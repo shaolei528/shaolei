@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#07110f">
+<title>Abyssal Wake</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050a09;color:#e8efe8;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}button,input{font:inherit}.hidden{display:none!important}.app{width:min(100%,620px);height:100svh;margin:auto;position:relative;background:#07110f}.gate{height:100%;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:28px 22px calc(28px + env(safe-area-inset-bottom));background:radial-gradient(circle at 50% 22%,#18332d 0,#0b1816 44%,#050a09 78%)}.sigil{font-size:54px;text-align:center;filter:grayscale(.3)}.brand{text-align:center;font-weight:900;letter-spacing:.16em;font-size:clamp(35px,10vw,54px);line-height:.95;text-shadow:0 3px #18201e}.subtitle{text-align:center;color:#93aaa2;font-size:12px;line-height:1.55;margin:2px 0 16px}.name{height:54px;border:1px solid #2d4540;background:#0b1715;color:#eaf3ed;border-radius:4px;text-align:center;font-weight:800;letter-spacing:.06em;outline:none}.enter{height:54px;border:1px solid #718b7c;background:#c8d6c9;color:#07100e;border-radius:4px;font-weight:900;letter-spacing:.08em}.setup{font-size:11px;text-align:center;color:#a6b8b1;line-height:1.55;padding:10px;border:1px dashed #30443f;background:#0a1412}.game{height:100%;position:relative;overflow:hidden;background:#07110f}.top{height:94px;padding:calc(env(safe-area-inset-top) + 6px) 8px 6px;display:grid;grid-template-columns:1fr 1fr;gap:5px;background:#091311;border-bottom:2px solid #263a34;position:relative;z-index:12}.bars{display:grid;grid-template-rows:repeat(3,1fr);gap:4px}.bar{display:grid;grid-template-columns:34px 1fr 34px;gap:4px;align-items:center;font-size:9px}.meter{height:9px;border:1px solid #324740;background:#040807;overflow:hidden}.fill{height:100%;width:100%;background:#92a895}.fill.hp{background:#8f4b4f}.fill.hunger{background:#a48246}.fill.sanity{background:#586f75}.netgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}.metric{border:1px solid #283b36;background:#0c1715;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}.metric small{font-size:7px;color:#7f9890;letter-spacing:.08em}.metric b{font-size:11px;margin-top:1px;white-space:nowrap}.arena-wrap{position:absolute;inset:94px 0 0;overflow:hidden}.arena{display:block;width:100%;height:100%;background:#08110f;image-rendering:pixelated;touch-action:none}.connection{position:absolute;left:9px;top:103px;z-index:11;font-size:9px;padding:5px 7px;border:1px solid #344a43;background:#08100eee}.good{color:#8fcca5}.fair{color:#d5ba71}.poor{color:#d07a7a}.reconnect{color:#9aa8a3}.online{position:absolute;right:9px;top:103px;z-index:11;font-size:9px;padding:5px 7px;border:1px solid #344a43;background:#08100eee}.toast{position:absolute;left:50%;top:132px;transform:translateX(-50%);z-index:15;background:#091210e8;border:1px solid #40564f;padding:7px 10px;max-width:82%;font-size:10px;text-align:center;opacity:0;transition:opacity .12s;pointer-events:none}.toast.show{opacity:1}.joystick{position:absolute;left:20px;bottom:calc(22px + env(safe-area-inset-bottom));width:126px;height:126px;border:2px solid #334a43;background:#091512a8;z-index:10;touch-action:none;border-radius:50%}.stick{position:absolute;width:50px;height:50px;left:36px;top:36px;background:#a9b8af;border:2px solid #dae3dd;border-radius:50%;box-shadow:4px 4px 0 #14201c}.actions{position:absolute;right:16px;bottom:calc(22px + env(safe-area-inset-bottom));z-index:10;display:grid;grid-template-columns:62px 62px;grid-template-rows:62px 62px;gap:8px}.act{border:2px solid #41574f;background:#11211dde;color:#e4ece7;font-size:9px;font-weight:900;letter-spacing:.05em;border-radius:3px;touch-action:none}.attack{grid-column:2;grid-row:1 / span 2;height:132px;background:#2a1b1bde;border-color:#654344}.dash{grid-column:1;grid-row:2}.use{grid-column:1;grid-row:1}.inventory{position:absolute;left:50%;bottom:calc(13px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9;display:flex;gap:3px}.slot{width:42px;height:42px;border:2px solid #314740;background:#091310dc;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:13px}.slot small{font-size:7px;color:#9eb1a9}.panel{position:absolute;inset:112px 12px auto 12px;z-index:20;border:2px solid #3a5048;background:#08120ff3;padding:12px;max-height:55%;overflow:auto}.panel h2{font-size:13px;margin:0 0 10px;letter-spacing:.09em}.recipe{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #263a34;font-size:10px}.recipe button{border:1px solid #526a61;background:#15251f;color:#eef4f0;padding:7px 9px}.players{position:absolute;right:8px;top:129px;z-index:9;width:122px;border:1px solid #2c413a;background:#07100ed8;padding:6px;max-height:104px;overflow:hidden}.players h3{font-size:7px;color:#7f9890;margin:0 0 4px;letter-spacing:.08em}.players div{font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 0}.death{position:absolute;inset:94px 0 0;z-index:30;display:flex;align-items:center;justify-content:center;background:#050807dc}.deathbox{border:2px solid #5b4444;background:#100b0b;padding:18px;text-align:center;width:min(82%,310px)}.deathbox h2{font-size:20px;margin:0 0 7px;color:#d3a2a2}.deathbox p{font-size:10px;color:#a99b9b}.respawn{height:44px;width:100%;border:1px solid #755757;background:#291a1a;color:#eee;font-weight:800}.footer-note{position:absolute;left:50%;bottom:3px;transform:translateX(-50%);z-index:8;font-size:6px;color:#52645e;white-space:nowrap;pointer-events:none}
+</style>
+<script src="survival-config.js"></script>
+</head>
+<body>
+<div class="app">
+<section id="gate" class="gate">
+  <div class="sigil">◉</div>
+  <div class="brand">ABYSSAL<br>WAKE</div>
+  <div class="subtitle">PIXEL SURVIVAL · ONE SHARED WORLD<br>STAY FED. STAY SANE. DO NOT LOOK TOO LONG.</div>
+  <input id="name" class="name" maxlength="16" autocomplete="nickname" placeholder="SURVIVOR NAME">
+  <button id="enter" class="enter" type="button">ENTER THE FOG</button>
+  <div id="setup" class="setup hidden">Realtime world is not configured yet.</div>
+</section>
+<section id="game" class="game hidden">
+  <header class="top">
+    <div class="bars">
+      <div class="bar"><span>HP</span><div class="meter"><div id="hpFill" class="fill hp"></div></div><b id="hpVal">100</b></div>
+      <div class="bar"><span>FOOD</span><div class="meter"><div id="hungerFill" class="fill hunger"></div></div><b id="hungerVal">100</b></div>
+      <div class="bar"><span>MIND</span><div class="meter"><div id="sanityFill" class="fill sanity"></div></div><b id="sanityVal">100</b></div>
+    </div>
+    <div class="netgrid">
+      <div class="metric"><small>PING</small><b id="ping">--</b></div>
+      <div class="metric"><small>JITTER</small><b id="jitter">--</b></div>
+      <div class="metric"><small>SYNC LOSS</small><b id="loss">0%</b></div>
+      <div class="metric"><small>ZONE</small><b id="zone">0:0</b></div>
+    </div>
+  </header>
+  <div class="arena-wrap"><canvas id="canvas" class="arena" width="360" height="640"></canvas></div>
+  <div id="connection" class="connection reconnect">CONNECTING</div>
+  <div id="online" class="online">ONLINE 1</div>
+  <div id="toast" class="toast"></div>
+  <div class="players"><h3>NEARBY SURVIVORS</h3><div id="playerList"></div></div>
+  <div id="joystick" class="joystick"><div id="stick" class="stick"></div></div>
+  <div class="actions">
+    <button id="useBtn" class="act use" type="button">USE</button>
+    <button id="dashBtn" class="act dash" type="button">DASH</button>
+    <button id="attackBtn" class="act attack" type="button">ATTACK</button>
+  </div>
+  <div class="inventory">
+    <div class="slot">🪵<small id="wood">0</small></div>
+    <div class="slot">🪨<small id="stone">0</small></div>
+    <div class="slot">🍖<small id="food">0</small></div>
+    <div class="slot">◈<small id="shard">0</small></div>
+  </div>
+  <div id="craftPanel" class="panel hidden">
+    <h2>RITUAL WORKBENCH</h2>
+    <div class="recipe"><span>Bone Knife · 4 wood + 3 stone</span><button data-craft="knife">CRAFT</button></div>
+    <div class="recipe"><span>Lantern · 3 wood + 2 shard</span><button data-craft="lantern">CRAFT</button></div>
+    <div class="recipe"><span>Field Meal · 2 food</span><button data-craft="meal">EAT</button></div>
+    <div class="recipe"><span>Close</span><button id="closeCraft">CLOSE</button></div>
+  </div>
+  <div id="death" class="death hidden"><div class="deathbox"><h2>THE ABYSS TOOK YOU</h2><p>You wake elsewhere. Some supplies are gone.</p><button id="respawn" class="respawn" type="button">RETURN TO SHORE</button></div></div>
+  <div class="footer-note">LOW-BANDWIDTH ZONED REALTIME · POSITION INTERPOLATION ENABLED</div>
+</section>
+</div>
+<script type="module" src="survival-v3.js"></script>
+</body>
+</html>
