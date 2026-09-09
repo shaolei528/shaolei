@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#070b13" />
+<title>Orb Rush — Mobile 2 Player</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;min-height:100%;background:#070b13;color:#fff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}button,input{font:inherit}.hidden{display:none!important}.app{width:min(100%,560px);height:100svh;margin:0 auto;position:relative;background:radial-gradient(circle at 50% 15%,#18263b 0,#0b101a 42%,#070b13 100%)}.lobby{height:100%;display:flex;flex-direction:column;justify-content:center;padding:30px 24px calc(30px + env(safe-area-inset-bottom));gap:16px}.brand{text-align:center;font-weight:950;letter-spacing:.12em;font-size:clamp(38px,11vw,58px);line-height:.95}.tag{text-align:center;color:#9aa7b8;margin:0 0 22px;font-size:14px}.primary,.secondary{min-height:56px;border-radius:18px;border:0;font-weight:850;padding:0 20px}.primary{background:#f3f6fb;color:#07101c}.secondary{background:#131c29;color:#fff;border:1px solid #2a3748}.join{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:10px}.join input{height:56px;border-radius:18px;border:1px solid #2a3748;background:#0f1722;color:#fff;text-align:center;font-size:20px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;min-width:0}.hint,.status{min-height:22px;text-align:center;color:#8997aa;font-size:13px}.game{height:100%;position:relative;overflow:hidden}.hud{height:92px;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:12px;background:linear-gradient(180deg,#101827,#0a101a);border-bottom:1px solid rgba(255,255,255,.06);z-index:3;position:relative}.score{text-align:center}.score small,.room small{display:block;font-size:10px;letter-spacing:.12em;color:#8997aa}.score b{display:block;font-size:31px;line-height:1}.room{text-align:center;font-size:12px;font-weight:800}.room strong{display:block;font-size:15px;letter-spacing:.12em;margin-top:2px}.arena-wrap{position:absolute;inset:92px 0 0}.arena{display:block;width:100%;height:100%;touch-action:none;background:#090e16}.overlay{position:absolute;inset:92px 0 0;display:flex;align-items:center;justify-content:center;z-index:6;background:rgba(4,7,12,.57);backdrop-filter:blur(5px);padding:30px}.overlay-card{text-align:center;max-width:320px}.overlay-card h2{margin:0 0 8px;font-size:26px}.overlay-card p{margin:0 0 18px;color:#9aa7b8;line-height:1.45}.overlay-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}.overlay-actions button{min-height:48px;border-radius:15px;padding:0 18px;border:0;font-weight:850}.copy{background:#fff;color:#07101c}.ghost{background:#152030;color:#fff;border:1px solid #2c3a4e!important}.joystick{position:absolute;left:22px;bottom:calc(24px + env(safe-area-inset-bottom));width:142px;height:142px;border-radius:50%;z-index:5;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);touch-action:none}.stick{position:absolute;left:39px;top:39px;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:0 8px 24px rgba(0,0,0,.28);transform:translate(0,0)}.dash{position:absolute;right:26px;bottom:calc(46px + env(safe-area-inset-bottom));width:92px;height:92px;border-radius:50%;z-index:5;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.10);color:white;font-weight:900;touch-action:none}.net{position:absolute;right:14px;top:106px;z-index:5;padding:7px 10px;border-radius:999px;background:rgba(0,0,0,.28);font-size:11px;color:#aeb8c7}.error{color:#ff8c9a}.ok{color:#86e6b0}@media(max-width:360px){.joystick{width:126px;height:126px}.stick{left:35px;top:35px;width:56px;height:56px}.dash{width:82px;height:82px}.join{grid-template-columns:1fr 96px}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <section class="lobby" id="lobby">
+    <div class="brand">ORB<br>RUSH</div>
+    <p class="tag">Two phones · real-time WebRTC multiplayer</p>
+    <button class="primary" id="createBtn" type="button">Create Room</button>
+    <div class="join">
+      <input id="roomInput" maxlength="6" inputmode="text" autocomplete="off" placeholder="ROOM" aria-label="Room code" />
+      <button class="secondary" id="joinBtn" type="button">Join</button>
+    </div>
+    <div class="status" id="lobbyStatus">Open this same website on both phones.</div>
+  </section>
+
+  <section class="game hidden" id="game">
+    <header class="hud">
+      <div class="score"><small>YOU</small><b id="myScore">0</b></div>
+      <div class="room"><small>ROOM</small><strong id="roomCode">------</strong></div>
+      <div class="score"><small>RIVAL</small><b id="rivalScore">0</b></div>
+    </header>
+    <div class="arena-wrap"><canvas class="arena" id="canvas" width="1000" height="1600"></canvas></div>
+    <div class="net" id="net">connecting</div>
+    <div class="joystick" id="joystick"><div class="stick" id="stick"></div></div>
+    <button class="dash" id="dashBtn" type="button">DASH</button>
+
+    <div class="overlay" id="overlay">
+      <div class="overlay-card">
+        <h2 id="overlayTitle">Room created</h2>
+        <p id="overlayText">Waiting for your friend…</p>
+        <div class="overlay-actions">
+          <button class="copy" id="copyBtn" type="button">Copy Invite Link</button>
+          <button class="ghost hidden" id="restartBtn" type="button">Play Again</button>
+          <button class="ghost" id="leaveBtn" type="button">Leave</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<script type="module">
+import { Peer } from 'https://cdn.jsdelivr.net/npm/peerjs@1.5.5/+esm';
+
+const $ = (s) => document.querySelector(s);
+const lobby=$('#lobby'),game=$('#game'),createBtn=$('#createBtn'),joinBtn=$('#joinBtn'),roomInput=$('#roomInput'),lobbyStatus=$('#lobbyStatus');
+const roomCodeEl=$('#roomCode'),myScoreEl=$('#myScore'),rivalScoreEl=$('#rivalScore'),overlay=$('#overlay'),overlayTitle=$('#overlayTitle'),overlayText=$('#overlayText'),copyBtn=$('#copyBtn'),restartBtn=$('#restartBtn'),leaveBtn=$('#leaveBtn'),net=$('#net');
+const canvas=$('#canvas'),ctx=canvas.getContext('2d'),joystick=$('#joystick'),stick=$('#stick'),dashBtn=$('#dashBtn');
+const WORLD={w:1000,h:1600};
+const WIN_SCORE=7;
+let peer=null,conn=null,role=null,roomCode='',running=false,last=performance.now(),sendClock=0,input={x:0,y:0,dash:false},guestInput={x:0,y:0,dash:false};
+let gameState=null,hostLoop=null;
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const randomCode=()=>{const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<6;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s};
+const peerId=(code)=>'orb-rush-'+code.toLowerCase();
+const orbSpawn=()=>({x:110+Math.random()*(WORLD.w-220),y:250+Math.random()*(WORLD.h-460),r:34});
+function initialState(){return{status:'playing',winner:0,orb:orbSpawn(),players:[{id:1,x:245,y:WORLD.h-280,r:47,score:0,vx:0,vy:0,dashCd:0},{id:2,x:755,y:WORLD.h-280,r:47,score:0,vx:0,vy:0,dashCd:0}]}}
+function setLobbyStatus(text,error=false){lobbyStatus.textContent=text;lobbyStatus.className='status '+(error?'error':'')}
+function enterGame(){lobby.classList.add('hidden');game.classList.remove('hidden');roomCodeEl.textContent=roomCode;resize()}
+function showOverlay(title,text,showRestart=false){overlayTitle.textContent=title;overlayText.textContent=text;restartBtn.classList.toggle('hidden',!showRestart);copyBtn.classList.toggle('hidden',showRestart);overlay.classList.remove('hidden')}
+function hideOverlay(){overlay.classList.add('hidden')}
+function setNet(text,ok=false){net.textContent=text;net.className='net '+(ok?'ok':'')}
+function safeSend(data){if(conn&&conn.open){try{conn.send(data)}catch{}}}
+function cleanup(){running=false;if(hostLoop)cancelAnimationFrame(hostLoop);hostLoop=null;if(conn){try{conn.close()}catch{}}if(peer){try{peer.destroy()}catch{}}conn=null;peer=null;role=null;roomCode='';gameState=null;input={x:0,y:0,dash:false};guestInput={x:0,y:0,dash:false};stick.style.transform='translate(0,0)'}
+function leave(){cleanup();game.classList.add('hidden');lobby.classList.remove('hidden');history.replaceState(null,'',location.pathname);setLobbyStatus('Open this same website on both phones.')}
+leaveBtn.addEventListener('click',leave);
+
+function attachConnection(c){
+  conn=c;
+  conn.on('open',()=>{
+    setNet('connected',true);
+    if(role==='host'){
+      gameState=initialState();running=true;safeSend({t:'start',state:gameState});hideOverlay();last=performance.now();hostLoop=requestAnimationFrame(tickHost);
+    }
+  });
+  conn.on('data',data=>{
+    if(!data||typeof data!=='object')return;
+    if(role==='host'&&data.t==='input') guestInput={x:clamp(Number(data.x)||0,-1,1),y:clamp(Number(data.y)||0,-1,1),dash:!!data.dash};
+    if(role==='guest'&&data.t==='start'){gameState=data.state;running=true;hideOverlay();}
+    if(role==='guest'&&data.t==='state'){gameState=data.state;running=data.state?.status==='playing';renderScores();if(data.state?.status==='ended')endUI();}
+    if(role==='guest'&&data.t==='restart'){gameState=data.state;running=true;hideOverlay();restartBtn.classList.add('hidden');}
+  });
+  conn.on('close',()=>{running=false;setNet('disconnected');showOverlay('Connection lost','Your friend disconnected. Leave and create/join a room again.')});
+  conn.on('error',()=>setNet('network error'));
+}
+
+function createRoom(){
+  cleanup();role='host';roomCode=randomCode();enterGame();showOverlay('Room '+roomCode,'Send the invite link or room code to your friend.');setNet('opening room');
+  peer=new Peer(peerId(roomCode));
+  peer.on('open',()=>{setNet('waiting');history.replaceState(null,'','?room='+roomCode)});
+  peer.on('connection',c=>{if(conn&&conn.open){c.close();return}attachConnection(c)});
+  peer.on('error',err=>{
+    if(err.type==='unavailable-id'){roomCode=randomCode();roomCodeEl.textContent=roomCode;try{peer.destroy()}catch{};createRoom();return}
+    setNet('error');showOverlay('Network problem','Could not open the multiplayer room. Check internet and try again.')
+  });
+}
+
+function joinRoom(code){
+  cleanup();role='guest';roomCode=String(code||'').trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(roomCode)){setLobbyStatus('Enter a valid 6-character room code.',true);return}
+  enterGame();showOverlay('Joining '+roomCode,'Connecting to your friend…');setNet('connecting');
+  peer=new Peer();
+  peer.on('open',()=>{const c=peer.connect(peerId(roomCode),{reliable:true,serialization:'json'});attachConnection(c)});
+  peer.on('error',err=>{setNet('error');if(err.type==='peer-unavailable')showOverlay('Room not found','Ask your friend to keep the room open and check the code.');else showOverlay('Network problem','Could not connect. Try again on mobile data or another network.')});
+}
+createBtn.addEventListener('click',createRoom);
+joinBtn.addEventListener('click',()=>joinRoom(roomInput.value));
+roomInput.addEventListener('input',()=>roomInput.value=roomInput.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6));
+roomInput.addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom(roomInput.value)});
+copyBtn.addEventListener('click',async()=>{const url=location.origin+location.pathname+'?room='+roomCode;try{await navigator.clipboard.writeText(url);copyBtn.textContent='Copied ✓';setTimeout(()=>copyBtn.textContent='Copy Invite Link',1500)}catch{overlayText.textContent='Share this link: '+url}});
+restartBtn.addEventListener('click',()=>{if(role==='host'){gameState=initialState();running=true;safeSend({t:'restart',state:gameState});hideOverlay();last=performance.now();if(!hostLoop)hostLoop=requestAnimationFrame(tickHost)}else{overlayText.textContent='Only the room creator can restart the match.'}});
+
+function applyPlayer(p,inp,dt){
+  if(!p)return;const len=Math.hypot(inp.x,inp.y),nx=len>1?inp.x/len:inp.x,ny=len>1?inp.y/len:inp.y;let speed=430;
+  p.dashCd=Math.max(0,(p.dashCd||0)-dt);
+  if(inp.dash&&p.dashCd<=0){speed=1040;p.dashCd=.9;inp.dash=false}
+  p.vx=nx*speed;p.vy=ny*speed;p.x=clamp(p.x+p.vx*dt,p.r,WORLD.w-p.r);p.y=clamp(p.y+p.vy*dt,180+p.r,WORLD.h-p.r);
+}
+function collect(p){const o=gameState.orb,dx=p.x-o.x,dy=p.y-o.y;if(Math.hypot(dx,dy)<p.r+o.r){p.score++;if(p.score>=WIN_SCORE){gameState.status='ended';gameState.winner=p.id;running=false}else gameState.orb=orbSpawn()}}
+function collide(a,b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,min=a.r+b.r;if(d<min){let n=(min-d)/2,nx=dx/d,ny=dy/d;a.x-=nx*n;a.y-=ny*n;b.x+=nx*n;b.y+=ny*n}}
+function tickHost(now){
+  hostLoop=null;if(role!=='host'||!gameState)return;const dt=clamp((now-last)/1000,0,.04);last=now;
+  if(running&&gameState.status==='playing'){
+    applyPlayer(gameState.players[0],input,dt);applyPlayer(gameState.players[1],guestInput,dt);collide(gameState.players[0],gameState.players[1]);collect(gameState.players[0]);if(gameState.status==='playing')collect(gameState.players[1]);
+    sendClock+=dt;if(sendClock>=.05){sendClock=0;safeSend({t:'state',state:gameState})}
+    renderScores();if(gameState.status==='ended'){safeSend({t:'state',state:gameState});endUI()}
+  }
+  if(role==='host')hostLoop=requestAnimationFrame(tickHost);
+}
+function endUI(){if(!gameState)return;const me=role==='host'?1:2;const won=gameState.winner===me;showOverlay(won?'YOU WIN 🏆':'RIVAL WINS',won?'First to 7. Nice run.':'First to 7. Rematch?',true)}
+function renderScores(){if(!gameState)return;const me=role==='host'?gameState.players[0]:gameState.players[1],r=role==='host'?gameState.players[1]:gameState.players[0];myScoreEl.textContent=me?.score??0;rivalScoreEl.textContent=r?.score??0}
+
+let joyPointer=null;
+function moveJoy(e){const r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy,max=r.width*.31,len=Math.hypot(dx,dy)||1;if(len>max){dx=dx/len*max;dy=dy/len*max}stick.style.transform=`translate(${dx}px,${dy}px)`;input.x=dx/max;input.y=dy/max;if(role==='guest')safeSend({t:'input',x:input.x,y:input.y,dash:input.dash})}
+joystick.addEventListener('pointerdown',e=>{joyPointer=e.pointerId;joystick.setPointerCapture(e.pointerId);moveJoy(e)});joystick.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)moveJoy(e)});function stopJoy(){joyPointer=null;input.x=0;input.y=0;stick.style.transform='translate(0,0)';if(role==='guest')safeSend({t:'input',x:0,y:0,dash:false})}joystick.addEventListener('pointerup',stopJoy);joystick.addEventListener('pointercancel',stopJoy);
+dashBtn.addEventListener('pointerdown',e=>{e.preventDefault();input.dash=true;if(role==='guest')safeSend({t:'input',x:input.x,y:input.y,dash:true})});
+
+function resize(){const r=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.max(1,Math.round(r.width*dpr));canvas.height=Math.max(1,Math.round(r.height*dpr))}addEventListener('resize',resize);
+function draw(){
+  const W=canvas.width,H=canvas.height,sx=W/WORLD.w,sy=H/WORLD.h;ctx.clearRect(0,0,W,H);ctx.fillStyle='#090e16';ctx.fillRect(0,0,W,H);ctx.strokeStyle='rgba(255,255,255,.045)';ctx.lineWidth=Math.max(1,sx*2);
+  for(let x=0;x<=WORLD.w;x+=100){ctx.beginPath();ctx.moveTo(x*sx,0);ctx.lineTo(x*sx,H);ctx.stroke()}for(let y=180;y<=WORLD.h;y+=100){ctx.beginPath();ctx.moveTo(0,y*sy);ctx.lineTo(W,y*sy);ctx.stroke()}
+  if(gameState){const o=gameState.orb;if(o){let g=ctx.createRadialGradient(o.x*sx,o.y*sy,2,o.x*sx,o.y*sy,82*sx);g.addColorStop(0,'rgba(255,226,93,.85)');g.addColorStop(1,'rgba(255,226,93,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(o.x*sx,o.y*sy,82*sx,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffe25d';ctx.beginPath();ctx.arc(o.x*sx,o.y*sy,o.r*sx,0,Math.PI*2);ctx.fill()}
+    gameState.players.forEach(p=>{const mine=(role==='host'&&p.id===1)||(role==='guest'&&p.id===2);ctx.fillStyle=mine?'#67a8ff':'#ff7185';ctx.beginPath();ctx.arc(p.x*sx,p.y*sy,p.r*sx,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font=`900 ${Math.max(12,28*sx)}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(mine?'YOU':'P2',p.x*sx,p.y*sy)})
+  }
+  requestAnimationFrame(draw)
+}
+resize();draw();
+
+const params=new URLSearchParams(location.search);const invite=params.get('room');if(invite){roomInput.value=invite.toUpperCase();setLobbyStatus('Invite detected — tap Join to enter room '+roomInput.value)}
+</script>
+</body>
+</html>
