@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#071019">
+<title>Orb Rush World</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071019;color:#fff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input{font:inherit}.hidden{display:none!important}.app{width:min(100%,620px);height:100svh;margin:auto;position:relative;background:#071019}.gate{height:100%;padding:32px 24px calc(30px + env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:center;gap:14px;background:radial-gradient(circle at 50% 14%,#183047,#09131e 48%,#071019)}.brand{font-weight:950;font-size:clamp(42px,13vw,64px);line-height:.9;letter-spacing:.08em;text-align:center}.sub{text-align:center;color:#9eb0c2;margin:4px 0 18px}.name{height:58px;border-radius:18px;border:1px solid #314459;background:#0d1a27;color:white;text-align:center;font-size:19px;font-weight:800;outline:none}.enter{height:58px;border:0;border-radius:18px;background:#f3f7fb;color:#06101a;font-weight:900}.setup{padding:14px 16px;border-radius:15px;background:#111b27;border:1px solid #29394b;color:#9eafc0;font-size:13px;line-height:1.45;text-align:center}.world{height:100%;position:relative;overflow:hidden}.hud{height:110px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;display:grid;grid-template-columns:repeat(4,1fr);gap:7px;background:linear-gradient(#101d2b,#09131e);border-bottom:1px solid rgba(255,255,255,.06);position:relative;z-index:8}.metric{min-width:0;padding:8px 5px;border-radius:12px;background:rgba(255,255,255,.045);text-align:center}.metric small{display:block;color:#7f93a6;font-size:9px;letter-spacing:.08em;white-space:nowrap}.metric b{display:block;font-size:16px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.arena-wrap{position:absolute;inset:110px 0 0}.arena{width:100%;height:100%;display:block;touch-action:none;background:#08121b}.joystick{position:absolute;left:22px;bottom:calc(24px + env(safe-area-inset-bottom));width:142px;height:142px;border-radius:50%;z-index:7;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);touch-action:none}.stick{position:absolute;left:39px;top:39px;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:0 8px 24px rgba(0,0,0,.28)}.dash{position:absolute;right:24px;bottom:calc(42px + env(safe-area-inset-bottom));width:94px;height:94px;border-radius:50%;z-index:7;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.10);color:white;font-weight:900;touch-action:none}.players{position:absolute;right:10px;top:120px;z-index:7;width:150px;max-height:150px;overflow:hidden;padding:8px;border-radius:14px;background:rgba(2,8,13,.62);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(5px)}.players h3{font-size:10px;letter-spacing:.1em;color:#8ea1b4;margin:0 0 6px}.players div{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 0}.toast{position:absolute;left:50%;top:122px;transform:translateX(-50%);z-index:10;max-width:80%;padding:9px 13px;border-radius:999px;background:rgba(0,0,0,.65);font-size:12px;opacity:0;pointer-events:none;transition:opacity .18s}.toast.show{opacity:1}.connection{position:absolute;left:12px;top:122px;z-index:7;padding:8px 10px;border-radius:999px;background:rgba(0,0,0,.55);font-size:11px}.good{color:#88e5ae}.fair{color:#ffd67a}.poor{color:#ff8d9b}.reconnect{color:#a8b9cb}.score-pill{position:absolute;left:50%;top:154px;transform:translateX(-50%);z-index:7;padding:7px 13px;border-radius:999px;background:rgba(0,0,0,.48);font-size:12px;font-weight:850}.debug-note{position:absolute;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;color:rgba(255,255,255,.35);font-size:9px;white-space:nowrap;pointer-events:none}@media(max-width:380px){.hud{gap:4px;padding-left:7px;padding-right:7px}.metric{padding:7px 2px}.metric b{font-size:14px}.joystick{width:128px;height:128px}.stick{left:35px;top:35px;width:58px;height:58px}.dash{width:84px;height:84px}.players{width:132px}}
+</style>
+<script src="world-config.js"></script>
+</head>
+<body>
+<div class="app">
+<section id="gate" class="gate">
+  <div class="brand">ORB<br>WORLD</div>
+  <p class="sub">One public world · every phone joins the same live map</p>
+  <input id="nameInput" class="name" maxlength="18" autocomplete="nickname" placeholder="YOUR NAME" aria-label="Player name">
+  <button id="enterBtn" class="enter" type="button">ENTER WORLD</button>
+  <div id="setup" class="setup hidden">Realtime backend is not connected yet.</div>
+</section>
+<section id="world" class="world hidden">
+  <header class="hud">
+    <div class="metric"><small>ONLINE</small><b id="online">1</b></div>
+    <div class="metric"><small>PING</small><b id="ping">-- ms</b></div>
+    <div class="metric"><small>JITTER</small><b id="jitter">-- ms</b></div>
+    <div class="metric"><small>SYNC LOSS</small><b id="loss">0.0%</b></div>
+  </header>
+  <div class="arena-wrap"><canvas id="canvas" class="arena"></canvas></div>
+  <div id="connection" class="connection reconnect">CONNECTING</div>
+  <div id="score" class="score-pill">ENERGY 0</div>
+  <div class="players"><h3>ONLINE PLAYERS</h3><div id="playerList"></div></div>
+  <div id="toast" class="toast"></div>
+  <div id="joystick" class="joystick"><div id="stick" class="stick"></div></div>
+  <button id="dash" class="dash" type="button">DASH</button>
+  <div class="debug-note">SYNC LOSS = missed realtime state updates, not raw IP packet loss</div>
+</section>
+</div>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm';
+
+const cfg=window.ORB_CONFIG||{};
+const $=s=>document.querySelector(s);
+const gate=$('#gate'),worldEl=$('#world'),nameInput=$('#nameInput'),enterBtn=$('#enterBtn'),setup=$('#setup');
+const canvas=$('#canvas'),ctx=canvas.getContext('2d'),onlineEl=$('#online'),pingEl=$('#ping'),jitterEl=$('#jitter'),lossEl=$('#loss'),connectionEl=$('#connection'),scoreEl=$('#score'),playerList=$('#playerList'),toastEl=$('#toast');
+const joystick=$('#joystick'),stick=$('#stick'),dashBtn=$('#dash');
+const WORLD={w:2200,h:3200};
+const clientId=(crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now()).slice(0,12);
+const colors=['#67a7ff','#ff7587','#6ee0b1','#c493ff','#ffd66e','#69d7eb','#ff9a65','#f58de7'];
+const color=colors[[...clientId].reduce((a,c)=>a+c.charCodeAt(0),0)%colors.length];
+let supabase=null,channel=null,name='',subscribed=false,isLeader=false,leaderId=null;
+let me={id:clientId,name:'',color,x:WORLD.w/2,y:WORLD.h/2,r:44,vx:0,vy:0,score:0,seq:0,dashCd:0};
+let remotes=new Map(),presenceIds=new Set(),scores={},orbs=[];
+let input={x:0,y:0,dash:false},last=performance.now(),sendTimer=0,worldTimer=0,pingTimer=0,toastTimer=0;
+let pingSamples=[],lastPing=null,recvMoves=0,missedMoves=0,lastSeqById=new Map(),connectedAt=0;
+let cam={x:me.x,y:me.y};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const cleanName=s=>(String(s||'').replace(/[<>]/g,'').trim().slice(0,18)||'Player');
+function makeOrbs(){return Array.from({length:8},(_,i)=>({id:'o'+i,x:rand(130,WORLD.w-130),y:rand(260,WORLD.h-220),r:30}))}
+function toast(t){toastEl.textContent=t;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),1700)}
+function quality(){const p=pingSamples.length?pingSamples[pingSamples.length-1]:9999;if(!subscribed)return['RECONNECTING','reconnect'];if(p<120)return['GOOD','good'];if(p<250)return['FAIR','fair'];return['POOR','poor']}
+function updateNetUI(){const q=quality();connectionEl.textContent=q[0];connectionEl.className='connection '+q[1];if(pingSamples.length){const p=pingSamples.at(-1);pingEl.textContent=Math.round(p)+' ms';const j=pingSamples.length>1?pingSamples.slice(1).reduce((s,v,i)=>s+Math.abs(v-pingSamples[i]),0)/(pingSamples.length-1):0;jitterEl.textContent=Math.round(j)+' ms'}const total=recvMoves+missedMoves;lossEl.textContent=(total?missedMoves/total*100:0).toFixed(1)+'%'}
+function resize(){const r=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.max(1,Math.round(r.width*dpr));canvas.height=Math.max(1,Math.round(r.height*dpr))}
+addEventListener('resize',resize);
+function screen(p){const scale=Math.min(canvas.width/900,canvas.height/1500);return{x:(p.x-cam.x)*scale+canvas.width/2,y:(p.y-cam.y)*scale+canvas.height/2,s:scale}}
+function draw(){
+  const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);ctx.fillStyle='#08121b';ctx.fillRect(0,0,w,h);
+  cam.x+=(me.x-cam.x)*.09;cam.y+=(me.y-cam.y)*.09;
+  const sc=Math.min(w/900,h/1500),grid=140*sc,ox=(((-cam.x*sc+w/2)%grid)+grid)%grid,oy=(((-cam.y*sc+h/2)%grid)+grid)%grid;
+  ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;for(let x=ox;x<w;x+=grid){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=oy;y<h;y+=grid){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+  const tl=screen({x:0,y:0}),br=screen({x:WORLD.w,y:WORLD.h});ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=4;ctx.strokeRect(tl.x,tl.y,br.x-tl.x,br.y-tl.y);
+  for(const o of orbs){const q=screen(o);if(q.x<-80||q.y<-80||q.x>w+80||q.y>h+80)continue;const g=ctx.createRadialGradient(q.x,q.y,3,q.x,q.y,65*sc);g.addColorStop(0,'rgba(255,224,88,.95)');g.addColorStop(1,'rgba(255,224,88,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(q.x,q.y,65*sc,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffe05d';ctx.beginPath();ctx.arc(q.x,q.y,o.r*sc,0,Math.PI*2);ctx.fill()}
+  for(const r of remotes.values()){r.x+=(r.tx-r.x)*.22;r.y+=(r.ty-r.y)*.22;drawPlayer(r,false,sc,w,h)}
+  drawPlayer(me,true,sc,w,h);
+  requestAnimationFrame(draw)
+}
+function drawPlayer(p,self,sc,w,h){const q=screen(p);if(q.x<-100||q.y<-100||q.x>w+100||q.y>h+100)return;ctx.fillStyle=p.color||'#fff';ctx.beginPath();ctx.arc(q.x,q.y,p.r*sc,0,Math.PI*2);ctx.fill();if(self){ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=3;ctx.stroke()}ctx.textAlign='center';ctx.font=`700 ${Math.max(18,24*sc)}px system-ui`;ctx.fillStyle='#fff';ctx.fillText(p.name||'Player',q.x,q.y-p.r*sc-14);ctx.font=`700 ${Math.max(14,18*sc)}px system-ui`;ctx.fillStyle='rgba(255,255,255,.8)';ctx.fillText(String(scores[p.id]||0),q.x,q.y+5)}
+function updateOnlineUI(){onlineEl.textContent=presenceIds.size||1;const all=[me,...remotes.values()].filter((p,i,a)=>a.findIndex(x=>x.id===p.id)===i).sort((a,b)=>(scores[b.id]||0)-(scores[a.id]||0));playerList.innerHTML=all.slice(0,8).map(p=>`<div>${p.id===me.id?'● ':''}${escapeHtml(p.name||'Player')} · ${scores[p.id]||0}</div>`).join('')+(all.length>8?`<div>+${all.length-8} more</div>`:'');scoreEl.textContent='ENERGY '+(scores[me.id]||0)}
+function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function electLeader(){const ids=[...presenceIds].sort();const old=leaderId;leaderId=ids[0]||me.id;isLeader=leaderId===me.id;if(isLeader&&!orbs.length)orbs=makeOrbs();if(old!==leaderId){toast(isLeader?'You are world sync leader':'World leader synced');if(isLeader)broadcastWorld()}}
+function parsePresence(){const state=channel.presenceState();const next=new Set();const meta=new Map();for(const arr of Object.values(state)){for(const p of arr){if(!p?.id)continue;next.add(p.id);meta.set(p.id,p)}}const joined=[...next].filter(id=>!presenceIds.has(id));const left=[...presenceIds].filter(id=>!next.has(id));presenceIds=next;for(const id of joined){if(id!==me.id){const p=meta.get(id);toast((p?.name||'Player')+' joined')}}for(const id of left){if(id!==me.id){const p=remotes.get(id);toast((p?.name||'Player')+' left');remotes.delete(id);lastSeqById.delete(id)}}for(const [id,p] of meta){if(id===me.id)continue;if(!remotes.has(id))remotes.set(id,{id,name:p.name||'Player',color:p.color||'#fff',x:p.x||WORLD.w/2,y:p.y||WORLD.h/2,tx:p.x||WORLD.w/2,ty:p.y||WORLD.h/2,r:44})}electLeader();updateOnlineUI();if(isLeader)broadcastWorld()}
+async function send(event,payload){if(!channel||!subscribed)return;try{await channel.send({type:'broadcast',event,payload})}catch{}}
+function broadcastWorld(){send('world_state',{leader:me.id,orbs,scores,ts:Date.now()})}
+function onMove(p){if(!p||p.id===me.id)return;recvMoves++;const prev=lastSeqById.get(p.id);if(Number.isFinite(prev)&&p.seq>prev+1)missedMoves+=p.seq-prev-1;lastSeqById.set(p.id,p.seq);let r=remotes.get(p.id);if(!r){r={id:p.id,name:p.name||'Player',color:p.color||'#fff',x:p.x,y:p.y,tx:p.x,ty:p.y,r:44};remotes.set(p.id,r)}r.name=p.name||r.name;r.color=p.color||r.color;r.tx=clamp(Number(p.x)||0,0,WORLD.w);r.ty=clamp(Number(p.y)||0,0,WORLD.h);updateNetUI()}
+function onWorld(p){if(!p)return;if(Array.isArray(p.orbs))orbs=p.orbs;if(p.scores&&typeof p.scores==='object')scores=p.scores;if(p.leader)leaderId=p.leader;updateOnlineUI()}
+function onCollect(p){if(!isLeader||!p?.id||!p?.orbId)return;const orb=orbs.find(o=>o.id===p.orbId);if(!orb)return;const pl=p.id===me.id?me:remotes.get(p.id);if(!pl||Math.hypot((pl.tx??pl.x)-orb.x,(pl.ty??pl.y)-orb.y)>145)return;scores[p.id]=(scores[p.id]||0)+1;orb.x=rand(130,WORLD.w-130);orb.y=rand(260,WORLD.h-220);broadcastWorld();updateOnlineUI()}
+async function connect(){
+  if(!cfg.supabaseUrl||!cfg.supabaseKey){setup.textContent='Public World v2 is built, but the Supabase Realtime project still needs to be connected before this version can go live.';setup.classList.remove('hidden');return}
+  name=cleanName(nameInput.value);localStorage.setItem('orb-world-name',name);me.name=name;scores[me.id]=scores[me.id]||0;
+  gate.classList.add('hidden');worldEl.classList.remove('hidden');resize();
+  supabase=createClient(cfg.supabaseUrl,cfg.supabaseKey,{auth:{persistSession:false,autoRefreshToken:false}});
+  channel=supabase.channel(cfg.channel||'orb-rush-public-world-v2',{config:{broadcast:{self:true,ack:true},presence:{key:me.id}}});
+  channel.on('presence',{event:'sync'},parsePresence)
+    .on('broadcast',{event:'move'},({payload})=>onMove(payload))
+    .on('broadcast',{event:'world_state'},({payload})=>onWorld(payload))
+    .on('broadcast',{event:'collect_request'},({payload})=>onCollect(payload))
+    .on('broadcast',{event:'hello'},()=>{if(isLeader)broadcastWorld()})
+    .on('broadcast',{event:'net_ping'},({payload})=>{if(payload?.id===me.id&&Number.isFinite(payload.t)){const v=performance.now()-payload.t;pingSamples.push(v);if(pingSamples.length>10)pingSamples.shift();lastPing=v;updateNetUI()}})
+    .subscribe(async status=>{
+      if(status==='SUBSCRIBED'){subscribed=true;connectedAt=Date.now();await channel.track({id:me.id,name:me.name,color:me.color,x:me.x,y:me.y,joined_at:new Date().toISOString()});send('hello',{id:me.id});toast('Connected to public world');updateNetUI()}
+      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){subscribed=false;updateNetUI()}
+    });
+}
+nameInput.value=localStorage.getItem('orb-world-name')||'';enterBtn.addEventListener('click',connect);nameInput.addEventListener('keydown',e=>{if(e.key==='Enter')connect()});
+function physics(dt){const len=Math.hypot(input.x,input.y),nx=len>1?input.x/len:input.x,ny=len>1?input.y/len:input.y;me.dashCd=Math.max(0,me.dashCd-dt);let speed=470;if(input.dash&&me.dashCd<=0){speed=1150;me.dashCd=.9;input.dash=false}me.vx=nx*speed;me.vy=ny*speed;me.x=clamp(me.x+me.vx*dt,me.r,WORLD.w-me.r);me.y=clamp(me.y+me.vy*dt,me.r,WORLD.h-me.r);for(const o of orbs){if(Math.hypot(me.x-o.x,me.y-o.y)<me.r+o.r+8){send('collect_request',{id:me.id,orbId:o.id})}}}
+function loop(now){const dt=clamp((now-last)/1000,0,.05);last=now;if(!worldEl.classList.contains('hidden')){physics(dt);sendTimer+=dt;worldTimer+=dt;pingTimer+=dt;if(sendTimer>=.066){sendTimer=0;me.seq++;send('move',{id:me.id,name:me.name,color:me.color,x:me.x,y:me.y,seq:me.seq,ts:Date.now()})}if(isLeader&&worldTimer>=1){worldTimer=0;broadcastWorld()}if(subscribed&&pingTimer>=2){pingTimer=0;send('net_ping',{id:me.id,t:performance.now(),n:Math.random()})}updateOnlineUI()}requestAnimationFrame(loop)}
+requestAnimationFrame(loop);requestAnimationFrame(draw);
+let active=false,pid=null;function joy(e){const r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,max=r.width*.32;let dx=e.clientX-cx,dy=e.clientY-cy,l=Math.hypot(dx,dy)||1;if(l>max){dx=dx/l*max;dy=dy/l*max}stick.style.transform=`translate(${dx}px,${dy}px)`;input.x=dx/max;input.y=dy/max}
+joystick.addEventListener('pointerdown',e=>{active=true;pid=e.pointerId;joystick.setPointerCapture(pid);joy(e)});joystick.addEventListener('pointermove',e=>{if(active&&e.pointerId===pid)joy(e)});function stop(){active=false;input.x=input.y=0;stick.style.transform='translate(0,0)'}joystick.addEventListener('pointerup',stop);joystick.addEventListener('pointercancel',stop);dashBtn.addEventListener('pointerdown',()=>input.dash=true);
+if(!cfg.supabaseUrl||!cfg.supabaseKey){setup.classList.remove('hidden');setup.textContent='Public World v2 code is ready. Connect the Supabase plugin so I can create the realtime backend and switch this version live.'}
+</script>
+</body>
+</html>
