@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#183c32">
+<title>Abyssal Wake — Mirewood</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07110f;color:#edf5ee;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}button,input{font:inherit}.hidden{display:none!important}.app{width:min(100%,620px);height:100svh;margin:auto;position:relative;background:#17382f;overflow:hidden}.gate{height:100%;display:flex;align-items:center;justify-content:center;padding:24px 22px calc(24px + env(safe-area-inset-bottom));background:radial-gradient(circle at 50% 15%,#8ab779 0,#4e8063 27%,#234c3d 52%,#0a1714 84%);position:relative;overflow:hidden}.gate:before{content:'';position:absolute;inset:0;opacity:.18;background-image:linear-gradient(90deg,#d8e8b722 1px,transparent 1px),linear-gradient(#d8e8b722 1px,transparent 1px);background-size:16px 16px}.gate:after{content:'';position:absolute;left:-10%;right:-10%;bottom:-7%;height:35%;background:repeating-linear-gradient(165deg,#416f55 0 9px,#355e49 9px 17px);clip-path:polygon(0 55%,12% 39%,24% 51%,37% 28%,49% 48%,62% 30%,76% 44%,88% 20%,100% 40%,100% 100%,0 100%)}.gate-card{position:relative;z-index:2;width:min(92%,420px);border:2px solid #99b999;background:#0d1d18e8;box-shadow:0 12px 44px #0009;padding:18px 16px}.sprite-hero{width:72px;height:96px;margin:0 auto 5px;background:url('assets/player_sheet.png') 0 0/288px 384px no-repeat;image-rendering:pixelated;filter:drop-shadow(0 7px 0 #0004)}.brand{text-align:center;font-weight:950;letter-spacing:.16em;font-size:clamp(34px,9vw,52px);line-height:.94;text-shadow:0 3px #16211e}.subtitle{text-align:center;color:#c3d3cb;font-size:10px;line-height:1.6;margin:9px 0 13px}.name{width:100%;height:50px;border:1px solid #769487;background:#11251f;color:#f1f7f3;border-radius:5px;text-align:center;font-weight:800;letter-spacing:.06em;outline:none}.enter{width:100%;height:52px;border:1px solid #b9d1bd;background:#e3eddf;color:#0c1714;border-radius:5px;font-weight:950;letter-spacing:.08em;margin-top:8px}.setup{font-size:10px;text-align:center;color:#b5c4be;line-height:1.5;padding:8px;border:1px dashed #526b61;background:#0d1a17;margin-top:8px}.note{text-align:center;color:#abc0b6;font-size:8px;margin-top:8px}.game{height:100%;position:relative;overflow:hidden;background:#315b47}.top{height:102px;padding:calc(env(safe-area-inset-top) + 5px) 8px 6px;display:grid;grid-template-columns:46px 1.25fr .95fr;gap:6px;background:#10201bea;border-bottom:2px solid #587268;position:relative;z-index:12;backdrop-filter:blur(5px)}.portrait{width:46px;height:46px;border:2px solid #789488;margin-top:2px;background:#173028 url('assets/player_sheet.png') 0 0/184px 245px no-repeat;image-rendering:pixelated}.bars{display:grid;grid-template-rows:repeat(3,1fr);gap:4px}.bar{display:grid;grid-template-columns:30px 1fr 30px;gap:4px;align-items:center;font-size:8px}.meter{height:9px;border:1px solid #53695f;background:#08110e;overflow:hidden}.fill{height:100%;width:100%}.fill.hp{background:#cf6265}.fill.hunger{background:#c9a35c}.fill.sanity{background:#72a4b5}.netgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}.metric{border:1px solid #41574f;background:#12231f;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}.metric small{font-size:6px;color:#a5b7b0;letter-spacing:.07em}.metric b{font-size:9px;margin-top:1px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}.arena-wrap{position:absolute;inset:102px 0 0;overflow:hidden}.arena{display:block;width:100%;height:100%;background:#4e755d;image-rendering:pixelated;touch-action:none}.connection,.online,.camp-badge{position:absolute;top:111px;z-index:11;font-size:8px;padding:5px 7px;border:1px solid #557064;background:#10201de8}.connection{left:8px}.online{right:8px}.camp-badge{left:50%;transform:translateX(-50%);border-color:#79a28a;background:#1d4939e8;color:#c9f1d3;letter-spacing:.06em}.good{color:#9fe0b1}.fair{color:#efd07a}.poor{color:#ef9292}.reconnect{color:#c6cfcb}.day-badge{position:absolute;left:50%;top:137px;transform:translateX(-50%);z-index:10;color:#ffe498;font-size:7px;font-weight:900;text-shadow:0 1px #000}.toast{position:absolute;left:50%;top:153px;transform:translateX(-50%);z-index:18;background:#10201ff0;border:1px solid #7a9388;padding:7px 10px;max-width:82%;font-size:9px;text-align:center;opacity:0;transition:opacity .12s;pointer-events:none}.toast.show{opacity:1}.quest{position:absolute;left:8px;top:148px;z-index:9;width:148px;border:1px solid #587166;background:#10211dde;padding:7px}.quest small{display:block;color:#efd17f;font-size:7px;letter-spacing:.09em;margin-bottom:4px}.quest b{font-size:8px;line-height:1.35;color:#f0f5f1}.players{position:absolute;right:8px;top:148px;z-index:9;width:118px;border:1px solid #587166;background:#10211dde;padding:6px;max-height:92px;overflow:hidden}.players h3{font-size:6px;color:#b2c5bc;margin:0 0 4px;letter-spacing:.08em}.players div{font-size:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 0}.joystick{position:absolute;left:17px;bottom:calc(22px + env(safe-area-inset-bottom));width:124px;height:124px;border:2px solid #728c81;background:#11241fc9;z-index:10;touch-action:none;border-radius:50%;box-shadow:0 7px 20px #0005}.stick{position:absolute;width:48px;height:48px;left:36px;top:36px;background:#c9d5cf;border:2px solid #f0f6f2;border-radius:50%;box-shadow:4px 4px 0 #23332d}.actions{position:absolute;right:14px;bottom:calc(22px + env(safe-area-inset-bottom));z-index:10;display:grid;grid-template-columns:58px 58px;grid-template-rows:58px 58px;gap:7px}.act{border:2px solid #748b82;background:#1c382fdc;color:#f0f6f2;font-size:8px;font-weight:900;letter-spacing:.04em;border-radius:6px;touch-action:none}.attack{grid-column:2;grid-row:1/span 2;height:123px;background:#523332e5;border-color:#a56d66}.dash{grid-column:1;grid-row:2}.use{grid-column:1;grid-row:1}.inventory{position:absolute;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9;display:flex;gap:3px}.slot{width:39px;height:39px;border:2px solid #597066;background:#10201ddd;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:12px}.slot small{font-size:7px;color:#d2dfd8}.chat-toggle,.map-toggle{position:absolute;bottom:calc(157px + env(safe-area-inset-bottom));z-index:11;border:1px solid #7c948a;background:#172f28e8;color:#edf4ef;width:48px;height:34px;font-size:8px;border-radius:5px}.chat-toggle{left:8px}.map-toggle{right:8px}.panel,.map-panel{position:absolute;inset:132px 10px auto 10px;z-index:24;border:2px solid #667f74;background:#0d1917f7;padding:12px;max-height:60%;overflow:auto;box-shadow:0 12px 35px #0008}.panel h2{font-size:12px;margin:0 0 10px;letter-spacing:.09em}.recipe{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #344b42;font-size:9px}.recipe button{border:1px solid #789086;background:#285044;color:#f1f6f3;padding:7px 9px}.map-head{display:flex;justify-content:space-between;align-items:center;font-size:10px;margin-bottom:7px}.map-close,.chat-close{background:transparent;color:#eaf2ed;border:0;font-size:17px}.map-canvas{display:block;width:min(100%,340px);aspect-ratio:1;margin:auto;border:1px solid #5f786d;image-rendering:pixelated}.map-note{font-size:8px;color:#b9ccc4;line-height:1.5;margin-top:7px;text-align:center}.chat-panel{position:absolute;left:8px;right:8px;bottom:calc(162px + env(safe-area-inset-bottom));z-index:23;border:2px solid #667f74;background:#0d1917f7;padding:8px;max-height:230px}.chat-head{display:flex;justify-content:space-between;align-items:center;font-size:8px;color:#c8d7d0;margin-bottom:5px}.chat-messages{height:120px;overflow:auto;border:1px solid #30483f;background:#07110f;padding:6px;font-size:8px;line-height:1.5}.chat-line{margin:0 0 2px}.chat-line b{color:#9ed6b5}.chat-entry{display:grid;grid-template-columns:1fr 52px;gap:5px;margin-top:6px}.chat-entry input{min-width:0;height:34px;border:1px solid #425d52;background:#10201c;color:#eef5f0;padding:0 7px}.chat-entry button{border:1px solid #71887f;background:#244339;color:#fff}.death{position:absolute;inset:102px 0 0;z-index:30;display:flex;align-items:center;justify-content:center;background:#050807dc}.deathbox{border:2px solid #7e5555;background:#180e0e;padding:18px;text-align:center;width:min(82%,310px)}.deathbox h2{font-size:20px;margin:0 0 7px;color:#e1aaaa}.deathbox p{font-size:9px;color:#c7aaaa}.respawn{height:44px;width:100%;border:1px solid #966c67;background:#3b2222;color:#eee;font-weight:800}.footer-note{position:absolute;left:50%;bottom:2px;transform:translateX(-50%);z-index:8;font-size:5px;color:#8ca098;white-space:nowrap;pointer-events:none}@media(max-height:700px){.quest,.players{display:none}.chat-toggle,.map-toggle{bottom:145px}.inventory{bottom:7px}.joystick{width:112px;height:112px}.stick{left:31px;top:31px}.actions{bottom:17px}}
+</style>
+<script src="survival-config.js"></script>
+</head>
+<body>
+<div class="app">
+<section id="gate" class="gate">
+  <div class="gate-card">
+    <div class="sprite-hero" aria-hidden="true"></div>
+    <div class="brand">ABYSSAL<br>WAKE</div>
+    <div class="subtitle">MIREWOOD ISLE · DAYLIGHT ARRIVAL<br>REST AT CAMP. TALK. CRAFT. LEAVE WHEN READY.</div>
+    <input id="name" class="name" maxlength="16" autocomplete="nickname" placeholder="SURVIVOR NAME">
+    <button id="enter" class="enter" type="button">ENTER SAFE CAMP</button>
+    <div id="setup" class="setup hidden">The world is not ready yet.</div>
+    <div class="note">Safe Camp · no monsters · no PvP · recovery · starter supplies</div>
+  </div>
+</section>
+<section id="game" class="game hidden">
+  <header class="top">
+    <div class="portrait" aria-hidden="true"></div>
+    <div class="bars">
+      <div class="bar"><span>HP</span><div class="meter"><div id="hpFill" class="fill hp"></div></div><b id="hpVal">100</b></div>
+      <div class="bar"><span>FOOD</span><div class="meter"><div id="hungerFill" class="fill hunger"></div></div><b id="hungerVal">100</b></div>
+      <div class="bar"><span>MIND</span><div class="meter"><div id="sanityFill" class="fill sanity"></div></div><b id="sanityVal">100</b></div>
+    </div>
+    <div class="netgrid">
+      <div class="metric"><small>PING</small><b id="ping">--</b></div>
+      <div class="metric"><small>JITTER</small><b id="jitter">--</b></div>
+      <div class="metric"><small>SYNC LOSS</small><b id="loss">0%</b></div>
+      <div class="metric"><small>AREA</small><b id="zone">CAMP</b></div>
+    </div>
+  </header>
+  <div class="arena-wrap"><canvas id="canvas" class="arena" width="360" height="640"></canvas></div>
+  <div id="connection" class="connection reconnect">CONNECTING</div>
+  <div id="campBadge" class="camp-badge">☀ SAFE CAMP</div>
+  <div id="online" class="online">ONLINE 1</div>
+  <div id="dayBadge" class="day-badge">☀ DAY</div>
+  <div id="toast" class="toast"></div>
+  <div class="quest"><small>STARTING OUT</small><b id="questText">Find the Camp Guide.</b></div>
+  <div class="players"><h3>NEARBY SURVIVORS</h3><div id="playerList"></div></div>
+  <button id="chatToggle" class="chat-toggle" type="button">CHAT</button>
+  <button id="mapToggle" class="map-toggle" type="button">MAP</button>
+  <div id="chatPanel" class="chat-panel hidden">
+    <div class="chat-head"><b>WORLD CHAT</b><button id="chatClose" class="chat-close" type="button">×</button></div>
+    <div id="chatMessages" class="chat-messages"></div>
+    <div class="chat-entry"><input id="chatInput" maxlength="80" placeholder="Say something…"><button id="chatSend" type="button">SEND</button></div>
+  </div>
+  <div id="mapPanel" class="map-panel hidden">
+    <div class="map-head"><b>MIREWOOD WORLD MAP</b><button id="mapClose" class="map-close" type="button">×</button></div>
+    <canvas id="mapCanvas" class="map-canvas" width="300" height="300"></canvas>
+    <div class="map-note">Yellow = you · green = nearby survivors · pale ring = Safe Camp</div>
+  </div>
+  <div id="joystick" class="joystick"><div id="stick" class="stick"></div></div>
+  <div class="actions">
+    <button id="useBtn" class="act use" type="button">USE</button>
+    <button id="dashBtn" class="act dash" type="button">DASH</button>
+    <button id="attackBtn" class="act attack" type="button">ATTACK</button>
+  </div>
+  <div class="inventory">
+    <div class="slot">🪵<small id="wood">0</small></div>
+    <div class="slot">🪨<small id="stone">0</small></div>
+    <div class="slot">🍖<small id="food">0</small></div>
+    <div class="slot">◈<small id="shard">0</small></div>
+  </div>
+  <div id="craftPanel" class="panel hidden">
+    <h2>CAMP WORKBENCH</h2>
+    <div style="font-size:8px;color:#aec3ba;margin-bottom:7px">Prepare here before leaving the warded camp.</div>
+    <div class="recipe"><span>Bone Knife · 4 wood + 3 stone</span><button data-craft="knife">CRAFT</button></div>
+    <div class="recipe"><span>Lantern · 3 wood + 2 shard</span><button data-craft="lantern">CRAFT</button></div>
+    <div class="recipe"><span>Field Meal · 2 food</span><button data-craft="meal">EAT</button></div>
+    <div class="recipe"><span>Close</span><button id="closeCraft">CLOSE</button></div>
+  </div>
+  <div id="death" class="death hidden"><div class="deathbox"><h2>THE ABYSS TOOK YOU</h2><p>You wake back at camp. Some supplies are gone.</p><button id="respawn" class="respawn" type="button">RETURN TO CAMP</button></div></div>
+  <div class="footer-note">SAFE CAMP · SPRITE ANIMATION · ZONED REALTIME · INTERPOLATED MOVEMENT</div>
+</section>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="game-core.js?v=7"></script>
+<script src="game-play.js?v=7"></script>
+<script src="game-render.js?v=7"></script>
+<script src="game-v7-patch.js?v=7"></script>
+<script src="mobile-fixes.js?v=7"></script>
+</body>
+</html>
