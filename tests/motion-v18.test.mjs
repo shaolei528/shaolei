@@ -112,9 +112,34 @@ assert.ok(Math.abs(p60-p120)<0.01,`60/120Hz local distance diverged: ${p60} vs $
 
 {
   const h=makeHarness();
+  const delayed=[[0,0],[320,32],[690,69],[1040,104]];
+  let i=0;
+  let lastX=-Infinity;
+  for(let t=0;t<=1250;t+=1000/60){
+    h.setNow(t);
+    while(i<delayed.length&&delayed[i][0]<=t){
+      const [at,x]=delayed[i++];
+      h.setNow(at);
+      h.sandbox.onMove({id:'remote-lag',zone:'1:1',x,y:0,dir:0,seq:i});
+      h.setNow(t);
+    }
+    h.sandbox.draw();
+    const remote=h.sandbox.remotes.get('remote-lag');
+    if(remote){
+      assert.ok(Number.isFinite(remote.x),'high-latency simulation produced non-finite position');
+      assert.ok(remote.x+0.001>=lastX,`high-latency interpolation moved backwards: ${lastX} -> ${remote.x}`);
+      lastX=remote.x;
+    }
+  }
+  const remote=h.sandbox.remotes.get('remote-lag');
+  assert.ok(remote.x<=112,'high-latency extrapolation exceeded the 80ms safety cap');
+}
+
+{
+  const h=makeHarness();
   h.setNow(0);
   h.sandbox.onMove({id:'self',zone:'1:1',x:999,y:999,seq:1});
   assert.equal(h.sandbox.remotes.has('self'),false,'self move must never create a remote correction target');
 }
 
-console.log(JSON.stringify({ok:true,p30,p60,p120,mode:'client-prediction',remote:'snapshot-buffer'}));
+console.log(JSON.stringify({ok:true,p30,p60,p120,mode:'client-prediction',remote:'snapshot-buffer',highLatency:'simulated-pass'}));
