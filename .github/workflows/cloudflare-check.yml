@@ -7,7 +7,9 @@ on:
       - 'survival-v17.html'
       - 'network-relay-v16.js'
       - 'smooth-motion-v18.js'
+      - 'platform-inventory-v19.js'
       - 'tests/motion-v18.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
       - 'game-render.js'
       - 'game-play.js'
       - 'render-v9.js'
@@ -21,7 +23,9 @@ on:
       - 'survival-v17.html'
       - 'network-relay-v16.js'
       - 'smooth-motion-v18.js'
+      - 'platform-inventory-v19.js'
       - 'tests/motion-v18.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
       - 'game-render.js'
       - 'game-play.js'
       - 'render-v9.js'
@@ -43,6 +47,8 @@ jobs:
         run: node --check network-relay-v16.js
       - name: Check motion pipeline syntax
         run: node --check smooth-motion-v18.js
+      - name: Check cross-platform inventory syntax
+        run: node --check platform-inventory-v19.js
       - name: Check gameplay/render syntax
         run: |
           node --check game-play.js
@@ -50,6 +56,8 @@ jobs:
           node --check render-v9.js
       - name: Motion prediction regression test
         run: node tests/motion-v18.test.mjs
+      - name: Cross-platform inventory regression test
+        run: node tests/platform-inventory-v19.test.mjs
       - name: Check V17 boot syntax
         run: |
           python - <<'PY'
@@ -62,6 +70,8 @@ jobs:
           Path('/tmp/v17-boot.js').write_text(match.group(1))
           if 'smooth-motion-v18.js' not in text:
               raise SystemExit('V17 motion module missing')
+          if 'platform-inventory-v19.js' not in text:
+              raise SystemExit('V17 platform inventory module missing')
           if "const VER='17g'" not in text:
               raise SystemExit('V17g cache key missing')
           PY
