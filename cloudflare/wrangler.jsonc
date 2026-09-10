@@ -2,6 +2,8 @@
   "name": "abyssal-wake-relay",
   "main": "src/index.js",
   "compatibility_date": "2026-09-10",
+  "workers_dev": true,
+  "preview_urls": false,
   "durable_objects": {
     "bindings": [
       {
