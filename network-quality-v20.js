@@ -56,14 +56,14 @@ function summarize(values,outcomes=[],fallbackLoss=0){
 function qualityFor(stats,connected=true){
   if(!connected)return ['重新连接','reconnect'];
   if(!stats||stats.samples<MIN_STABLE_SAMPLES)return ['测量中','reconnect'];
-  if(stats.median<180&&stats.p90<330&&stats.jitter<90&&stats.loss<.06)return ['良好','good'];
-  if(stats.median<330&&stats.p90<700&&stats.jitter<180&&stats.loss<.15)return ['一般','fair'];
+  if(stats.median<180&&stats.p90<330&&stats.latest<450&&stats.jitter<90&&stats.loss<.06)return ['良好','good'];
+  if(stats.median<330&&stats.p90<700&&stats.latest<1200&&stats.jitter<180&&stats.loss<.15)return ['一般','fair'];
   return ['较差','poor'];
 }
 function intervalFor(stats){
   if(!stats||stats.samples<MIN_STABLE_SAMPLES)return .20;
-  if(stats.median<180&&stats.p90<330&&stats.jitter<90&&stats.loss<.06)return .14;
-  if(stats.median<330&&stats.p90<700&&stats.jitter<180&&stats.loss<.15)return .20;
+  if(stats.median<180&&stats.p90<330&&stats.latest<450&&stats.jitter<90&&stats.loss<.06)return .14;
+  if(stats.median<330&&stats.p90<700&&stats.latest<1200&&stats.jitter<180&&stats.loss<.15)return .20;
   return .32;
 }
 function hzForInterval(seconds){return seconds>0?1/seconds:0;}
@@ -133,7 +133,7 @@ function appendDiagnostics(stats){
     'RTT 样本: '+stats.samples,
     '说明: 主界面显示中位 RTT；最新/P90 保留在这里用于识别尖峰。'
   ].join('\n');
-  el.textContent=base+DIAG_MARKER+extra.slice('V20 稳健网络统计'.length);
+  el.textContent=base+'\n'+extra;
 }
 
 if(originalConnectionQuality){
