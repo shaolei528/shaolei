@@ -1,0 +1,34 @@
+name: relay-check
+
+on:
+  push:
+    paths:
+      - 'relay/**'
+      - 'network-relay-v16.js'
+      - 'survival-v16.html'
+      - '.github/workflows/relay-check.yml'
+  pull_request:
+    paths:
+      - 'relay/**'
+      - 'network-relay-v16.js'
+      - 'survival-v16.html'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check client syntax
+        run: node --check network-relay-v16.js
+      - name: Install relay dependencies
+        working-directory: relay
+        run: npm install --omit=dev
+      - name: Check relay syntax
+        working-directory: relay
+        run: node --check server.js && node --check smoke-test.js
+      - name: Run two-client relay smoke test
+        working-directory: relay
+        run: npm test
