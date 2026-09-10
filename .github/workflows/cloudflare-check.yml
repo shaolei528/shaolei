@@ -45,3 +45,9 @@ jobs:
       - name: Validate Worker bundle
         working-directory: cloudflare
         run: npm run check
+      - name: External production health check
+        run: |
+          set -euxo pipefail
+          curl --fail-with-body --show-error --location --connect-timeout 10 --max-time 20 \
+            -H 'Accept: application/json' \
+            https://abyssal-wake-relay.zuoranzhang.workers.dev/health
