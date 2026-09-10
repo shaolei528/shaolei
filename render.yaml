@@ -3,6 +3,7 @@ services:
     name: abyssal-wake-relay
     runtime: node
     rootDir: relay
+    region: singapore
     plan: free
     buildCommand: npm install --omit=dev
     startCommand: npm start
