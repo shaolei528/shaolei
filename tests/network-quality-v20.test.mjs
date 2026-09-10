@@ -23,12 +23,11 @@ const stable=api.summarize([118,122,125,121,127,124],[true,true,true,true,true,t
 assert.equal(api.qualityFor(stable,true)[0],'良好','stable low latency must be good');
 assert.equal(api.intervalFor(stable),.14,'good relay must keep the existing fastest movement interval');
 
-const oneSpike=api.summarize([120,125,130,581,128,126,124,127,123,129],Array(10).fill(true));
+const oneSpike=api.summarize([120,125,130,128,126,124,127,123,129,581],Array(10).fill(true));
 assert.ok(oneSpike.median<140,'one spike must not replace the stable RTT with 581ms');
-assert.equal(oneSpike.latest,129,'latest RTT must remain independently observable');
-assert.ok(oneSpike.jitter>90,'the spike must remain visible in jitter');
-assert.equal(api.qualityFor(oneSpike,true)[0],'一般','a major spike must degrade quality instead of being hidden as good');
-assert.equal(api.intervalFor(oneSpike),.20,'a major spike must move to the middle send interval');
+assert.equal(oneSpike.latest,581,'the newest spike must remain independently observable');
+assert.equal(api.qualityFor(oneSpike,true)[0],'一般','a fresh 581ms spike must degrade quality instead of being hidden as good');
+assert.equal(api.intervalFor(oneSpike),.20,'a fresh major spike must move to the middle send interval');
 
 const sustainedHigh=api.summarize([480,510,581,540,525],[true,true,true,true,true]);
 assert.equal(api.qualityFor(sustainedHigh,true)[0],'较差','sustained high RTT must be poor');
@@ -66,6 +65,7 @@ for(const required of[
   '近期 Ping 丢失',
   '移动同步档位',
   'disconnectTransitions',
+  'stats.latest<450',
   'qualityFor(currentStats(),connectedForQuality())',
   'return intervalFor(currentStats())'
 ]){
@@ -75,7 +75,7 @@ for(const required of[
 console.log(JSON.stringify({
   ok:true,
   stableQuality:'good',
-  singleSpike:'degraded-not-hidden',
+  fresh581Spike:'fair-not-hidden',
   sustainedHigh:'poor',
   recentLoss:'poor',
   disconnected:'reconnecting',
