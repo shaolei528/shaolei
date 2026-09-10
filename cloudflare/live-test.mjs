@@ -7,9 +7,9 @@ const ZONE = 'abyssal-wake-public-v1:zone:1:1';
 const runId = Date.now().toString(36);
 
 class Client {
-  constructor(name) {
+  constructor(name, id = null) {
     this.name = name;
-    this.id = `${name}-${runId}`;
+    this.id = id || `${name}-${runId}`;
     this.ws = null;
     this.messages = [];
     this.waiters = [];
@@ -62,37 +62,73 @@ class Client {
     });
   }
 
+  clearMessages() {
+    this.messages.length = 0;
+  }
+
+  closeAndWait(timeoutMs = 5000) {
+    return new Promise(resolve => {
+      if (!this.ws || this.ws.readyState === WebSocket.CLOSED) return resolve();
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        resolve();
+      };
+      this.ws.once('close', finish);
+      try { this.ws.close(); } catch { finish(); }
+      setTimeout(finish, timeoutMs);
+    });
+  }
+
   close() {
     try { this.ws?.close(); } catch {}
   }
 }
 
+function ids(entries) {
+  return new Set((entries || []).map(x => x?.id));
+}
+
 function hasBoth(entries, a, b) {
-  const ids = new Set((entries || []).map(x => x?.id));
-  return ids.has(a) && ids.has(b);
+  const set = ids(entries);
+  return set.has(a) && set.has(b);
+}
+
+function hasAWithoutB(entries, a, b) {
+  const set = ids(entries);
+  return set.has(a) && !set.has(b);
+}
+
+async function hello(client, displayName) {
+  client.send({ type: 'hello', sessionId: client.id, name: displayName, protocol: PROTOCOL });
+  await client.waitFor(m => m.type === 'hello_ack' && m.protocol === PROTOCOL, 'hello_ack');
+}
+
+async function subscribeAndTrackGlobal(client, displayName) {
+  client.send({ type: 'subscribe', channel: GLOBAL });
+  await client.waitFor(m => m.type === 'subscribed' && m.channel === GLOBAL, 'global subscribed');
+  client.send({ type: 'track', channel: GLOBAL, meta: { id: client.id, name: displayName, zone: '1:1' } });
+}
+
+async function subscribeAndTrackZone(client, displayName, x) {
+  client.send({ type: 'subscribe', channel: ZONE });
+  await client.waitFor(m => m.type === 'subscribed' && m.channel === ZONE, 'zone subscribed');
+  client.send({ type: 'track', channel: ZONE, meta: { id: client.id, name: displayName, x, y: 2470 } });
 }
 
 const a = new Client('liveA');
 const b = new Client('liveB');
+let bReconnect = null;
 
 try {
   await Promise.all([a.connect(), b.connect()]);
+  await Promise.all([hello(a, 'Live A'), hello(b, 'Live B')]);
 
-  a.send({ type: 'hello', sessionId: a.id, name: 'Live A', protocol: PROTOCOL });
-  b.send({ type: 'hello', sessionId: b.id, name: 'Live B', protocol: PROTOCOL });
   await Promise.all([
-    a.waitFor(m => m.type === 'hello_ack' && m.protocol === PROTOCOL, 'hello_ack'),
-    b.waitFor(m => m.type === 'hello_ack' && m.protocol === PROTOCOL, 'hello_ack')
+    subscribeAndTrackGlobal(a, 'Live A'),
+    subscribeAndTrackGlobal(b, 'Live B')
   ]);
-
-  a.send({ type: 'subscribe', channel: GLOBAL });
-  b.send({ type: 'subscribe', channel: GLOBAL });
-  await Promise.all([
-    a.waitFor(m => m.type === 'subscribed' && m.channel === GLOBAL, 'global subscribed'),
-    b.waitFor(m => m.type === 'subscribed' && m.channel === GLOBAL, 'global subscribed')
-  ]);
-  a.send({ type: 'track', channel: GLOBAL, meta: { id: a.id, name: 'Live A', zone: '1:1' } });
-  b.send({ type: 'track', channel: GLOBAL, meta: { id: b.id, name: 'Live B', zone: '1:1' } });
   await Promise.all([
     a.waitFor(m => m.type === 'presence_snapshot' && m.channel === GLOBAL && hasBoth(m.entries, a.id, b.id), 'global presence=2'),
     b.waitFor(m => m.type === 'presence_snapshot' && m.channel === GLOBAL && hasBoth(m.entries, a.id, b.id), 'global presence=2')
@@ -102,29 +138,79 @@ try {
   a.send({ type: 'broadcast', channel: GLOBAL, event: 'chat', payload: { id: a.id, name: 'Live A', text: chatToken } });
   await b.waitFor(m => m.type === 'broadcast' && m.channel === GLOBAL && m.event === 'chat' && m.payload?.text === chatToken, 'chat A->B');
 
-  a.send({ type: 'subscribe', channel: ZONE });
-  b.send({ type: 'subscribe', channel: ZONE });
   await Promise.all([
-    a.waitFor(m => m.type === 'subscribed' && m.channel === ZONE, 'zone subscribed'),
-    b.waitFor(m => m.type === 'subscribed' && m.channel === ZONE, 'zone subscribed')
+    subscribeAndTrackZone(a, 'Live A', 2400),
+    subscribeAndTrackZone(b, 'Live B', 2420)
   ]);
-  a.send({ type: 'track', channel: ZONE, meta: { id: a.id, name: 'Live A', x: 2400, y: 2470 } });
-  b.send({ type: 'track', channel: ZONE, meta: { id: b.id, name: 'Live B', x: 2420, y: 2470 } });
   await Promise.all([
     a.waitFor(m => m.type === 'presence_snapshot' && m.channel === ZONE && hasBoth(m.entries, a.id, b.id), 'zone presence=2'),
     b.waitFor(m => m.type === 'presence_snapshot' && m.channel === ZONE && hasBoth(m.entries, a.id, b.id), 'zone presence=2')
   ]);
 
-  const seq = 777;
-  a.send({ type: 'broadcast', channel: ZONE, event: 'move', payload: { id: a.id, x: 2450, y: 2470, dir: 0, seq } });
-  await b.waitFor(m => m.type === 'broadcast' && m.channel === ZONE && m.event === 'move' && m.payload?.seq === seq, 'move A->B');
+  const seqA = 777;
+  a.send({ type: 'broadcast', channel: ZONE, event: 'move', payload: { id: a.id, zone: '1:1', x: 2450, y: 2470, dir: 0, seq: seqA } });
+  await b.waitFor(m => m.type === 'broadcast' && m.channel === ZONE && m.event === 'move' && m.payload?.id === a.id && m.payload?.seq === seqA, 'move A->B');
+
+  const seqB = 778;
+  b.send({ type: 'broadcast', channel: ZONE, event: 'move', payload: { id: b.id, zone: '1:1', x: 2440, y: 2480, dir: 3.14, seq: seqB } });
+  await a.waitFor(m => m.type === 'broadcast' && m.channel === ZONE && m.event === 'move' && m.payload?.id === b.id && m.payload?.seq === seqB, 'move B->A');
+
+  a.send({
+    type: 'broadcast', channel: ZONE, event: 'attack',
+    payload: { id: a.id, name: 'Live A', x: 2450, y: 2470, dir: 0, range: 62, damage: 11, zone: '1:1' }
+  });
+  await b.waitFor(m => m.type === 'broadcast' && m.channel === ZONE && m.event === 'attack' && m.payload?.id === a.id && m.payload?.damage === 11, 'attack sync');
+
+  const mobId = `mob-${runId}`;
+  a.send({
+    type: 'broadcast', channel: ZONE, event: 'mobs',
+    payload: { zone: '1:1', mobs: [{ id: mobId, kind: 'crawler', x: 2520, y: 2500, hp: 58, phase: 0, respawnAt: 0 }] }
+  });
+  await b.waitFor(m => m.type === 'broadcast' && m.channel === ZONE && m.event === 'mobs' && m.payload?.mobs?.[0]?.id === mobId, 'monster state sync');
+
+  const resourceId = `resource-${runId}`;
+  const until = Date.now() + 60000;
+  a.send({ type: 'broadcast', channel: ZONE, event: 'harvest', payload: { zone: '1:1', rid: resourceId, until } });
+  await b.waitFor(m => m.type === 'broadcast' && m.channel === ZONE && m.event === 'harvest' && m.payload?.rid === resourceId, 'resource state sync');
 
   const pingId = `p-${runId}`;
   a.send({ type: 'ping', id: pingId });
   await a.waitFor(m => m.type === 'pong' && m.id === pingId, 'pong');
 
-  console.log('LIVE RELAY PASS: hello + global presence2 + chat + zone presence2 + move + ping');
+  a.clearMessages();
+  await b.closeAndWait();
+  await a.waitFor(m => m.type === 'presence_snapshot' && m.channel === GLOBAL && hasAWithoutB(m.entries, a.id, b.id), 'global presence after B exit');
+  await a.waitFor(m => m.type === 'presence_snapshot' && m.channel === ZONE && hasAWithoutB(m.entries, a.id, b.id), 'zone presence after B exit');
+
+  bReconnect = new Client('liveB-reconnect', b.id);
+  await bReconnect.connect();
+  await hello(bReconnect, 'Live B');
+  await subscribeAndTrackGlobal(bReconnect, 'Live B');
+  await subscribeAndTrackZone(bReconnect, 'Live B', 2430);
+
+  a.clearMessages();
+  bReconnect.clearMessages();
+  a.send({ type: 'track', channel: GLOBAL, meta: { id: a.id, name: 'Live A', zone: '1:1' } });
+  a.send({ type: 'track', channel: ZONE, meta: { id: a.id, name: 'Live A', x: 2450, y: 2470 } });
+  await Promise.all([
+    a.waitFor(m => m.type === 'presence_snapshot' && m.channel === GLOBAL && hasBoth(m.entries, a.id, b.id), 'global presence=2 after reconnect'),
+    a.waitFor(m => m.type === 'presence_snapshot' && m.channel === ZONE && hasBoth(m.entries, a.id, b.id), 'zone presence=2 after reconnect')
+  ]);
+
+  const worldMobId = `world-mob-${runId}`;
+  a.send({
+    type: 'broadcast', channel: ZONE, event: 'world',
+    payload: { zone: '1:1', mobs: [{ id: worldMobId, kind: 'crawler', x: 2500, y: 2500, hp: 58, phase: 0, respawnAt: 0 }], harvested: [[resourceId, until]] }
+  });
+  await bReconnect.waitFor(m => m.type === 'broadcast' && m.channel === ZONE && m.event === 'world' && m.payload?.mobs?.[0]?.id === worldMobId && m.payload?.harvested?.[0]?.[0] === resourceId, 'world state delivery after reconnect');
+
+  const reconnectSeq = 779;
+  bReconnect.send({ type: 'broadcast', channel: ZONE, event: 'move', payload: { id: b.id, zone: '1:1', x: 2460, y: 2490, dir: 1.57, seq: reconnectSeq } });
+  await a.waitFor(m => m.type === 'broadcast' && m.channel === ZONE && m.event === 'move' && m.payload?.id === b.id && m.payload?.seq === reconnectSeq, 'move after reconnect');
+
+  console.log('LIVE RELAY PASS: A/B connect + online2 + chat + bidirectional move + attack + mobs + resource + exit presence + reconnect + world delivery + ping');
 } finally {
   a.close();
   b.close();
+  bReconnect?.close();
 }
