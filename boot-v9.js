@@ -157,6 +157,8 @@
 
     if(BOOT.loading){
       BOOT.requested = true;
+      setBusy(true);
+      setStatus('Loading Mirewood…');
       return;
     }
 
