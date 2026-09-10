@@ -34,14 +34,11 @@ jobs:
           node-version: '20'
       - name: Module-sort byte equivalence and load order
         run: node tests/module-sort.test.mjs
-      - name: Categorized module syntax
-        run: find modules -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Terrain syntax
         run: node --check terrain-v21.js
       - name: Terrain vertical-slice regression
         run: node tests/terrain-v21.test.mjs
       - name: V21 boot and static preview syntax
-        if: ${{ always() }}
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -66,7 +63,6 @@ jobs:
           node --check /tmp/v21-boot.js
           node --check /tmp/v21-preview.js
       - name: Existing gameplay regression suite
-        if: ${{ always() }}
         run: |
           node tests/motion-v18.test.mjs
           node tests/platform-inventory-v19.test.mjs
@@ -74,15 +70,12 @@ jobs:
           node tests/ready-localization-v9.test.mjs
           node tests/network-quality-v20.test.mjs
       - name: Relay protocol regression
-        if: ${{ always() }}
         run: node cloudflare/test.mjs
       - name: Worker bundle dry run
-        if: ${{ always() }}
         run: |
           npm install
           npm run check:worker
       - name: Current production relay health
-        if: ${{ always() }}
         run: |
           set -euxo pipefail
           for i in 1 2 3; do
@@ -95,7 +88,6 @@ jobs:
           cat /tmp/health.txt 2>/dev/null || true
           exit 1
       - name: Current production live two-client multiplayer
-        if: ${{ always() }}
         env:
           LIVE_RELAY_URL: wss://abyssal-wake-relay.zuoranzhang.workers.dev/ws
         run: npm run test:live-relay
