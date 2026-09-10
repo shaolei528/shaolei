@@ -1,0 +1,23 @@
+{
+  "name": "abyssal-wake-relay",
+  "main": "cloudflare/src/index.js",
+  "compatibility_date": "2026-09-10",
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WORLD",
+        "class_name": "GameWorld"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["GameWorld"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
