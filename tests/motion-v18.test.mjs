@@ -15,35 +15,36 @@ function makeHarness(){
     clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
     me:{x:0,y:0,dir:0},
     camera:{x:0,y:0},
-    remotes:new Map(),
-    joystick:{x:1,y:0},
-    update(dt){
-      this.me.x+=100*dt;
-      for(const r of this.remotes.values()){
-        r.x=r.x+(r.tx-r.x)*.19;
-        r.y=r.y+(r.ty-r.y)*.19;
-      }
-    },
-    draw(){},
-    onMove(payload){
-      if(!payload||payload.id==='self'||payload.zone!=='1:1')return;
-      let r=this.remotes.get(payload.id);
-      if(!r){
-        r={id:payload.id,x:Number(payload.x)||0,y:Number(payload.y)||0,tx:Number(payload.x)||0,ty:Number(payload.y)||0,dir:0,moving:false};
-        this.remotes.set(payload.id,r);
-      }
-      r.tx=Number(payload.x)||0;
-      r.ty=Number(payload.y)||0;
-      r.dir=Number(payload.dir)||0;
+    remotes:new Map()
+  };
+
+  sandbox.update=function(dt){
+    sandbox.me.x+=100*dt;
+    for(const r of sandbox.remotes.values()){
+      r.x=r.x+(r.tx-r.x)*.19;
+      r.y=r.y+(r.ty-r.y)*.19;
     }
   };
+  sandbox.draw=function(){};
+  sandbox.onMove=function(payload){
+    if(!payload||payload.id==='self'||payload.zone!=='1:1')return;
+    let r=sandbox.remotes.get(payload.id);
+    if(!r){
+      r={id:payload.id,x:Number(payload.x)||0,y:Number(payload.y)||0,tx:Number(payload.x)||0,ty:Number(payload.y)||0,dir:0,moving:false};
+      sandbox.remotes.set(payload.id,r);
+    }
+    r.tx=Number(payload.x)||0;
+    r.ty=Number(payload.y)||0;
+    r.dir=Number(payload.dir)||0;
+  };
+
   sandbox.window=sandbox;
   vm.createContext(sandbox);
   vm.runInContext(source,sandbox,{filename:'smooth-motion-v18.js'});
   return {
     sandbox,
     setNow(v){now=v;},
-    advance(ms){now+=ms; sandbox.draw(); return now;}
+    advance(ms){now+=ms;sandbox.draw();return now;}
   };
 }
 
@@ -89,9 +90,7 @@ assert.ok(Math.abs(p60-p120)<0.01,`60/120Hz local distance diverged: ${p60} vs $
 
 {
   const h=makeHarness();
-  const arrivals=[
-    [0,0],[70,7],[190,19],[260,26],[410,41],[500,50]
-  ];
+  const arrivals=[[0,0],[70,7],[190,19],[260,26],[410,41],[500,50]];
   let arrivalIndex=0;
   let lastX=-Infinity;
   for(let t=0;t<=650;t+=1000/60){
