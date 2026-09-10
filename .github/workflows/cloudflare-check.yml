@@ -4,10 +4,16 @@ on:
   push:
     paths:
       - 'cloudflare/**'
+      - 'survival-v17.html'
+      - 'network-relay-v16.js'
+      - 'survival-config.js'
       - '.github/workflows/cloudflare-check.yml'
   pull_request:
     paths:
       - 'cloudflare/**'
+      - 'survival-v17.html'
+      - 'network-relay-v16.js'
+      - 'survival-config.js'
 
 jobs:
   test:
@@ -19,6 +25,20 @@ jobs:
           node-version: '20'
       - name: Protocol test
         run: node cloudflare/test.mjs
+      - name: Check relay client syntax
+        run: node --check network-relay-v16.js
+      - name: Check V17 boot syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          text = Path('survival-v17.html').read_text()
+          match = re.search(r'<script>([\s\S]*?)</script>', text)
+          if not match:
+              raise SystemExit('V17 inline boot script not found')
+          Path('/tmp/v17-boot.js').write_text(match.group(1))
+          PY
+          node --check /tmp/v17-boot.js
       - name: Install Cloudflare toolchain
         working-directory: cloudflare
         run: npm install
