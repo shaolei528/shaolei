@@ -11,6 +11,7 @@
   let fireCooldownUntil=0;
   let dialogOpen=false;
   let lastChatAt=0;
+  let chatFlushing=false;
 
   function safeStop(){
     try{ stopJoy(); }catch{}
@@ -156,18 +157,22 @@
 
   function interactionTarget(){
     if(!started||dead||dialogOpen)return null;
-    const list=[];
     if(inCamp()){
-      list.push({type:'guide',d:Math.hypot(me.x-GUIDE.x,me.y-GUIDE.y),label:'【互动】与营地向导交谈'});
-      list.push({type:'fire',d:Math.hypot(me.x-FIRE.x,me.y-FIRE.y),label:'【互动】在篝火旁休息'});
-      list.push({type:'workbench',d:Math.hypot(me.x-WORKBENCH.x,me.y-WORKBENCH.y),label:'【互动】使用工作台'});
-      const left=(harvested.get(CHEST.id)||0)-Date.now();
-      list.push({type:'chest',d:Math.hypot(me.x-CHEST.x,me.y-CHEST.y),label:left>0?`共享宝箱刷新中 · ${Math.ceil(left/1000)}秒`:'【互动】打开共享宝箱'});
+      const guideD=Math.hypot(me.x-GUIDE.x,me.y-GUIDE.y);
+      if(guideD<=92)return{type:'guide',d:guideD,label:'【互动】与营地向导交谈'};
+      const workbenchD=Math.hypot(me.x-WORKBENCH.x,me.y-WORKBENCH.y);
+      if(workbenchD<=92)return{type:'workbench',d:workbenchD,label:'【互动】使用工作台'};
+      const chestD=Math.hypot(me.x-CHEST.x,me.y-CHEST.y);
+      if(chestD<=92){
+        const left=(harvested.get(CHEST.id)||0)-Date.now();
+        return{type:'chest',d:chestD,label:left>0?`共享宝箱刷新中 · ${Math.ceil(left/1000)}秒`:'【互动】打开共享宝箱'};
+      }
+      const fireD=Math.hypot(me.x-FIRE.x,me.y-FIRE.y);
+      if(fireD<=78)return{type:'fire',d:fireD,label:'【互动】在篝火旁休息'};
     }
     const nr=nearestResource();
-    if(nr)list.push({type:'resource',d:nr.d,label:`【互动】采集${ITEM_ZH[nr.resource.type]||'资源'}`,resource:nr.resource});
-    list.sort((a,b)=>a.d-b.d);
-    return list[0]&&list[0].d<=92?list[0]:null;
+    if(nr&&nr.d<=82)return{type:'resource',d:nr.d,label:`【互动】采集${ITEM_ZH[nr.resource.type]||'资源'}`,resource:nr.resource};
+    return null;
   }
 
   function harvestResource(r){
@@ -300,10 +305,15 @@
   }
 
   async function flushChat(){
-    if(!CHAT_QUEUE.length||!globalConnected||!globalCh)return;
-    while(CHAT_QUEUE.length&&globalConnected&&globalCh){
-      if(!(await transmitChat(CHAT_QUEUE[0])))break;
-      CHAT_QUEUE.shift();
+    if(chatFlushing||!CHAT_QUEUE.length||!globalConnected||!globalCh)return;
+    chatFlushing=true;
+    try{
+      while(CHAT_QUEUE.length&&globalConnected&&globalCh){
+        if(!(await transmitChat(CHAT_QUEUE[0])))break;
+        CHAT_QUEUE.shift();
+      }
+    }finally{
+      chatFlushing=false;
     }
   }
 
