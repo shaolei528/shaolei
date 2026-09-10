@@ -8,6 +8,7 @@ on:
       - 'network-relay-v16.js'
       - 'smooth-motion-v18.js'
       - 'platform-inventory-v19.js'
+      - 'regression-v14.js'
       - 'tests/motion-v18.test.mjs'
       - 'tests/platform-inventory-v19.test.mjs'
       - 'game-render.js'
@@ -24,6 +25,7 @@ on:
       - 'network-relay-v16.js'
       - 'smooth-motion-v18.js'
       - 'platform-inventory-v19.js'
+      - 'regression-v14.js'
       - 'tests/motion-v18.test.mjs'
       - 'tests/platform-inventory-v19.test.mjs'
       - 'game-render.js'
@@ -49,6 +51,8 @@ jobs:
         run: node --check smooth-motion-v18.js
       - name: Check cross-platform inventory syntax
         run: node --check platform-inventory-v19.js
+      - name: Check UI stability syntax
+        run: node --check regression-v14.js
       - name: Check gameplay/render syntax
         run: |
           node --check game-play.js
@@ -94,7 +98,7 @@ jobs:
           ]
           missing = [item for item in required if item not in text]
           if missing:
-              raise SystemExit('motion invariant missing: ' + ', '.join(missing))
+            raise SystemExit('motion invariant missing: ' + ', '.join(missing))
           PY
       - name: Validate root Worker bundle
         run: |
