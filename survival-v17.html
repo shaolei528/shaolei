@@ -4,245 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17382f">
-<title>深渊苏醒 — V17</title>
-<style>
-html,body{margin:0;width:100%;height:100%;display:grid;place-items:center;background:#07110f;color:#dce9e1;font:700 11px ui-monospace,monospace}.boot{padding:18px;border:1px solid #607b6e;background:#0d1b17;text-align:center;line-height:1.7;max-width:82%}.boot small{color:#a9bbb2;font-weight:500}
-</style>
+<title>深渊苏醒 — V17 Cloudflare</title>
+<style>html,body{margin:0;width:100%;height:100%;display:grid;place-items:center;background:#07110f;color:#dce9e1;font:700 11px ui-monospace,monospace}.boot{padding:18px;border:1px solid #607b6e;background:#0d1b17;text-align:center;line-height:1.7;max-width:82%}.boot small{color:#a9bbb2;font-weight:500}</style>
 </head>
 <body>
-<div class="boot" id="v17Boot">正在加载沼林岛…<br><small>正在准备 Cloudflare 公网多人世界。</small></div>
+<div class="boot" id="boot">正在加载沼林岛…<br><small>正在准备 Cloudflare 公网多人世界。</small></div>
 <script>
 (()=>{
-  'use strict';
-
-  const BOOT = {
-    uiReady:false,
-    depsReady:false,
-    depsLoading:false,
-    requested:false,
-    promise:null,
-    lastPointerUpAt:0,
-    timeoutMs:8000
-  };
-  window.ABYSSAL_BOOT_V17 = BOOT;
-
-  const v17Boot = document.getElementById('v17Boot');
-
-  function failScreen(text){
-    if(v17Boot){
-      v17Boot.innerHTML = text + '<br><small>请重新载入一次；如果仍失败，把截图发给我。</small>';
-    }
-  }
-
-  function loadScript(src, timeoutMs=BOOT.timeoutMs){
-    return new Promise((resolve,reject)=>{
-      const script=document.createElement('script');
-      let settled=false;
-      const timer=setTimeout(()=>finish(false,new Error('timeout: '+src)),timeoutMs);
-      function finish(ok,value){
-        if(settled)return;
-        settled=true;
-        clearTimeout(timer);
-        script.onload=null;
-        script.onerror=null;
-        if(ok)resolve(value);
-        else{script.remove();reject(value);}
-      }
-      script.src=src;
-      script.async=false;
-      script.onload=()=>finish(true,src);
-      script.onerror=()=>finish(false,new Error('failed: '+src));
-      document.head.appendChild(script);
-    });
-  }
-
-  async function loadRealtime(){
-    if(window.supabase?.createClient)return;
-    const mirrors=[
-      'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4',
-      'https://unpkg.com/@supabase/supabase-js@2.57.4'
-    ];
-    let lastError=null;
-    for(const src of mirrors){
-      try{
-        setStatus('正在连接多人世界…');
-        await loadScript(src,8000);
-        if(window.supabase?.createClient)return;
-      }catch(error){
-        lastError=error;
-      }
-    }
-    throw lastError||new Error('Realtime client unavailable');
-  }
-
-  function setStatus(text,error=false){
-    const setup=document.getElementById('setup');
-    if(!setup)return;
-    setup.classList.remove('hidden');
-    setup.textContent=text;
-    setup.style.color=error?'#efb1aa':'';
-  }
-
-  function setEnterBusy(busy){
-    const enter=document.getElementById('enter');
-    if(!enter)return;
-    if(!enter.dataset.v17Label)enter.dataset.v17Label=enter.textContent;
-    enter.disabled=!!busy;
-    enter.textContent=busy?'正在进入营地…':enter.dataset.v17Label;
-    enter.style.opacity=busy?'.78':'';
-  }
-
-  let enter=null;
-  let nameInput=null;
-
-  function removeEntryInterceptors(){
-    if(!enter)return;
-    enter.removeEventListener('pointerup',interceptPointerUp,true);
-    enter.removeEventListener('click',interceptClick,true);
-    nameInput?.removeEventListener('keydown',interceptKeyDown,true);
-  }
-
-  function handOffToExistingGame(){
-    if(!BOOT.depsReady)return;
-    removeEntryInterceptors();
-    setEnterBusy(false);
-    const setup=document.getElementById('setup');
-    if(setup)setup.classList.add('hidden');
-    if(BOOT.requested){
-      BOOT.requested=false;
-      queueMicrotask(()=>enter?.click());
-    }
-  }
-
-  async function loadExistingModules(){
-    if(BOOT.depsReady)return true;
-    if(BOOT.promise)return BOOT.promise;
-
-    BOOT.promise=(async()=>{
-      BOOT.depsLoading=true;
-      try{
-        if(!window.ABYSSAL_CONFIG){
-          await loadScript('./survival-config.js?v=17',5000);
-        }
-        await loadRealtime();
-
-        const files=[
-          './game-core.js?v=17',
-          './game-play.js?v=17',
-          './game-render.js?v=17',
-          './game-v7-patch.js?v=17',
-          './mobile-fixes.js?v=17',
-          './network-v9.js?v=17',
-          './gameplay-v9.js?v=17',
-          './content-v9.js?v=17',
-          './render-v9.js?v=17',
-          './optimize-v9.js?v=17',
-          './ux-cn-v11.js?v=17',
-          './interaction-v12.js?v=17',
-          './network-relay-v16.js?v=17',
-          './regression-v14.js?v=17'
-        ];
-
-        for(const file of files){
-          setStatus('正在加载游戏系统…');
-          await loadScript(file,8000);
-        }
-
-        BOOT.depsReady=true;
-        BOOT.depsLoading=false;
-        BOOT.promise=null;
-        handOffToExistingGame();
-        return true;
-      }catch(error){
-        console.error('[Abyssal V17 boot]',error);
-        BOOT.depsReady=false;
-        BOOT.depsLoading=false;
-        BOOT.promise=null;
-        BOOT.requested=false;
-        setEnterBusy(false);
-        setStatus('多人世界连接失败。请点击【进入安全营地】重试。',true);
-        return false;
-      }
-    })();
-
-    return BOOT.promise;
-  }
-
-  function requestEntry(event){
-    if(BOOT.depsReady)return;
-    event?.preventDefault?.();
-    event?.stopImmediatePropagation?.();
-    BOOT.requested=true;
-    setEnterBusy(true);
-    setStatus(BOOT.depsLoading?'正在加载游戏系统…':'正在准备安全营地…');
-    loadExistingModules();
-  }
-
-  function interceptPointerUp(event){
-    BOOT.lastPointerUpAt=performance.now();
-    requestEntry(event);
-  }
-  function interceptClick(event){
-    if(performance.now()-BOOT.lastPointerUpAt<650){
-      if(!BOOT.depsReady){
-        event.preventDefault();
-        event.stopImmediatePropagation();
-      }
-      return;
-    }
-    requestEntry(event);
-  }
-  function interceptKeyDown(event){
-    if(event.key==='Enter')requestEntry(event);
-  }
-
-  async function mountExistingUI(){
-    try{
-      const response=await fetch('./survival-v7.html?ui=17',{cache:'no-store'});
-      if(!response.ok)throw new Error('survival-v7.html '+response.status);
-      const source=await response.text();
-      const parsed=new DOMParser().parseFromString(source,'text/html');
-
-      parsed.querySelectorAll('script').forEach(node=>node.remove());
-
-      document.head.querySelectorAll('style[data-v17-old]').forEach(node=>node.remove());
-      const currentStyles=[...document.head.querySelectorAll('style')];
-      currentStyles.forEach(style=>style.setAttribute('data-v17-old','1'));
-
-      for(const style of parsed.head.querySelectorAll('style')){
-        document.head.appendChild(style.cloneNode(true));
-      }
-
-      document.body.innerHTML=parsed.body.innerHTML;
-
-      const entryBrand=document.querySelector('.brand'); if(entryBrand)entryBrand.innerHTML='深渊<br>苏醒';
-      const entrySub=document.querySelector('.subtitle'); if(entrySub)entrySub.innerHTML='沼林岛 · 白昼抵达<br>先在营地休息、聊天、制作装备，再一起探索。';
-      const entryName=document.getElementById('name'); if(entryName)entryName.placeholder='幸存者名字';
-      const entryBtn=document.getElementById('enter'); if(entryBtn)entryBtn.textContent='进入安全营地';
-      const entryNote=document.querySelector('.gate .note'); if(entryNote)entryNote.textContent='安全营地 · 无怪物 · 禁止 PvP · 可恢复 · 有新手物资';
-
-      enter=document.getElementById('enter');
-      nameInput=document.getElementById('name');
-      const gate=document.getElementById('gate');
-      if(!enter||!gate)throw new Error('entry DOM missing after UI mount');
-
-      BOOT.uiReady=true;
-
-      enter.addEventListener('pointerup',interceptPointerUp,{capture:true,passive:false});
-      enter.addEventListener('click',interceptClick,{capture:true,passive:false});
-      nameInput?.addEventListener('keydown',interceptKeyDown,{capture:true});
-
-      setTimeout(()=>{
-        if(!BOOT.depsReady&&!BOOT.depsLoading)loadExistingModules();
-      },400);
-
-    }catch(error){
-      console.error('[Abyssal V17 UI]',error);
-      failScreen('沼林岛界面加载失败');
-    }
-  }
-
-  mountExistingUI();
+'use strict';
+const VER='17c';
+const BOOT={depsReady:false,depsLoading:false,requested:false,promise:null,lastPointerUpAt:0,timeoutMs:8000};
+window.ABYSSAL_BOOT_V17=BOOT;
+const boot=document.getElementById('boot');
+let enter=null,nameInput=null;
+function failScreen(text){if(boot)boot.innerHTML=text+'<br><small>请重新载入一次；如果仍失败，把截图发给我。</small>';}
+function loadScript(src,timeoutMs=BOOT.timeoutMs){return new Promise((resolve,reject)=>{const s=document.createElement('script');let settled=false;const timer=setTimeout(()=>done(false,new Error('timeout: '+src)),timeoutMs);function done(ok,value){if(settled)return;settled=true;clearTimeout(timer);s.onload=s.onerror=null;if(ok)resolve(value);else{s.remove();reject(value);}}s.src=src;s.async=false;s.onload=()=>done(true,src);s.onerror=()=>done(false,new Error('failed: '+src));document.head.appendChild(s);});}
+function setStatus(text,error=false){const el=document.getElementById('setup');if(!el)return;el.classList.remove('hidden');el.textContent=text;el.style.color=error?'#efb1aa':'';}
+function setEnterBusy(busy){const el=document.getElementById('enter');if(!el)return;if(!el.dataset.v17Label)el.dataset.v17Label=el.textContent;el.disabled=!!busy;el.textContent=busy?'正在进入营地…':el.dataset.v17Label;el.style.opacity=busy?'.78':'';}
+function installRelayShim(){if(window.supabase?.createClient)return;const makeChannel=()=>{const ch={on(){return ch;},subscribe(cb){queueMicrotask(()=>cb?.('CHANNEL_ERROR'));return ch;},async track(){return 'error';},async send(){return 'error';},presenceState(){return{};},async unsubscribe(){return'ok';}};return ch;};window.supabase={__abyssalRelayShim:true,createClient:()=>({channel:makeChannel,removeChannel:async()=>{}})};}
+async function ensureRealtime(){if(window.ABYSSAL_CONFIG?.RELAY_URL){installRelayShim();return;}if(window.supabase?.createClient)return;const mirrors=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4','https://unpkg.com/@supabase/supabase-js@2.57.4'];let last=null;for(const src of mirrors){try{setStatus('正在连接备用多人线路…');await loadScript(src,8000);if(window.supabase?.createClient)return;}catch(e){last=e;}}throw last||new Error('Realtime client unavailable');}
+function removeInterceptors(){if(!enter)return;enter.removeEventListener('pointerup',onPointer,true);enter.removeEventListener('click',onClick,true);nameInput?.removeEventListener('keydown',onKey,true);}
+function handoff(){if(!BOOT.depsReady)return;removeInterceptors();setEnterBusy(false);document.getElementById('setup')?.classList.add('hidden');if(BOOT.requested){BOOT.requested=false;queueMicrotask(()=>enter?.click());}}
+async function loadModules(){if(BOOT.depsReady)return true;if(BOOT.promise)return BOOT.promise;BOOT.promise=(async()=>{BOOT.depsLoading=true;try{if(!window.ABYSSAL_CONFIG)await loadScript('./survival-config.js?v='+VER,5000);await ensureRealtime();const files=['game-core.js','game-play.js','game-render.js','game-v7-patch.js','mobile-fixes.js','network-v9.js','gameplay-v9.js','content-v9.js','render-v9.js','optimize-v9.js','ux-cn-v11.js','interaction-v12.js','network-relay-v16.js','regression-v14.js'];for(const name of files){setStatus('正在加载游戏系统…');await loadScript('./'+name+'?v='+VER,8000);}BOOT.depsReady=true;BOOT.depsLoading=false;BOOT.promise=null;handoff();return true;}catch(error){console.error('[Abyssal V17 boot]',error);BOOT.depsReady=false;BOOT.depsLoading=false;BOOT.promise=null;BOOT.requested=false;setEnterBusy(false);setStatus('多人世界连接失败。请点击【进入安全营地】重试。',true);return false;}})();return BOOT.promise;}
+function requestEntry(event){if(BOOT.depsReady)return;event?.preventDefault?.();event?.stopImmediatePropagation?.();BOOT.requested=true;setEnterBusy(true);setStatus(BOOT.depsLoading?'正在加载游戏系统…':'正在准备安全营地…');loadModules();}
+function onPointer(event){BOOT.lastPointerUpAt=performance.now();requestEntry(event);}
+function onClick(event){if(performance.now()-BOOT.lastPointerUpAt<650){if(!BOOT.depsReady){event.preventDefault();event.stopImmediatePropagation();}return;}requestEntry(event);}
+function onKey(event){if(event.key==='Enter')requestEntry(event);}
+async function mountUI(){try{const response=await fetch('./survival-v7.html?ui='+VER,{cache:'no-store'});if(!response.ok)throw new Error('survival-v7.html '+response.status);const source=await response.text();const parsed=new DOMParser().parseFromString(source,'text/html');parsed.querySelectorAll('script').forEach(n=>n.remove());for(const style of parsed.head.querySelectorAll('style'))document.head.appendChild(style.cloneNode(true));document.body.innerHTML=parsed.body.innerHTML;const brand=document.querySelector('.brand');if(brand)brand.innerHTML='深渊<br>苏醒';const sub=document.querySelector('.subtitle');if(sub)sub.innerHTML='沼林岛 · 公网实时世界<br>先在营地休息、聊天、制作装备，再一起探索。';const input=document.getElementById('name');if(input)input.placeholder='幸存者名字';const btn=document.getElementById('enter');if(btn)btn.textContent='进入安全营地';const note=document.querySelector('.gate .note');if(note)note.textContent='安全营地 · 无怪物 · 禁止 PvP · 可恢复 · 有新手物资';enter=btn;nameInput=input;const gate=document.getElementById('gate');if(!enter||!gate)throw new Error('entry DOM missing after UI mount');enter.addEventListener('pointerup',onPointer,{capture:true,passive:false});enter.addEventListener('click',onClick,{capture:true,passive:false});nameInput?.addEventListener('keydown',onKey,{capture:true});setTimeout(()=>{if(!BOOT.depsReady&&!BOOT.depsLoading)loadModules();},300);}catch(error){console.error('[Abyssal V17 UI]',error);failScreen('沼林岛界面加载失败');}}
+mountUI();
 })();
 </script>
 </body>
