@@ -23,25 +23,16 @@ html,body{margin:0;width:100%;height:100%;display:grid;place-items:center;backgr
     const bodyEnd = html.lastIndexOf('</body>');
     if(bodyEnd < 0) throw new Error('missing body end marker');
 
-    const markers = [
-      '<script>\nwindow.__ABYSSAL_BOOT_AT',
-      '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>'
-    ];
-
-    let scriptStart = -1;
-    for(const marker of markers){
-      const index = html.indexOf(marker);
-      if(index >= 0){
-        scriptStart = index;
-        break;
-      }
+    let scriptStart = html.indexOf('<script>\nwindow.__ABYSSAL_BOOT_AT');
+    if(scriptStart < 0){
+      const cdnIndex = html.indexOf('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+      if(cdnIndex >= 0) scriptStart = html.lastIndexOf('<script', cdnIndex);
     }
 
     if(scriptStart < 0) throw new Error('legacy script marker missing');
 
-    html = html.slice(0, scriptStart)
-      + '<script src="boot-v9.js?v=9"><\\/script>\n'
-      + html.slice(bodyEnd);
+    const bootTag = '<script src="boot-v9.js?v=9"><' + '/script>\n';
+    html = html.slice(0, scriptStart) + bootTag + html.slice(bodyEnd);
 
     document.open();
     document.write(html);
