@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 
 const source=fs.readFileSync(new URL('../platform-inventory-v19.js',import.meta.url),'utf8');
 const boot=fs.readFileSync(new URL('../survival-v17.html',import.meta.url),'utf8');
+const regression=fs.readFileSync(new URL('../regression-v14.js',import.meta.url),'utf8');
 
 const documentStub={
   getElementById(){return null;},
@@ -51,6 +52,30 @@ assert.equal(api.isTypingTarget({tagName:'DIV'}),false,'normal game surface must
   },'inventory snapshot must preserve existing item semantics safely');
 }
 
+assert.equal(api.detectDesktop({
+  finePointer:true,
+  hover:true,
+  navigatorLike:{platform:'Win32',userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',maxTouchPoints:0}
+}),true,'Windows desktop must stay desktop even in a narrow embedded browser');
+
+assert.equal(api.detectDesktop({
+  finePointer:false,
+  hover:false,
+  navigatorLike:{platform:'Win32',userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',maxTouchPoints:0}
+}),true,'Windows keyboard platform must not depend on viewport width');
+
+assert.equal(api.detectDesktop({
+  finePointer:false,
+  hover:false,
+  navigatorLike:{platform:'iPhone',userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile',maxTouchPoints:5}
+}),false,'iPhone must remain touch mode');
+
+assert.equal(api.detectDesktop({
+  finePointer:false,
+  hover:false,
+  navigatorLike:{platform:'MacIntel',userAgent:'Mozilla/5.0',maxTouchPoints:5}
+}),false,'iPad desktop UA must remain touch mode');
+
 const interactionIndex=boot.indexOf("'interaction-v12.js'");
 const platformIndex=boot.indexOf("'platform-inventory-v19.js'");
 const relayIndex=boot.indexOf("'network-relay-v16.js'");
@@ -65,15 +90,25 @@ for(const required of[
   "background-image:url('assets/resource_sheet.png')",
   "ITEM_META",
   "inventorySnapshot(inventory)",
-  "imageSmoothingEnabled=false"
+  "imageSmoothingEnabled=false",
+  "html.abyssal-desktop-v19 .joystick",
+  "window.matchMedia('(any-pointer: fine)')"
 ]){
   assert.ok(source.includes(required),`platform invariant missing: ${required}`);
 }
+
+assert.equal(source.includes('(min-width: 820px) and (pointer: fine)'),false,'desktop mode must not depend on 820px viewport width');
+assert.equal(regression.includes('setInterval(fixDynamicText,160)'),false,'localization must not poll the DOM every 160ms');
+assert.ok(regression.includes('new MutationObserver(()=>fixDynamicText())'),'late status writes must be localized before paint');
+assert.ok(regression.includes("updateUI=function(){const result=baseUpdateUIV14.apply(this,arguments);fixDynamicText();return result;}"),'normal UI updates must localize synchronously');
 
 console.log(JSON.stringify({
   ok:true,
   keyboard:'wasd+arrows',
   typingIsolation:'pass',
   inventoryMapping:'pass',
+  embeddedWindowsDesktop:'pass',
+  mobileIsolation:'pass',
+  localizationPolling:'removed',
   bootOrder:'pass'
 }));
