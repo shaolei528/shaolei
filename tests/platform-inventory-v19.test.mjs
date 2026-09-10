@@ -50,6 +50,11 @@ assert.equal(api.isTypingTarget({tagName:'DIV'}),false,'normal game surface must
   assert.deepEqual(JSON.parse(JSON.stringify(bag)),{
     wood:4,stone:0,food:3,shard:0,knife:true,lantern:false
   },'inventory snapshot must preserve existing item semantics safely');
+  assert.equal(
+    api.inventorySignature(bag),
+    'wood:4|stone:0|food:3|shard:0|knife:1|lantern:0',
+    'inventory signature must change only with meaningful inventory state'
+  );
 }
 
 assert.equal(api.detectDesktop({
@@ -90,6 +95,9 @@ for(const required of[
   "background-image:url('assets/resource_sheet.png')",
   "ITEM_META",
   "inventorySnapshot(inventory)",
+  "inventorySignature(snapshot)",
+  "if(!force&&!API.panelOpen)return false",
+  "if(API.panelOpen)refreshInventory()",
   "imageSmoothingEnabled=false",
   "html.abyssal-desktop-v19 .joystick",
   "window.matchMedia('(any-pointer: fine)')"
@@ -98,6 +106,7 @@ for(const required of[
 }
 
 assert.equal(source.includes('(min-width: 820px) and (pointer: fine)'),false,'desktop mode must not depend on 820px viewport width');
+assert.equal(source.includes('draw=function(){fitDesktopCanvas()'),false,'layout must not be measured on every render frame');
 assert.equal(regression.includes('setInterval(fixDynamicText,160)'),false,'localization must not poll the DOM every 160ms');
 assert.ok(regression.includes('new MutationObserver(()=>fixDynamicText())'),'late status writes must be localized before paint');
 assert.ok(regression.includes("updateUI=function(){const result=baseUpdateUIV14.apply(this,arguments);fixDynamicText();return result;}"),'normal UI updates must localize synchronously');
@@ -107,6 +116,9 @@ console.log(JSON.stringify({
   keyboard:'wasd+arrows',
   typingIsolation:'pass',
   inventoryMapping:'pass',
+  inventoryHiddenRender:'suppressed',
+  inventoryStateRender:'deduplicated',
+  perFrameLayoutRead:'removed',
   embeddedWindowsDesktop:'pass',
   mobileIsolation:'pass',
   localizationPolling:'removed',
