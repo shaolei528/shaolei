@@ -6,6 +6,7 @@ on:
       - 'cloudflare/**'
       - 'survival-v17.html'
       - 'network-relay-v16.js'
+      - 'network-quality-v20.js'
       - 'smooth-motion-v18.js'
       - 'platform-inventory-v19.js'
       - 'interaction-v12.js'
@@ -15,6 +16,7 @@ on:
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
       - 'tests/ready-localization-v9.test.mjs'
+      - 'tests/network-quality-v20.test.mjs'
       - 'game-render.js'
       - 'game-play.js'
       - 'render-v9.js'
@@ -27,6 +29,7 @@ on:
       - 'cloudflare/**'
       - 'survival-v17.html'
       - 'network-relay-v16.js'
+      - 'network-quality-v20.js'
       - 'smooth-motion-v18.js'
       - 'platform-inventory-v19.js'
       - 'interaction-v12.js'
@@ -36,6 +39,7 @@ on:
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
       - 'tests/ready-localization-v9.test.mjs'
+      - 'tests/network-quality-v20.test.mjs'
       - 'game-render.js'
       - 'game-play.js'
       - 'render-v9.js'
@@ -55,6 +59,8 @@ jobs:
         run: node cloudflare/test.mjs
       - name: Check relay client syntax
         run: node --check network-relay-v16.js
+      - name: Check network quality syntax
+        run: node --check network-quality-v20.js
       - name: Check motion pipeline syntax
         run: node --check smooth-motion-v18.js
       - name: Check cross-platform inventory syntax
@@ -78,6 +84,8 @@ jobs:
         run: node tests/interaction-v12.test.mjs
       - name: Ready localization regression test
         run: node tests/ready-localization-v9.test.mjs
+      - name: Network quality regression test
+        run: node tests/network-quality-v20.test.mjs
       - name: Check V17 boot syntax
         run: |
           python - <<'PY'
@@ -96,8 +104,10 @@ jobs:
               raise SystemExit('V17 interaction module missing')
           if 'content-v9.js' not in text:
               raise SystemExit('V17 content module missing')
-          if "const VER='17g'" not in text:
-              raise SystemExit('V17g cache key missing')
+          if 'network-quality-v20.js' not in text:
+              raise SystemExit('V17 network quality module missing')
+          if "const VER='17h'" not in text:
+              raise SystemExit('V17h cache key missing')
           PY
           node --check /tmp/v17-boot.js
       - name: Check motion invariants
