@@ -1,0 +1,22 @@
+{
+  "name": "abyssal-wake-relay",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-10",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WORLD",
+        "class_name": "GameWorld"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["GameWorld"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
