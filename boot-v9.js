@@ -116,7 +116,11 @@
           'game-render.js?v=9',
           'game-v7-patch.js?v=9',
           'mobile-fixes.js?v=9',
-          'network-v9.js?v=9'
+          'network-v9.js?v=9',
+          'gameplay-v9.js?v=9',
+          'content-v9.js?v=9',
+          'render-v9.js?v=9',
+          'optimize-v9.js?v=9'
         ];
 
         for(const file of files){
