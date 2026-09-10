@@ -9,6 +9,7 @@
 
 const MAX_OUTCOMES=24;
 const MIN_STABLE_SAMPLES=3;
+const DIAG_MARKER='\nV20 稳健网络统计';
 
 function numericSamples(values){
   return Array.from(values||[]).map(Number).filter(Number.isFinite).map(v=>Math.max(0,v));
@@ -119,8 +120,8 @@ function appendDiagnostics(stats){
   const fmt=v=>v==null?'--':Math.round(v)+'ms';
   const loss=(stats.loss*100).toFixed(1)+'%';
   const interval=intervalFor(stats);
+  const base=el.textContent.includes(DIAG_MARKER)?el.textContent.split(DIAG_MARKER)[0]:el.textContent;
   const extra=[
-    '',
     'V20 稳健网络统计',
     '最新 RTT: '+fmt(stats.latest),
     '中位 RTT: '+fmt(stats.median),
@@ -132,8 +133,7 @@ function appendDiagnostics(stats){
     'RTT 样本: '+stats.samples,
     '说明: 主界面显示中位 RTT；最新/P90 保留在这里用于识别尖峰。'
   ].join('\n');
-  if(!el.textContent.includes('V20 稳健网络统计'))el.textContent+=extra;
-  else el.textContent=el.textContent.split('\n\nV20 稳健网络统计')[0]+extra;
+  el.textContent=base+DIAG_MARKER+extra.slice('V20 稳健网络统计'.length);
 }
 
 if(originalConnectionQuality){
