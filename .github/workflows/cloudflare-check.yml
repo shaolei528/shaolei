@@ -62,3 +62,7 @@ jobs:
           done
           echo 'Cloudflare production endpoint is still not serving the expected Worker.' >&2
           exit 1
+      - name: Live two-client multiplayer test
+        env:
+          LIVE_RELAY_URL: wss://abyssal-wake-relay.zuoranzhang.workers.dev/ws
+        run: npm run test:live-relay
