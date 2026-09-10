@@ -9,10 +9,12 @@ on:
       - 'smooth-motion-v18.js'
       - 'platform-inventory-v19.js'
       - 'interaction-v12.js'
+      - 'content-v9.js'
       - 'regression-v14.js'
       - 'tests/motion-v18.test.mjs'
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
+      - 'tests/ready-localization-v9.test.mjs'
       - 'game-render.js'
       - 'game-play.js'
       - 'render-v9.js'
@@ -28,10 +30,12 @@ on:
       - 'smooth-motion-v18.js'
       - 'platform-inventory-v19.js'
       - 'interaction-v12.js'
+      - 'content-v9.js'
       - 'regression-v14.js'
       - 'tests/motion-v18.test.mjs'
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
+      - 'tests/ready-localization-v9.test.mjs'
       - 'game-render.js'
       - 'game-play.js'
       - 'render-v9.js'
@@ -57,6 +61,8 @@ jobs:
         run: node --check platform-inventory-v19.js
       - name: Check interaction syntax
         run: node --check interaction-v12.js
+      - name: Check content syntax
+        run: node --check content-v9.js
       - name: Check UI stability syntax
         run: node --check regression-v14.js
       - name: Check gameplay/render syntax
@@ -70,6 +76,8 @@ jobs:
         run: node tests/platform-inventory-v19.test.mjs
       - name: Interaction joystick regression test
         run: node tests/interaction-v12.test.mjs
+      - name: Ready localization regression test
+        run: node tests/ready-localization-v9.test.mjs
       - name: Check V17 boot syntax
         run: |
           python - <<'PY'
@@ -86,6 +94,8 @@ jobs:
               raise SystemExit('V17 platform inventory module missing')
           if 'interaction-v12.js' not in text:
               raise SystemExit('V17 interaction module missing')
+          if 'content-v9.js' not in text:
+              raise SystemExit('V17 content module missing')
           if "const VER='17g'" not in text:
               raise SystemExit('V17g cache key missing')
           PY
@@ -108,7 +118,7 @@ jobs:
           ]
           missing = [item for item in required if item not in text]
           if missing:
-              raise SystemExit('motion invariant missing: ' + ', '.join(missing))
+            raise SystemExit('motion invariant missing: ' + ', '.join(missing))
           PY
       - name: Validate root Worker bundle
         run: |
