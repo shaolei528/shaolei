@@ -328,9 +328,24 @@
     updateUI();
   }
 
-  /* Replace only lifecycle functions. Existing gameplay event handlers remain intact. */
-  connectGlobal = connectGlobalV9;
-  switchZone = switchZoneV9;
+  connectGlobal = function(){
+    return connectGlobalV9().catch(error=>{
+      console.warn('[Abyssal V9 network] initial global connect failed', error);
+      globalConnected = false;
+      scheduleReconnect(error?.message || 'initial global connect failed');
+      return null;
+    });
+  };
+
+  switchZone = function(z){
+    return switchZoneV9(z).catch(error=>{
+      console.warn('[Abyssal V9 network] zone switch failed', error);
+      zoneConnected = false;
+      scheduleReconnect(error?.message || 'zone switch failed');
+      return null;
+    });
+  };
+
   measurePing = measurePingV9;
 
   window.addEventListener('online', ()=>{
