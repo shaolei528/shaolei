@@ -5,6 +5,7 @@ on:
     paths:
       - 'ART_BIBLE.md'
       - 'terrain-v21.js'
+      - 'terrain-v21-preview.html'
       - 'survival-v21.html'
       - 'assets/art-v21/**'
       - 'tests/terrain-v21.test.mjs'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'ART_BIBLE.md'
       - 'terrain-v21.js'
+      - 'terrain-v21-preview.html'
       - 'survival-v21.html'
       - 'assets/art-v21/**'
       - 'tests/terrain-v21.test.mjs'
@@ -30,22 +32,30 @@ jobs:
         run: node --check terrain-v21.js
       - name: Terrain vertical-slice regression
         run: node tests/terrain-v21.test.mjs
-      - name: V21 boot syntax and module order
+      - name: V21 boot and static preview syntax
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
-          text=Path('survival-v21.html').read_text()
-          match=re.search(r'<script>([\s\S]*?)</script>',text)
+          boot=Path('survival-v21.html').read_text()
+          match=re.search(r'<script>([\s\S]*?)</script>',boot)
           if not match:
               raise SystemExit('V21 inline boot script not found')
           Path('/tmp/v21-boot.js').write_text(match.group(1))
-          if "'terrain-v21.js'" not in text:
+          if "'terrain-v21.js'" not in boot:
               raise SystemExit('V21 terrain module missing')
-          if "const VER='21a'" not in text:
+          if "const VER='21a'" not in boot:
               raise SystemExit('V21a cache key missing')
+          preview=Path('terrain-v21-preview.html').read_text()
+          scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',preview)
+          if not scripts:
+              raise SystemExit('V21 static preview inline script missing')
+          Path('/tmp/v21-preview.js').write_text('\n'.join(scripts))
+          if './terrain-v21.js' not in preview or 'Collision: OFF' not in preview:
+              raise SystemExit('V21 static preview wiring missing')
           PY
           node --check /tmp/v21-boot.js
+          node --check /tmp/v21-preview.js
       - name: Existing gameplay regression suite
         run: |
           node tests/motion-v18.test.mjs

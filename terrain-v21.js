@@ -5,7 +5,7 @@
   V21 terrain vertical slice.
   - 64x64 art/map grid around Mirewood Safe Camp.
   - World/network coordinates remain unchanged.
-  - Visual terrain and collision are separate explicit data layers.
+  - Terrain render data and collision data are separate explicit layers.
   - Outside the slice the legacy renderer/collision behavior remains untouched.
 */
 
@@ -22,15 +22,20 @@ const ORIGIN_X=CAMP_X-12*TILE_SIZE;
 const ORIGIN_Y=CAMP_Y-10*TILE_SIZE;
 
 const TILE={
-  grass_a:0, grass_b:1, grass_flowers:2, sand_a:3, sand_b:4,
-  road_a:5, road_b:6, water_a:7, water_b:8,
-  shore_n:9, shore_s:10, shore_e:11, shore_w:12,
-  shore_ne:13, shore_nw:14, shore_se:15, shore_sw:16,
-  grass_to_sand_e:17, grass_to_sand_w:18, sand_pebbles:19
+  grass_a:0,grass_b:1,grass_flowers:2,sand_a:3,sand_b:4,
+  road_a:5,road_b:6,water_a:7,water_b:8,
+  shore_n:9,shore_s:10,shore_e:11,shore_w:12,
+  shore_ne:13,shore_nw:14,shore_se:15,shore_sw:16,
+  grass_to_sand_e:17,grass_to_sand_w:18,sand_pebbles:19
 };
 const TILE_NAMES=Object.fromEntries(Object.entries(TILE).map(([name,id])=>[id,name]));
 const WATER_TILES=new Set([TILE.water_a,TILE.water_b]);
-const SHORE_TILES=new Set([TILE.shore_n,TILE.shore_s,TILE.shore_e,TILE.shore_w,TILE.shore_ne,TILE.shore_nw,TILE.shore_se,TILE.shore_sw]);
+
+const COLLISION={
+  walkable:0,water:1,shore_n:2,shore_s:3,shore_e:4,shore_w:5,
+  shore_ne:6,shore_nw:7,shore_se:8,shore_sw:9
+};
+const COLLISION_NAMES=Object.fromEntries(Object.entries(COLLISION).map(([name,id])=>[id,name]));
 
 function hash2(x,y,seed=0){
   let n=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(seed|0,69069))|0;
@@ -38,22 +43,27 @@ function hash2(x,y,seed=0){
   return(n>>>0)/4294967295;
 }
 function insideCell(col,row){return col>=0&&row>=0&&col<SLICE_COLS&&row<SLICE_ROWS;}
-function coastLine(row){
-  return 21.1-Math.max(0,row-3)*.28-Math.max(0,row-14)*.44;
+function coastLine(row){return 21.1-Math.max(0,row-3)*.28-Math.max(0,row-14)*.44;}
+function authoredWater(col,row){
+  if(!insideCell(col,row))return false;
+  return col>=Math.ceil(coastLine(row));
+}
+function authoredSand(col,row){
+  if(!insideCell(col,row)||authoredWater(col,row))return false;
+  return col>=Math.ceil(coastLine(row))-2;
 }
 function rawMaterial(col,row){
   if(!insideCell(col,row))return'legacy';
-  const edge=coastLine(row);
-  if(col>=Math.ceil(edge))return'water';
-  if(col>=Math.ceil(edge)-2)return'sand';
+  if(authoredWater(col,row))return'water';
+  if(authoredSand(col,row))return'sand';
   const vertical=(col>=11&&col<=12&&row>=2&&row<=10);
-  const eastSpur=(row>=9&&row<=10&&col>=12&&col<=Math.floor(edge)-2);
+  const eastSpur=(row>=9&&row<=10&&col>=12&&col<=Math.floor(coastLine(row))-2);
   const westSpur=(row===10&&col>=7&&col<=11);
   if(vertical||eastSpur||westSpur)return'road';
   return'grass';
 }
 function materialNeighbor(col,row,dx,dy){return rawMaterial(col+dx,row+dy);}
-function tileAtCell(col,row){
+function chooseTile(col,row){
   const material=rawMaterial(col,row);
   if(material==='legacy')return null;
   const h=hash2(col,row,211);
@@ -81,31 +91,60 @@ function tileAtCell(col,row){
   if(h>.88)return TILE.grass_flowers;
   return h>.47?TILE.grass_b:TILE.grass_a;
 }
-function worldToCell(x,y){
-  const col=Math.floor((Number(x)-ORIGIN_X)/TILE_SIZE);
-  const row=Math.floor((Number(y)-ORIGIN_Y)/TILE_SIZE);
-  if(!insideCell(col,row))return null;
-  return{col,row,lx:Number(x)-(ORIGIN_X+col*TILE_SIZE),ly:Number(y)-(ORIGIN_Y+row*TILE_SIZE)};
+
+/* Visual terrain map: immutable tile ids for the authored slice. */
+const TERRAIN_MAP=new Uint8Array(SLICE_COLS*SLICE_ROWS);
+for(let row=0;row<SLICE_ROWS;row++)for(let col=0;col<SLICE_COLS;col++){
+  TERRAIN_MAP[row*SLICE_COLS+col]=chooseTile(col,row);
 }
-function isWaterPart(tile,lx,ly){
-  if(WATER_TILES.has(tile))return true;
-  if(!SHORE_TILES.has(tile))return false;
+function tileAtCell(col,row){return insideCell(col,row)?TERRAIN_MAP[row*SLICE_COLS+col]:null;}
+
+/* Collision map is authored independently from visual tile ids. */
+function chooseCollisionShape(col,row){
+  if(!insideCell(col,row))return null;
+  if(authoredWater(col,row))return COLLISION.water;
+  if(!authoredSand(col,row))return COLLISION.walkable;
+  const n=authoredWater(col,row-1),s=authoredWater(col,row+1),e=authoredWater(col+1,row),w=authoredWater(col-1,row);
+  if(n&&e)return COLLISION.shore_ne;
+  if(n&&w)return COLLISION.shore_nw;
+  if(s&&e)return COLLISION.shore_se;
+  if(s&&w)return COLLISION.shore_sw;
+  if(n)return COLLISION.shore_n;
+  if(s)return COLLISION.shore_s;
+  if(e)return COLLISION.shore_e;
+  if(w)return COLLISION.shore_w;
+  return COLLISION.walkable;
+}
+const COLLISION_MAP=new Uint8Array(SLICE_COLS*SLICE_ROWS);
+for(let row=0;row<SLICE_ROWS;row++)for(let col=0;col<SLICE_COLS;col++){
+  COLLISION_MAP[row*SLICE_COLS+col]=chooseCollisionShape(col,row);
+}
+function collisionShapeAtCell(col,row){return insideCell(col,row)?COLLISION_MAP[row*SLICE_COLS+col]:null;}
+
+function worldToCell(x,y){
+  const nx=Number(x),ny=Number(y);
+  if(!Number.isFinite(nx)||!Number.isFinite(ny))return null;
+  const col=Math.floor((nx-ORIGIN_X)/TILE_SIZE),row=Math.floor((ny-ORIGIN_Y)/TILE_SIZE);
+  if(!insideCell(col,row))return null;
+  return{col,row,lx:nx-(ORIGIN_X+col*TILE_SIZE),ly:ny-(ORIGIN_Y+row*TILE_SIZE)};
+}
+function isWaterPart(shape,lx,ly){
+  if(shape===COLLISION.water)return true;
   const x=Number(lx),y=Number(ly),edgeLow=20,edgeHigh=42,r=34;
-  if(tile===TILE.shore_n)return y<=edgeLow;
-  if(tile===TILE.shore_s)return y>=edgeHigh;
-  if(tile===TILE.shore_e)return x>=edgeHigh;
-  if(tile===TILE.shore_w)return x<=edgeLow;
-  if(tile===TILE.shore_ne)return Math.hypot(63-x,y)<=r;
-  if(tile===TILE.shore_nw)return Math.hypot(x,y)<=r;
-  if(tile===TILE.shore_se)return Math.hypot(63-x,63-y)<=r;
-  if(tile===TILE.shore_sw)return Math.hypot(x,63-y)<=r;
+  if(shape===COLLISION.shore_n)return y<=edgeLow;
+  if(shape===COLLISION.shore_s)return y>=edgeHigh;
+  if(shape===COLLISION.shore_e)return x>=edgeHigh;
+  if(shape===COLLISION.shore_w)return x<=edgeLow;
+  if(shape===COLLISION.shore_ne)return Math.hypot(63-x,y)<=r;
+  if(shape===COLLISION.shore_nw)return Math.hypot(x,y)<=r;
+  if(shape===COLLISION.shore_se)return Math.hypot(63-x,63-y)<=r;
+  if(shape===COLLISION.shore_sw)return Math.hypot(x,63-y)<=r;
   return false;
 }
 function collisionAtWorld(x,y){
   const cell=worldToCell(x,y);
   if(!cell)return'legacy';
-  const tile=tileAtCell(cell.col,cell.row);
-  return isWaterPart(tile,cell.lx,cell.ly)?'water':'walkable';
+  return isWaterPart(collisionShapeAtCell(cell.col,cell.row),cell.lx,cell.ly)?'water':'walkable';
 }
 function isBlockedPoint(x,y){return collisionAtWorld(x,y)==='water';}
 function isBlockedCircle(x,y,radius=10){
@@ -120,14 +159,12 @@ function isBlockedCircle(x,y,radius=10){
 }
 function resolveMovement(fromX,fromY,toX,toY,radius=10){
   let x=Number(fromX),y=Number(fromY);
-  const tx=Number(toX),ty=Number(toY);
-  if(![x,y,tx,ty].every(Number.isFinite))return{x:Number(fromX)||0,y:Number(fromY)||0,blocked:false};
-  const dist=Math.hypot(tx-x,ty-y);
-  const steps=Math.max(1,Math.ceil(dist/8));
+  const tx=Number(toX),ty=Number(toY),fx=Number(fromX),fy=Number(fromY);
+  if(![x,y,tx,ty,fx,fy].every(Number.isFinite))return{x:fx||0,y:fy||0,blocked:false};
+  const dist=Math.hypot(tx-x,ty-y),steps=Math.max(1,Math.ceil(dist/8));
   let blocked=false;
   for(let i=1;i<=steps;i++){
-    const wantX=fromX+(tx-fromX)*(i/steps);
-    const wantY=fromY+(ty-fromY)*(i/steps);
+    const wantX=fx+(tx-fx)*(i/steps),wantY=fy+(ty-fy)*(i/steps);
     if(!isBlockedCircle(wantX,wantY,radius)){x=wantX;y=wantY;continue;}
     blocked=true;
     if(!isBlockedCircle(wantX,y,radius))x=wantX;
@@ -142,7 +179,7 @@ let sheetReady=false;
 if(typeof Image!=='undefined'){
   sheet=new Image();
   sheet.onload=()=>{sheetReady=true;};
-  sheet.onerror=()=>{sheetReady=false;console.warn('[Abyssal V21 terrain] tilesheet failed to load; legacy ground remains available.');};
+  sheet.onerror=()=>{sheetReady=false;console.warn('[Abyssal V21 terrain] tilesheet failed to load; legacy ground remains visible.');};
   sheet.src=SHEET_PATH;
 }
 function sliceIntersectsView(cameraX,cameraY,W,H){
@@ -150,29 +187,24 @@ function sliceIntersectsView(cameraX,cameraY,W,H){
   const sliceRight=ORIGIN_X+SLICE_COLS*TILE_SIZE,sliceBottom=ORIGIN_Y+SLICE_ROWS*TILE_SIZE;
   return right>=ORIGIN_X&&left<=sliceRight&&bottom>=ORIGIN_Y&&top<=sliceBottom;
 }
-function debugWaterShape(context,tile,x,y){
-  context.beginPath();
-  if(WATER_TILES.has(tile)){context.rect(x,y,TILE_SIZE,TILE_SIZE);return;}
-  if(tile===TILE.shore_n){context.rect(x,y,TILE_SIZE,21);return;}
-  if(tile===TILE.shore_s){context.rect(x,y+42,TILE_SIZE,22);return;}
-  if(tile===TILE.shore_e){context.rect(x+42,y,22,TILE_SIZE);return;}
-  if(tile===TILE.shore_w){context.rect(x,y,21,TILE_SIZE);return;}
+function appendCollisionShape(context,shape,x,y){
+  if(shape===COLLISION.water){context.rect(x,y,TILE_SIZE,TILE_SIZE);return true;}
+  if(shape===COLLISION.shore_n){context.rect(x,y,TILE_SIZE,21);return true;}
+  if(shape===COLLISION.shore_s){context.rect(x,y+42,TILE_SIZE,22);return true;}
+  if(shape===COLLISION.shore_e){context.rect(x+42,y,22,TILE_SIZE);return true;}
+  if(shape===COLLISION.shore_w){context.rect(x,y,21,TILE_SIZE);return true;}
   const centers={
-    [TILE.shore_ne]:[x+63,y],[TILE.shore_nw]:[x,y],
-    [TILE.shore_se]:[x+63,y+63],[TILE.shore_sw]:[x,y+63]
+    [COLLISION.shore_ne]:[x+63,y],[COLLISION.shore_nw]:[x,y],
+    [COLLISION.shore_se]:[x+63,y+63],[COLLISION.shore_sw]:[x,y+63]
   };
-  const c=centers[tile];if(!c)return;
-  context.arc(c[0],c[1],34,0,Math.PI*2);
+  const c=centers[shape];if(!c)return false;
+  context.arc(c[0],c[1],34,0,Math.PI*2);return true;
 }
-function drawGround(args={}){
-  const context=args.ctx;
-  const cameraLike=args.camera;
-  const W=Number(args.W)||0,H=Number(args.H)||0;
+function renderTerrainGround(args={}){
+  const context=args.ctx,cameraLike=args.camera,W=Number(args.W)||0,H=Number(args.H)||0;
   if(!context||!cameraLike||args.currentZone!=='1:1'||!sheetReady||!sheet)return false;
   if(!sliceIntersectsView(cameraLike.x,cameraLike.y,W,H))return false;
-  context.save();
-  context.imageSmoothingEnabled=false;
-  context.fillStyle='#466f54';context.fillRect(0,0,W,H);
+  context.save();context.imageSmoothingEnabled=false;
   const minCol=Math.max(0,Math.floor((cameraLike.x-W/2-ORIGIN_X)/TILE_SIZE)-1);
   const maxCol=Math.min(SLICE_COLS-1,Math.ceil((cameraLike.x+W/2-ORIGIN_X)/TILE_SIZE)+1);
   const minRow=Math.max(0,Math.floor((cameraLike.y-H/2-ORIGIN_Y)/TILE_SIZE)-1);
@@ -180,16 +212,16 @@ function drawGround(args={}){
   const phase=Math.floor((typeof performance!=='undefined'?performance.now():0)/700)&1;
   for(let row=minRow;row<=maxRow;row++)for(let col=minCol;col<=maxCol;col++){
     let tile=tileAtCell(col,row);
-    if(tile===null)continue;
     if(WATER_TILES.has(tile))tile=((tile+phase-7)&1)+7;
     const srcX=(tile%SHEET_COLS)*TILE_SIZE,srcY=Math.floor(tile/SHEET_COLS)*TILE_SIZE;
     const worldX=ORIGIN_X+col*TILE_SIZE,worldY=ORIGIN_Y+row*TILE_SIZE;
     const x=Math.round(worldX-cameraLike.x+W/2),y=Math.round(worldY-cameraLike.y+H/2);
     context.drawImage(sheet,srcX,srcY,TILE_SIZE,TILE_SIZE,x,y,TILE_SIZE,TILE_SIZE);
     if(debug){
+      const shape=collisionShapeAtCell(col,row);
       context.save();
-      context.globalAlpha=.28;context.fillStyle='#4ab5ff';
-      debugWaterShape(context,tile,x,y);context.fill();
+      if(shape===COLLISION.walkable){context.globalAlpha=.07;context.fillStyle='#4bd27a';context.fillRect(x,y,TILE_SIZE,TILE_SIZE);}
+      else{context.globalAlpha=.30;context.fillStyle='#4ab5ff';context.beginPath();appendCollisionShape(context,shape,x,y);context.fill();}
       context.globalAlpha=.34;context.strokeStyle='#d7efe3';context.lineWidth=1;context.strokeRect(x+.5,y+.5,TILE_SIZE-1,TILE_SIZE-1);
       context.restore();
     }
@@ -202,23 +234,27 @@ function isDebug(){return debug;}
 
 const API={
   version:21,tileSize:TILE_SIZE,sheetPath:SHEET_PATH,tile:TILE,tileNames:TILE_NAMES,
+  collision:COLLISION,collisionNames:COLLISION_NAMES,
   slice:{originX:ORIGIN_X,originY:ORIGIN_Y,cols:SLICE_COLS,rows:SLICE_ROWS,width:SLICE_COLS*TILE_SIZE,height:SLICE_ROWS*TILE_SIZE},
-  rawMaterial,tileAtCell,worldToCell,isWaterPart,collisionAtWorld,isBlockedPoint,isBlockedCircle,resolveMovement,drawGround,setDebug,isDebug
+  rawMaterial,tileAtCell,collisionShapeAtCell,worldToCell,isWaterPart,collisionAtWorld,isBlockedPoint,isBlockedCircle,resolveMovement,
+  drawGround:renderTerrainGround,setDebug,isDebug,
+  terrainMap:TERRAIN_MAP,collisionMap:COLLISION_MAP
 };
 window.ABYSSAL_TERRAIN_V21=API;
 
-const baseDrawGround=(typeof drawGround==='function')?drawGround:null;
-if(baseDrawGround){
-  drawGround=function(W,H){
-    const rendered=API.drawGround({ctx,W,H,camera,currentZone});
-    if(!rendered)return baseDrawGround(W,H);
+/* Preserve the legacy ground first, then overlay only authored V21 cells. */
+const legacyDrawGround=(typeof window.drawGround==='function')?window.drawGround:null;
+if(legacyDrawGround){
+  window.drawGround=function(W,H){
+    legacyDrawGround(W,H);
+    return renderTerrainGround({ctx,W,H,camera,currentZone});
   };
 }
 
 let movementOrigin=null;
-const baseSendMove=(typeof sendMove==='function')?sendMove:null;
+const baseSendMove=(typeof window.sendMove==='function')?window.sendMove:null;
 if(baseSendMove){
-  sendMove=function(...args){
+  window.sendMove=function(...args){
     if(movementOrigin&&typeof me!=='undefined'){
       const resolved=resolveMovement(movementOrigin.x,movementOrigin.y,me.x,me.y,Math.min(12,me.r||10));
       me.x=resolved.x;me.y=resolved.y;
@@ -226,9 +262,9 @@ if(baseSendMove){
     return baseSendMove(...args);
   };
 }
-const baseUpdate=(typeof update==='function')?update:null;
+const baseUpdate=(typeof window.update==='function')?window.update:null;
 if(baseUpdate){
-  update=function(dt){
+  window.update=function(dt){
     if(typeof me==='undefined')return baseUpdate(dt);
     movementOrigin={x:me.x,y:me.y};
     try{
@@ -239,7 +275,7 @@ if(baseUpdate){
     }finally{movementOrigin=null;}
   };
 }
-API.installed=!!(baseDrawGround&&baseUpdate);
+API.installed=!!(legacyDrawGround&&baseUpdate);
 
 if(typeof addEventListener==='function')addEventListener('keydown',event=>{
   if(event.code!=='F2'||event.repeat)return;

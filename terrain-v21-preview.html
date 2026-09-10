@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ABYSSAL WAKE — V21 Terrain Preview</title>
+<style>
+html,body{margin:0;min-height:100%;background:#09110f;color:#d8e2d9;font:600 12px ui-monospace,monospace}body{display:grid;place-items:center}.wrap{width:min(100vw,960px);padding:14px;box-sizing:border-box}.bar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px}.meta{opacity:.72}.controls{display:flex;gap:8px}button{background:#182820;color:#dce9e1;border:1px solid #607b6e;padding:8px 10px;font:inherit}.frame{border:1px solid #304a40;background:#16291f;overflow:hidden}canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}.hint{margin-top:8px;opacity:.68;line-height:1.5}@media(max-width:600px){.wrap{padding:8px}.bar{align-items:flex-start;flex-direction:column}.controls{width:100%}button{flex:1}}</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar"><div><strong>ABYSSAL WAKE / V21</strong><div class="meta">Camp terrain vertical slice · 64×64</div></div><div class="controls"><button id="debug">Collision: OFF</button><button id="reset">Center camp</button></div></div>
+  <div class="frame"><canvas id="preview" width="896" height="640"></canvas></div>
+  <div class="hint">Drag to pan. Blue = water/non-walkable collision; faint green = walkable authored cells. This page is static and does not connect to multiplayer.</div>
+</div>
+<script src="./terrain-v21.js"></script>
+<script>
+(()=>{
+'use strict';
+const canvas=document.getElementById('preview'),ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
+const api=window.ABYSSAL_TERRAIN_V21;const camera={x:2400,y:2400};let dragging=false,lastX=0,lastY=0;
+function fit(){const mobile=innerWidth<600;canvas.width=mobile?512:896;canvas.height=mobile?704:640;ctx.imageSmoothingEnabled=false;}
+function draw(){ctx.fillStyle='#2c4d40';ctx.fillRect(0,0,canvas.width,canvas.height);api?.drawGround({ctx,W:canvas.width,H:canvas.height,camera,currentZone:'1:1'});requestAnimationFrame(draw)}
+function pos(e){return{x:e.clientX,y:e.clientY}}
+canvas.addEventListener('pointerdown',e=>{dragging=true;canvas.setPointerCapture(e.pointerId);const p=pos(e);lastX=p.x;lastY=p.y});
+canvas.addEventListener('pointermove',e=>{if(!dragging)return;const p=pos(e),scale=canvas.width/canvas.getBoundingClientRect().width;camera.x-=(p.x-lastX)*scale;camera.y-=(p.y-lastY)*scale;lastX=p.x;lastY=p.y});
+canvas.addEventListener('pointerup',()=>dragging=false);canvas.addEventListener('pointercancel',()=>dragging=false);
+document.getElementById('debug').addEventListener('click',e=>{const on=api.setDebug(!api.isDebug());e.currentTarget.textContent='Collision: '+(on?'ON':'OFF')});
+document.getElementById('reset').addEventListener('click',()=>{camera.x=2400;camera.y=2400});addEventListener('resize',fit);fit();draw();
+})();
+</script>
+</body>
+</html>
