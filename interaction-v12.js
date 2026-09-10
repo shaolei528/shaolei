@@ -230,12 +230,12 @@
   }
 
   function interact(){
-    safeStop();
     const target=interactionTarget();
     if(!target){toast('附近没有可以互动的目标。');return;}
     if(target.type==='guide'){openGuideDialog();return;}
     if(target.type==='fire'){restAtFire();return;}
     if(target.type==='workbench'){
+      safeStop();
       hideOtherPanels();
       craftPanel.classList.remove('hidden');
       return;
