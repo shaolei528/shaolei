@@ -39,7 +39,7 @@
     button = document.createElement('button');
     button.id = 'readyToggleV9';
     button.type = 'button';
-    button.textContent = 'PREP FIRST';
+    button.textContent = '先准备';
     button.style.cssText = [
       'position:absolute',
       'right:8px',
@@ -61,18 +61,18 @@
 
     button.addEventListener('click', ()=>{
       if(!inCamp()){
-        toast('Ready status can only be changed inside Safe Camp.');
+        toast('只能在安全营地内更改准备状态。');
         return;
       }
       if(!localPrepared()){
         CONTENT.ready = false;
-        toast('Craft a Bone Knife, carry food, and recover first.');
+        toast('先制作骨刃、携带食物，并恢复状态。');
         refreshReadyButton();
         return;
       }
       CONTENT.ready = !CONTENT.ready;
       CONTENT.groupReadyShown = false;
-      toast(CONTENT.ready ? 'You are ready for expedition.' : 'Ready status cancelled.');
+      toast(CONTENT.ready ? '你已标记为准备完成。' : '已取消准备状态。');
       sendMove();
       refreshReadyButton();
     });
@@ -87,20 +87,20 @@
     const prepared = localPrepared();
     if(!prepared){
       CONTENT.ready = false;
-      button.textContent = 'PREP FIRST';
+      button.textContent = '先准备';
       button.style.background = '#25332e';
       button.style.color = '#9eaea6';
       return;
     }
 
     if(!inCamp()){
-      button.textContent = CONTENT.ready ? 'READY ✓' : 'IN FIELD';
+      button.textContent = CONTENT.ready ? '已准备 ✓' : '野外';
       button.style.background = CONTENT.ready ? '#285744' : '#25332e';
       button.style.color = '#d8eee1';
       return;
     }
 
-    button.textContent = CONTENT.ready ? 'READY ✓ · TAP TO CANCEL' : 'MARK READY';
+    button.textContent = CONTENT.ready ? '已准备 ✓ · 点击取消' : '标记准备';
     button.style.background = CONTENT.ready ? '#285744' : '#1c3a31';
     button.style.color = '#edf6f0';
   }
@@ -153,13 +153,13 @@
 
     if(!near.length){
       const empty = document.createElement('div');
-      empty.textContent = 'waiting by the fire';
+      empty.textContent = '等待其他幸存者…';
       playerList.appendChild(empty);
     }else{
       for(const remote of near){
         const meta = CONTENT.remoteReady.get(remote.id);
         const row = document.createElement('div');
-        const status = meta?.expedition ? ' · FIELD' : (meta?.ready ? ' · READY ✓' : ' · CAMP');
+        const status = meta?.expedition ? ' · 野外' : (meta?.ready ? ' · 已准备 ✓' : ' · 营地');
         row.textContent = '• ' + clean(remote.name) + status;
         if(meta?.ready) row.style.color = '#bfe8c8';
         playerList.appendChild(row);
@@ -187,7 +187,7 @@
     const everyoneReady = nearbyIds.every(id=>CONTENT.remoteReady.get(id)?.ready === true);
     if(everyoneReady && !CONTENT.groupReadyShown){
       CONTENT.groupReadyShown = true;
-      toast('GROUP READY · leave camp when your team chooses.');
+      toast('队伍已准备完毕，可以一起离开营地。');
     }
     if(!everyoneReady) CONTENT.groupReadyShown = false;
   }
