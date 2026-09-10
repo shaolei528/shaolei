@@ -7,6 +7,8 @@ on:
       - 'survival-v17.html'
       - 'network-relay-v16.js'
       - 'survival-config.js'
+      - 'wrangler.jsonc'
+      - 'package.json'
       - '.github/workflows/cloudflare-check.yml'
   pull_request:
     paths:
@@ -14,6 +16,8 @@ on:
       - 'survival-v17.html'
       - 'network-relay-v16.js'
       - 'survival-config.js'
+      - 'wrangler.jsonc'
+      - 'package.json'
 
 jobs:
   test:
@@ -39,15 +43,22 @@ jobs:
           Path('/tmp/v17-boot.js').write_text(match.group(1))
           PY
           node --check /tmp/v17-boot.js
-      - name: Install Cloudflare toolchain
-        working-directory: cloudflare
-        run: npm install
-      - name: Validate Worker bundle
-        working-directory: cloudflare
-        run: npm run check
+      - name: Validate root Worker bundle
+        run: |
+          npm install
+          npm run check:worker
       - name: External production health check
         run: |
           set -euxo pipefail
-          curl --fail-with-body --show-error --location --connect-timeout 10 --max-time 20 \
-            -H 'Accept: application/json' \
-            https://abyssal-wake-relay.zuoranzhang.workers.dev/health
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -sS -o /tmp/health.txt -w '%{http_code}' --connect-timeout 10 --max-time 20 \
+              -H 'Accept: application/json' \
+              https://abyssal-wake-relay.zuoranzhang.workers.dev/health || true)
+            echo "attempt=$i http=$code body=$(cat /tmp/health.txt 2>/dev/null || true)"
+            if [ "$code" = "200" ] && grep -q '"ok":true' /tmp/health.txt; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'Cloudflare production endpoint is still not serving the expected Worker.' >&2
+          exit 1
