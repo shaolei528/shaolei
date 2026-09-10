@@ -55,25 +55,42 @@ function finiteNumber(value,fallback=0){
   return Number.isFinite(n)?n:fallback;
 }
 
+function movePacketAccepted(payload){
+  if(typeof validMove==='function')return validMove(payload);
+  return !!(payload?.id&&payload.id!==SESSION_ID&&payload.zone===currentZone&&Number.isFinite(Number(payload.x))&&Number.isFinite(Number(payload.y)));
+}
+
 function pushRemoteSnapshot(payload){
-  if(!payload?.id||payload.id===SESSION_ID||payload.zone!==currentZone)return;
-  const x=finiteNumber(payload.x,NaN),y=finiteNumber(payload.y,NaN);
+  if(!movePacketAccepted(payload))return;
+
+  /* baseOnMove owns the canonical movement validation and clamps network
+     coordinates to the world bounds. Snapshot interpolation must consume that
+     accepted state instead of trusting the raw client payload a second time. */
+  const remote=remotes.get(payload.id);
+  if(!remote)return;
+  const x=finiteNumber(remote.tx,NaN),y=finiteNumber(remote.ty,NaN);
   if(!Number.isFinite(x)||!Number.isFinite(y))return;
 
   const now=performance.now();
   let buffer=MOTION.remoteSnapshots.get(payload.id);
+  if(buffer?.length&&buffer.at(-1)?.zone!==currentZone){
+    buffer=[];
+    MOTION.remoteSnapshots.set(payload.id,buffer);
+  }
   if(!buffer){buffer=[];MOTION.remoteSnapshots.set(payload.id,buffer);}
 
   const last=buffer.at(-1);
-  if(last&&finiteNumber(payload.seq,0)>0&&finiteNumber(payload.seq,0)<finiteNumber(last.seq,0))return;
+  const seq=Math.max(0,Math.floor(finiteNumber(payload.seq,0)));
+  if(last&&seq>0&&seq<finiteNumber(last.seq,0))return;
 
   buffer.push({
     at:now,
+    zone:currentZone,
     x,
     y,
-    dir:finiteNumber(payload.dir,last?.dir||0),
+    dir:finiteNumber(remote.dir,last?.dir||0),
     moving:last?Math.hypot(x-last.x,y-last.y)>.35:false,
-    seq:Math.max(0,Math.floor(finiteNumber(payload.seq,0)))
+    seq
   });
 
   while(buffer.length>MAX_SNAPSHOTS)buffer.shift();
@@ -119,7 +136,7 @@ function sampleRemote(buffer,renderAt){
 }
 
 /* Existing network handlers still own validation, sequence accounting and tx/ty.
-   We only observe accepted-format movement packets for visual interpolation. */
+   We only observe movement packets after that handler has accepted/canonicalized them. */
 onMove=function(payload){
   baseOnMove(payload);
   pushRemoteSnapshot(payload);
@@ -163,7 +180,11 @@ draw=function(){
 
   for(const [id,r] of remotes){
     const before=remoteBefore.get(id)||{x:finiteNumber(r.x,0),y:finiteNumber(r.y,0)};
-    const buffer=MOTION.remoteSnapshots.get(id);
+    let buffer=MOTION.remoteSnapshots.get(id);
+    if(buffer?.length&&buffer.at(-1)?.zone!==currentZone){
+      MOTION.remoteSnapshots.delete(id);
+      buffer=null;
+    }
     const sampled=sampleRemote(buffer,renderAt);
 
     if(sampled){
