@@ -1,0 +1,77 @@
+name: terrain-v21-check
+
+on:
+  push:
+    paths:
+      - 'ART_BIBLE.md'
+      - 'terrain-v21.js'
+      - 'survival-v21.html'
+      - 'assets/art-v21/**'
+      - 'tests/terrain-v21.test.mjs'
+      - '.github/workflows/terrain-v21-check.yml'
+  pull_request:
+    paths:
+      - 'ART_BIBLE.md'
+      - 'terrain-v21.js'
+      - 'survival-v21.html'
+      - 'assets/art-v21/**'
+      - 'tests/terrain-v21.test.mjs'
+      - '.github/workflows/terrain-v21-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Terrain syntax
+        run: node --check terrain-v21.js
+      - name: Terrain vertical-slice regression
+        run: node tests/terrain-v21.test.mjs
+      - name: V21 boot syntax and module order
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('survival-v21.html').read_text()
+          match=re.search(r'<script>([\s\S]*?)</script>',text)
+          if not match:
+              raise SystemExit('V21 inline boot script not found')
+          Path('/tmp/v21-boot.js').write_text(match.group(1))
+          if "'terrain-v21.js'" not in text:
+              raise SystemExit('V21 terrain module missing')
+          if "const VER='21a'" not in text:
+              raise SystemExit('V21a cache key missing')
+          PY
+          node --check /tmp/v21-boot.js
+      - name: Existing gameplay regression suite
+        run: |
+          node tests/motion-v18.test.mjs
+          node tests/platform-inventory-v19.test.mjs
+          node tests/interaction-v12.test.mjs
+          node tests/ready-localization-v9.test.mjs
+          node tests/network-quality-v20.test.mjs
+      - name: Relay protocol regression
+        run: node cloudflare/test.mjs
+      - name: Worker bundle dry run
+        run: |
+          npm install
+          npm run check:worker
+      - name: Current production relay health
+        run: |
+          set -euxo pipefail
+          for i in 1 2 3; do
+            code=$(curl -sS -o /tmp/health.txt -w '%{http_code}' --connect-timeout 10 --max-time 20 \
+              -H 'Accept: application/json' \
+              https://abyssal-wake-relay.zuoranzhang.workers.dev/health || true)
+            if [ "$code" = "200" ] && grep -q '"ok":true' /tmp/health.txt; then exit 0; fi
+            sleep 8
+          done
+          cat /tmp/health.txt 2>/dev/null || true
+          exit 1
+      - name: Current production live two-client multiplayer
+        env:
+          LIVE_RELAY_URL: wss://abyssal-wake-relay.zuoranzhang.workers.dev/ws
+        run: npm run test:live-relay
