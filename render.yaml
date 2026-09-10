@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: abyssal-wake-relay
+    runtime: node
+    rootDir: relay
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: CHANNEL_PREFIX
+        value: abyssal-wake-public-v1
