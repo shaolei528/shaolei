@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17382f">
-<title>深渊苏醒 — V17f Smooth Motion</title>
+<title>深渊苏醒 — V17g Predicted Motion</title>
 <style>html,body{margin:0;width:100%;height:100%;display:grid;place-items:center;background:#07110f;color:#dce9e1;font:700 11px ui-monospace,monospace}.boot{padding:18px;border:1px solid #607b6e;background:#0d1b17;text-align:center;line-height:1.7;max-width:82%}.boot small{color:#a9bbb2;font-weight:500}</style>
 </head>
 <body>
@@ -12,7 +12,7 @@
 <script>
 (()=>{
 'use strict';
-const VER='17f';
+const VER='17g';
 const BOOT={depsReady:false,depsLoading:false,requested:false,promise:null,lastPointerUpAt:0,timeoutMs:8000};
 window.ABYSSAL_BOOT_V17=BOOT;
 const boot=document.getElementById('boot');
@@ -30,7 +30,7 @@ function requestEntry(event){if(BOOT.depsReady)return;event?.preventDefault?.();
 function onPointer(event){BOOT.lastPointerUpAt=performance.now();requestEntry(event);}
 function onClick(event){if(performance.now()-BOOT.lastPointerUpAt<650){if(!BOOT.depsReady){event.preventDefault();event.stopImmediatePropagation();}return;}requestEntry(event);}
 function onKey(event){if(event.key==='Enter')requestEntry(event);}
-async function mountUI(){try{const response=await fetch('./survival-v7.html?ui='+VER,{cache:'no-store'});if(!response.ok)throw new Error('survival-v7.html '+response.status);const source=await response.text();const parsed=new DOMParser().parseFromString(source,'text/html');parsed.querySelectorAll('script').forEach(n=>n.remove());for(const style of parsed.head.querySelectorAll('style'))document.head.appendChild(style.cloneNode(true));document.body.innerHTML=parsed.body.innerHTML;const brand=document.querySelector('.brand');if(brand)brand.innerHTML='深渊<br>苏醒';const sub=document.querySelector('.subtitle');if(sub)sub.innerHTML='沼林岛 · 公网实时世界<br>本地预测移动 · 远程平滑同步';const input=document.getElementById('name');if(input)input.placeholder='幸存者名字';const btn=document.getElementById('enter');if(btn)btn.textContent='进入安全营地';const note=document.querySelector('.gate .note');if(note)note.textContent='安全营地 · 无怪物 · 禁止 PvP · 可恢复 · 有新手物资';enter=btn;nameInput=input;const gate=document.getElementById('gate');if(!enter||!gate)throw new Error('entry DOM missing after UI mount');enter.addEventListener('pointerup',onPointer,{capture:true,passive:false});enter.addEventListener('click',onClick,{capture:true,passive:false});nameInput?.addEventListener('keydown',onKey,{capture:true});setTimeout(()=>{if(!BOOT.depsReady&&!BOOT.depsLoading)loadModules();},300);}catch(error){console.error('[Abyssal V17 UI]',error);failScreen('沼林岛界面加载失败');}}
+async function mountUI(){try{const response=await fetch('./survival-v7.html?ui='+VER,{cache:'no-store'});if(!response.ok)throw new Error('survival-v7.html '+response.status);const source=await response.text();const parsed=new DOMParser().parseFromString(source,'text/html');parsed.querySelectorAll('script').forEach(n=>n.remove());for(const style of parsed.head.querySelectorAll('style'))document.head.appendChild(style.cloneNode(true));document.body.innerHTML=parsed.body.innerHTML;const brand=document.querySelector('.brand');if(brand)brand.innerHTML='深渊<br>苏醒';const sub=document.querySelector('.subtitle');if(sub)sub.innerHTML='沼林岛 · 公网实时世界<br>本地预测移动 · 远程缓冲插值';const input=document.getElementById('name');if(input)input.placeholder='幸存者名字';const btn=document.getElementById('enter');if(btn)btn.textContent='进入安全营地';const note=document.querySelector('.gate .note');if(note)note.textContent='安全营地 · 无怪物 · 禁止 PvP · 可恢复 · 有新手物资';enter=btn;nameInput=input;const gate=document.getElementById('gate');if(!enter||!gate)throw new Error('entry DOM missing after UI mount');enter.addEventListener('pointerup',onPointer,{capture:true,passive:false});enter.addEventListener('click',onClick,{capture:true,passive:false});nameInput?.addEventListener('keydown',onKey,{capture:true});setTimeout(()=>{if(!BOOT.depsReady&&!BOOT.depsLoading)loadModules();},300);}catch(error){console.error('[Abyssal V17 UI]',error);failScreen('沼林岛界面加载失败');}}
 mountUI();
 })();
 </script>
