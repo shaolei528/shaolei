@@ -59,7 +59,6 @@
     if(rowsKey === PERF.lastPlayerListKey) return;
     PERF.lastPlayerListKey = rowsKey;
 
-    const readyButton = document.getElementById('readyToggleV9');
     const fragment = document.createDocumentFragment();
 
     if(!near.length){
@@ -78,9 +77,6 @@
     }
 
     playerList.replaceChildren(fragment);
-    if(readyButton && readyButton.parentElement !== playerList.parentElement){
-      playerList.parentElement?.appendChild(readyButton);
-    }
   };
 
   function cancelInput(){
