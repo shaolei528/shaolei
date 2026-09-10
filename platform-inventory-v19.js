@@ -36,6 +36,10 @@ function inventorySnapshot(source){
   const src=source||{};
   return Object.fromEntries(Object.keys(ITEM_META).map(id=>[id,id==='knife'||id==='lantern'?!!src[id]:Math.max(0,Math.floor(Number(src[id])||0))]));
 }
+function inventorySignature(snapshot){
+  const src=snapshot||{};
+  return Object.keys(ITEM_META).map(id=>`${id}:${src[id]===true?1:src[id]===false?0:src[id]??0}`).join('|');
+}
 function looksMobileNavigator(nav={}){
   if(nav.userAgentData?.mobile===true)return true;
   const ua=String(nav.userAgent||'');
@@ -51,7 +55,7 @@ function detectDesktop({finePointer=false,hover=false,navigatorLike={}}={}){
   return !!(finePointer||hover||desktopPlatform);
 }
 
-const API={version:19,keyboardVector,isTypingTarget,inventorySnapshot,looksMobileNavigator,detectDesktop,desktop:false,panelOpen:false};
+const API={version:19,keyboardVector,isTypingTarget,inventorySnapshot,inventorySignature,looksMobileNavigator,detectDesktop,desktop:false,panelOpen:false,inventoryRenderCount:0};
 window.ABYSSAL_PLATFORM_V19=API;
 
 const root=typeof game!=='undefined'?game:document.getElementById('game');
@@ -65,6 +69,7 @@ const keys=new Set();
 let panel=null;
 let toggle=null;
 let hint=null;
+let lastInventorySignature='';
 
 function isDesktop(){
   return detectDesktop({finePointer:!!fineMedia.matches,hover:!!hoverMedia.matches,navigatorLike:navigator});
@@ -140,9 +145,9 @@ function makeInventory(){
     hint.textContent='WASD / 方向键 移动 · Shift 冲刺 · 空格 攻击 · E 互动 · B / I 背包';
     root.appendChild(hint);
   }
+  toggle.setAttribute('aria-expanded','false');
   toggle.addEventListener('click',()=>setPanelOpen(panel.classList.contains('hidden')));
   panel.querySelector('.v19-bag-close')?.addEventListener('click',()=>setPanelOpen(false));
-  refreshInventory();
 }
 
 function stopMovement(){
@@ -163,11 +168,14 @@ function setPanelOpen(open){
   }else panel?.classList.add('hidden');
   toggle?.setAttribute('aria-expanded',open?'true':'false');
 }
-function refreshInventory(){
-  if(!panel||typeof inventory==='undefined')return;
+function refreshInventory(force=false){
+  if(!panel||typeof inventory==='undefined')return false;
+  if(!force&&!API.panelOpen)return false;
   const grid=panel.querySelector('.v19-bag-grid');
-  if(!grid)return;
+  if(!grid)return false;
   const snapshot=inventorySnapshot(inventory);
+  const signature=inventorySignature(snapshot);
+  if(!force&&signature===lastInventorySignature)return false;
   grid.replaceChildren();
   for(const id of Object.keys(ITEM_META)){
     const meta=ITEM_META[id];
@@ -186,6 +194,9 @@ function refreshInventory(){
     }
     card.append(icon,info);grid.appendChild(card);
   }
+  lastInventorySignature=signature;
+  API.inventoryRenderCount++;
+  return true;
 }
 
 function applyKeyboardMovement(){
@@ -239,9 +250,7 @@ function applyPlatform(){
 addStyles();
 makeInventory();
 const baseUpdateUI=typeof updateUI==='function'?updateUI:null;
-if(baseUpdateUI){updateUI=function(){const result=baseUpdateUI.apply(this,arguments);refreshInventory();return result;};}
-const baseDraw=typeof draw==='function'?draw:null;
-if(baseDraw){draw=function(){fitDesktopCanvas();return baseDraw.apply(this,arguments);};}
+if(baseUpdateUI){updateUI=function(){const result=baseUpdateUI.apply(this,arguments);if(API.panelOpen)refreshInventory();return result;};}
 
 document.addEventListener('keydown',onKeyDown,true);
 document.addEventListener('keyup',onKeyUp,true);
