@@ -140,6 +140,9 @@ class P2PChannel{
     }
   }
   close(){
+    if(!this.closed&&DUAL.ready){
+      sendWire({kind:'untrack',channel:this.key,from:SESSION_ID});
+    }
     this.closed=true;
     DUAL.channels.delete(this.key);
   }
@@ -197,6 +200,13 @@ function onHostWire(msg,sourceConn){
     hostSnapshot(msg.channel);
     return;
   }
+  if(msg.kind==='untrack'){
+    const map=DUAL.presence.get(msg.channel)||new Map();
+    map.delete(msg.from);
+    DUAL.presence.set(msg.channel,map);
+    hostSnapshot(msg.channel);
+    return;
+  }
   if(msg.kind==='broadcast'){
     dispatchWire(msg);
     for(const c of DUAL.guestConns.values()){
@@ -216,6 +226,13 @@ function sendWire(msg){
     if(msg.kind==='track'){
       const map=DUAL.presence.get(msg.channel)||new Map();
       map.set(SESSION_ID,{...(msg.meta||{}),id:SESSION_ID});
+      DUAL.presence.set(msg.channel,map);
+      hostSnapshot(msg.channel);
+      return;
+    }
+    if(msg.kind==='untrack'){
+      const map=DUAL.presence.get(msg.channel)||new Map();
+      map.delete(SESSION_ID);
       DUAL.presence.set(msg.channel,map);
       hostSnapshot(msg.channel);
       return;
@@ -481,6 +498,7 @@ function scheduleRecover(){
     try{
       tryDestroy(DUAL.peer);
       DUAL.peer=null;DUAL.hostConn=null;DUAL.guestConns.clear();DUAL.connSession.clear();
+      DUAL.channels.clear();DUAL.presence.clear();
       DUAL.ready=false;DUAL.role='idle';
       await startPeerTransport();
     }catch(e){
