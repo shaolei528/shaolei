@@ -60,7 +60,8 @@ function removePresence(ws, key) {
   if (!sessionId) return;
   const map = channels.get(key);
   if (!map) return;
-  if (map.delete(sessionId)) publishPresence(key);
+  const current = map.get(sessionId);
+  if (current?.ws === ws && map.delete(sessionId)) publishPresence(key);
   if (map.size === 0) channels.delete(key);
 }
 
