@@ -8,9 +8,7 @@ on:
       - 'terrain-v21-preview.html'
       - 'survival-v21.html'
       - 'assets/art-v21/**'
-      - 'modules/**'
       - 'tests/terrain-v21.test.mjs'
-      - 'tests/module-sort.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
   pull_request:
     paths:
@@ -19,9 +17,7 @@ on:
       - 'terrain-v21-preview.html'
       - 'survival-v21.html'
       - 'assets/art-v21/**'
-      - 'modules/**'
       - 'tests/terrain-v21.test.mjs'
-      - 'tests/module-sort.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
 
 jobs:
@@ -32,8 +28,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Module-sort byte equivalence and load order
-        run: node tests/module-sort.test.mjs
       - name: Terrain syntax
         run: node --check terrain-v21.js
       - name: Terrain vertical-slice regression
