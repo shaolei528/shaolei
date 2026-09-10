@@ -1,0 +1,15 @@
+{
+  "version": 21,
+  "style": "polished top-down pixel art",
+  "tileSize": 64,
+  "sheet": "terrain-v21.png",
+  "columns": 5,
+  "rows": 4,
+  "tiles": [
+    "grass_a", "grass_b", "grass_flowers", "sand_a", "sand_b",
+    "road_a", "road_b", "water_a", "water_b", "shore_n",
+    "shore_s", "shore_e", "shore_w", "shore_ne", "shore_nw",
+    "shore_se", "shore_sw", "grass_to_sand_e", "grass_to_sand_w", "sand_pebbles"
+  ],
+  "notes": "Visual art only. Collision is defined explicitly by terrain-v21.js and is never inferred from PNG alpha."
+}
