@@ -6,6 +6,10 @@ on:
       - 'cloudflare/**'
       - 'survival-v17.html'
       - 'network-relay-v16.js'
+      - 'smooth-motion-v18.js'
+      - 'game-render.js'
+      - 'game-play.js'
+      - 'render-v9.js'
       - 'survival-config.js'
       - 'wrangler.jsonc'
       - 'package.json'
@@ -15,6 +19,10 @@ on:
       - 'cloudflare/**'
       - 'survival-v17.html'
       - 'network-relay-v16.js'
+      - 'smooth-motion-v18.js'
+      - 'game-render.js'
+      - 'game-play.js'
+      - 'render-v9.js'
       - 'survival-config.js'
       - 'wrangler.jsonc'
       - 'package.json'
@@ -31,6 +39,13 @@ jobs:
         run: node cloudflare/test.mjs
       - name: Check relay client syntax
         run: node --check network-relay-v16.js
+      - name: Check motion pipeline syntax
+        run: node --check smooth-motion-v18.js
+      - name: Check gameplay/render syntax
+        run: |
+          node --check game-play.js
+          node --check game-render.js
+          node --check render-v9.js
       - name: Check V17 boot syntax
         run: |
           python - <<'PY'
@@ -41,8 +56,29 @@ jobs:
           if not match:
               raise SystemExit('V17 inline boot script not found')
           Path('/tmp/v17-boot.js').write_text(match.group(1))
+          if 'smooth-motion-v18.js' not in text:
+              raise SystemExit('V17 motion module missing')
+          if "const VER='17f'" not in text:
+              raise SystemExit('V17f cache key missing')
           PY
           node --check /tmp/v17-boot.js
+      - name: Check motion invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('smooth-motion-v18.js').read_text()
+          required = [
+            "mode:'client-prediction'",
+            'baseUpdate(dt)',
+            'camera.x=me.x',
+            'camera.y=me.y',
+            'Math.exp(-12*dt)',
+            'legacyTicksBlocked'
+          ]
+          missing = [item for item in required if item not in text]
+          if missing:
+              raise SystemExit('motion invariant missing: ' + ', '.join(missing))
+          PY
       - name: Validate root Worker bundle
         run: |
           npm install
