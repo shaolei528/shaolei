@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#17382f">
+<title>Abyssal Wake — V9</title>
+<style>
+html,body{margin:0;width:100%;height:100%;display:grid;place-items:center;background:#07110f;color:#dce9e1;font:700 11px ui-monospace,monospace}.boot{padding:18px;border:1px solid #607b6e;background:#0d1b17;text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="boot" id="boot">LOADING MIREWOOD…</div>
+<script>
+(async()=>{
+  'use strict';
+  const boot = document.getElementById('boot');
+  try{
+    const response = await fetch('./survival-v7.html?v=9', {cache:'no-store'});
+    if(!response.ok) throw new Error('survival-v7.html ' + response.status);
+
+    let html = await response.text();
+    const bodyEnd = html.lastIndexOf('</body>');
+    if(bodyEnd < 0) throw new Error('missing body end marker');
+
+    const markers = [
+      '<script>\nwindow.__ABYSSAL_BOOT_AT',
+      '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>'
+    ];
+
+    let scriptStart = -1;
+    for(const marker of markers){
+      const index = html.indexOf(marker);
+      if(index >= 0){
+        scriptStart = index;
+        break;
+      }
+    }
+
+    if(scriptStart < 0) throw new Error('legacy script marker missing');
+
+    html = html.slice(0, scriptStart)
+      + '<script src="boot-v9.js?v=9"><\\/script>\n'
+      + html.slice(bodyEnd);
+
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(error){
+    console.error('[Abyssal V9 wrapper]', error);
+    boot.innerHTML = 'MIREWOOD FAILED TO LOAD<br><small>Reload once. If it persists, the entry file is unavailable.</small>';
+  }
+})();
+</script>
+</body>
+</html>
