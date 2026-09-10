@@ -94,8 +94,8 @@ assert.ok(source.includes("const legacyDrawGround=(typeof window.drawGround==='f
 assert.ok(source.includes('const baseSendMove='),'terrain adapter must canonicalize collision before legacy movement packets are sent');
 assert.ok(source.includes('const baseUpdate='),'terrain adapter must resolve local movement every simulation update');
 const terrainIndex=boot.indexOf("'terrain-v21.js'");
-const renderV9Index=boot.indexOf("'modules/render/render-v9.js'");
-const motionIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");
+const renderV9Index=boot.indexOf("'render-v9.js'");
+const motionIndex=boot.indexOf("'smooth-motion-v18.js'");
 assert.ok(terrainIndex>=0&&terrainIndex<renderV9Index,'V21 terrain must load before the extended render loop');
 assert.ok(terrainIndex<motionIndex,'terrain collision must be present before smooth-motion wraps update');
 assert.ok(preview.includes('terrain-v21.js')&&preview.includes('Collision: OFF'),'static terrain preview must load V21 and expose collision debug');
