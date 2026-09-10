@@ -41,7 +41,11 @@
     button.type = 'button';
     button.textContent = 'PREP FIRST';
     button.style.cssText = [
-      'width:100%',
+      'position:absolute',
+      'right:8px',
+      'top:244px',
+      'z-index:12',
+      'width:118px',
       'height:27px',
       'margin-top:5px',
       'border:1px solid #6f8c7f',
@@ -53,8 +57,7 @@
       'touch-action:manipulation'
     ].join(';');
 
-    const container = playerList?.parentElement;
-    if(container) container.appendChild(button);
+    if(game) game.appendChild(button);
 
     button.addEventListener('click', ()=>{
       if(!inCamp()){
@@ -163,9 +166,6 @@
       }
     }
 
-    const oldButton = document.getElementById('readyToggleV9');
-    if(oldButton) oldButton.remove();
-    ensureReadyButton();
     refreshReadyButton();
   };
 
