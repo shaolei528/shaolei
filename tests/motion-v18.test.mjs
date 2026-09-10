@@ -12,12 +12,16 @@ function makeHarness(){
     performance:{now:()=>now},
     SESSION_ID:'self',
     currentZone:'1:1',
+    WORLD:{w:1000,h:1000},
     clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
     me:{x:0,y:0,dir:0},
     camera:{x:0,y:0},
     remotes:new Map()
   };
 
+  sandbox.validMove=function(p){
+    return !!(p&&p.id&&p.id!=='self'&&p.zone===sandbox.currentZone&&Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.y)));
+  };
   sandbox.update=function(dt){
     sandbox.me.x+=100*dt;
     for(const r of sandbox.remotes.values()){
@@ -27,14 +31,16 @@ function makeHarness(){
   };
   sandbox.draw=function(){};
   sandbox.onMove=function(payload){
-    if(!payload||payload.id==='self'||payload.zone!=='1:1')return;
+    if(!sandbox.validMove(payload))return;
+    const x=sandbox.clamp(Number(payload.x),0,sandbox.WORLD.w);
+    const y=sandbox.clamp(Number(payload.y),0,sandbox.WORLD.h);
     let r=sandbox.remotes.get(payload.id);
     if(!r){
-      r={id:payload.id,x:Number(payload.x)||0,y:Number(payload.y)||0,tx:Number(payload.x)||0,ty:Number(payload.y)||0,dir:0,moving:false};
+      r={id:payload.id,x,y,tx:x,ty:y,dir:0,moving:false};
       sandbox.remotes.set(payload.id,r);
     }
-    r.tx=Number(payload.x)||0;
-    r.ty=Number(payload.y)||0;
+    r.tx=x;
+    r.ty=y;
     r.dir=Number(payload.dir)||0;
   };
 
@@ -138,8 +144,43 @@ assert.ok(Math.abs(p60-p120)<0.01,`60/120Hz local distance diverged: ${p60} vs $
 {
   const h=makeHarness();
   h.setNow(0);
+  h.sandbox.onMove({id:'remote-bound',zone:'1:1',x:999999,y:-500,dir:0,seq:1});
+  h.setNow(120);
+  h.sandbox.draw();
+  const remote=h.sandbox.remotes.get('remote-bound');
+  assert.ok(remote,'bounded remote player should exist');
+  assert.equal(remote.tx,1000,'base movement handler should clamp x to WORLD.w');
+  assert.equal(remote.ty,0,'base movement handler should clamp y to zero');
+  assert.equal(remote.x,1000,'snapshot renderer must use canonical clamped x');
+  assert.equal(remote.y,0,'snapshot renderer must use canonical clamped y');
+}
+
+{
+  const h=makeHarness();
+  h.setNow(0);
+  h.sandbox.onMove({id:'remote-zone',zone:'1:1',x:40,y:40,dir:0,seq:10});
+  h.setNow(100);
+  h.sandbox.onMove({id:'remote-zone',zone:'1:1',x:60,y:40,dir:0,seq:11});
+  h.sandbox.currentZone='2:2';
+  h.sandbox.remotes.clear();
+  h.setNow(180);
+  h.sandbox.onMove({id:'remote-zone',zone:'2:2',x:700,y:700,dir:1,seq:1});
+  h.setNow(220);
+  h.sandbox.draw();
+  const remote=h.sandbox.remotes.get('remote-zone');
+  const buffer=h.sandbox.ABYSSAL_MOTION_V18.remoteSnapshots.get('remote-zone');
+  assert.ok(remote,'same player id should be recreated in the new zone');
+  assert.equal(remote.x,700,'old-zone snapshot must not pull the player back after zone switch');
+  assert.equal(remote.y,700,'old-zone snapshot must not contaminate new-zone y');
+  assert.equal(buffer?.at(-1)?.zone,'2:2','snapshot buffer must belong to the current zone');
+  assert.equal(buffer?.at(-1)?.seq,1,'new-zone sequence must not be rejected by old-zone sequence history');
+}
+
+{
+  const h=makeHarness();
+  h.setNow(0);
   h.sandbox.onMove({id:'self',zone:'1:1',x:999,y:999,seq:1});
   assert.equal(h.sandbox.remotes.has('self'),false,'self move must never create a remote correction target');
 }
 
-console.log(JSON.stringify({ok:true,p30,p60,p120,mode:'client-prediction',remote:'snapshot-buffer',highLatency:'simulated-pass'}));
+console.log(JSON.stringify({ok:true,p30,p60,p120,mode:'client-prediction',remote:'snapshot-buffer',highLatency:'simulated-pass',boundedSnapshots:'pass',zoneIsolation:'pass'}));
