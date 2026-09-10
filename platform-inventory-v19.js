@@ -4,13 +4,12 @@
 /*
   V19 cross-platform controls + inventory UI.
 
-  This module intentionally reuses the existing gameplay state instead of creating
-  a second inventory or movement system. Mobile keeps the current touch controls;
-  desktop gains keyboard controls and a wider native-resolution canvas. No network
-  event, payload, save schema, item id or authority rule is changed here.
+  Reuses the existing gameplay state. Mobile keeps touch controls; desktop gains
+  keyboard controls and a wider canvas. Desktop detection intentionally does not
+  depend on viewport width because embedded desktop browsers can be narrower than
+  820px even when a real mouse/keyboard are present.
 */
 
-const DESKTOP_MEDIA='(min-width: 820px) and (pointer: fine)';
 const RESOURCE_ITEMS=['wood','stone','food','shard'];
 const ITEM_META={
   wood:{name:'木材',desc:'基础制作材料',sprite:0},
@@ -37,8 +36,22 @@ function inventorySnapshot(source){
   const src=source||{};
   return Object.fromEntries(Object.keys(ITEM_META).map(id=>[id,id==='knife'||id==='lantern'?!!src[id]:Math.max(0,Math.floor(Number(src[id])||0))]));
 }
+function looksMobileNavigator(nav={}){
+  if(nav.userAgentData?.mobile===true)return true;
+  const ua=String(nav.userAgent||'');
+  const platform=String(nav.platform||'');
+  if(/Android|iPhone|iPad|iPod|Mobile/i.test(ua))return true;
+  if(platform==='MacIntel'&&Number(nav.maxTouchPoints||0)>1)return true;
+  return false;
+}
+function detectDesktop({finePointer=false,hover=false,navigatorLike={}}={}){
+  if(looksMobileNavigator(navigatorLike))return false;
+  const platform=String(navigatorLike.platform||'');
+  const desktopPlatform=/Win|Mac|Linux/i.test(platform);
+  return !!(finePointer||hover||desktopPlatform);
+}
 
-const API={version:19,keyboardVector,isTypingTarget,inventorySnapshot,desktop:false,panelOpen:false};
+const API={version:19,keyboardVector,isTypingTarget,inventorySnapshot,looksMobileNavigator,detectDesktop,desktop:false,panelOpen:false};
 window.ABYSSAL_PLATFORM_V19=API;
 
 const root=typeof game!=='undefined'?game:document.getElementById('game');
@@ -46,13 +59,16 @@ const arenaWrap=document.querySelector('.arena-wrap');
 const arenaCanvas=typeof canvas!=='undefined'?canvas:document.getElementById('canvas');
 if(!root||!arenaWrap||!arenaCanvas)return;
 
-const media=window.matchMedia?window.matchMedia(DESKTOP_MEDIA):{matches:false,addEventListener(){}};
+const fineMedia=window.matchMedia?window.matchMedia('(any-pointer: fine)'):{matches:false,addEventListener(){}};
+const hoverMedia=window.matchMedia?window.matchMedia('(any-hover: hover)'):{matches:false,addEventListener(){}};
 const keys=new Set();
 let panel=null;
 let toggle=null;
 let hint=null;
 
-function isDesktop(){return !!media.matches;}
+function isDesktop(){
+  return detectDesktop({finePointer:!!fineMedia.matches,hover:!!hoverMedia.matches,navigatorLike:navigator});
+}
 function addStyles(){
   if(document.getElementById('platformInventoryStyleV19'))return;
   const style=document.createElement('style');
@@ -75,20 +91,19 @@ function addStyles(){
     .v19-bag-foot{padding:0 10px 11px;color:#91a59c;font:600 7px/1.5 ui-monospace,monospace;text-align:center}
     #desktopControlsV19{display:none;position:absolute;left:50%;bottom:60px;transform:translateX(-50%);z-index:13;padding:6px 9px;border:1px solid #465f55;background:#0a1714d9;color:#b7c9c1;font:700 7px ui-monospace,monospace;white-space:nowrap;pointer-events:none}
     @media(max-height:700px){#inventoryToggleV19{bottom:145px}}
-    @media(min-width:820px) and (pointer:fine){
-      .app{width:100vw!important;max-width:1100px!important;height:100svh!important}
-      .top{grid-template-columns:56px minmax(300px,430px) minmax(270px,1fr);padding-left:12px;padding-right:12px}
-      .joystick,.actions{display:none!important}
-      .inventory{bottom:12px!important}
-      .chat-toggle,.map-toggle{bottom:12px!important}
-      .chat-toggle{left:12px!important}.map-toggle{right:12px!important}
-      #inventoryToggleV19{right:68px;bottom:12px;width:54px;height:34px}
-      #desktopControlsV19{display:block}
-      #inventoryPanelV19{left:50%;right:auto;top:126px;transform:translateX(-50%);width:min(720px,calc(100% - 40px));max-height:calc(100% - 164px)}
-      .v19-bag-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:12px}
-      .v19-item{min-height:88px}
-      .quest{width:190px}.players{width:160px}
-    }
+    html.abyssal-desktop-v19 .app{width:100vw!important;max-width:1100px!important;height:100svh!important}
+    html.abyssal-desktop-v19 .top{grid-template-columns:56px minmax(250px,430px) minmax(220px,1fr);padding-left:12px;padding-right:12px}
+    html.abyssal-desktop-v19 .joystick,html.abyssal-desktop-v19 .actions{display:none!important}
+    html.abyssal-desktop-v19 .inventory{bottom:12px!important}
+    html.abyssal-desktop-v19 .chat-toggle,html.abyssal-desktop-v19 .map-toggle{bottom:12px!important}
+    html.abyssal-desktop-v19 .chat-toggle{left:12px!important}html.abyssal-desktop-v19 .map-toggle{right:12px!important}
+    html.abyssal-desktop-v19 #inventoryToggleV19{right:68px;bottom:12px;width:54px;height:34px}
+    html.abyssal-desktop-v19 #desktopControlsV19{display:block}
+    html.abyssal-desktop-v19 #inventoryPanelV19{left:50%;right:auto;top:126px;transform:translateX(-50%);width:min(720px,calc(100% - 40px));max-height:calc(100% - 164px)}
+    html.abyssal-desktop-v19 .v19-bag-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:12px}
+    html.abyssal-desktop-v19 .v19-item{min-height:88px}
+    html.abyssal-desktop-v19 .quest{width:190px}html.abyssal-desktop-v19 .players{width:160px}
+    @media(max-width:680px){html.abyssal-desktop-v19 .quest{width:150px}html.abyssal-desktop-v19 .players{width:130px}html.abyssal-desktop-v19 #desktopControlsV19{font-size:6px}}
   `;
   document.head.appendChild(style);
 }
@@ -102,7 +117,6 @@ function makeInventory(){
     toggle.textContent='背包';
     root.appendChild(toggle);
   }
-
   panel=document.getElementById('inventoryPanelV19');
   if(!panel){
     panel=document.createElement('section');
@@ -119,7 +133,6 @@ function makeInventory(){
       <div class="v19-bag-foot">电脑：B / I 打开背包 · 手机：点击【背包】</div>`;
     root.appendChild(panel);
   }
-
   hint=document.getElementById('desktopControlsV19');
   if(!hint){
     hint=document.createElement('div');
@@ -127,7 +140,6 @@ function makeInventory(){
     hint.textContent='WASD / 方向键 移动 · Shift 冲刺 · 空格 攻击 · E 互动 · B / I 背包';
     root.appendChild(hint);
   }
-
   toggle.addEventListener('click',()=>setPanelOpen(panel.classList.contains('hidden')));
   panel.querySelector('.v19-bag-close')?.addEventListener('click',()=>setPanelOpen(false));
   refreshInventory();
@@ -151,7 +163,6 @@ function setPanelOpen(open){
   }else panel?.classList.add('hidden');
   toggle?.setAttribute('aria-expanded',open?'true':'false');
 }
-
 function refreshInventory(){
   if(!panel||typeof inventory==='undefined')return;
   const grid=panel.querySelector('.v19-bag-grid');
@@ -160,12 +171,9 @@ function refreshInventory(){
   grid.replaceChildren();
   for(const id of Object.keys(ITEM_META)){
     const meta=ITEM_META[id];
-    const card=document.createElement('article');
-    card.className='v19-item';
-    const icon=document.createElement('div');
-    icon.className='v19-item-icon '+(RESOURCE_ITEMS.includes(id)?'sprite':'gear');
-    if(RESOURCE_ITEMS.includes(id))icon.dataset.sprite=String(meta.sprite);
-    else icon.textContent=meta.glyph||'?';
+    const card=document.createElement('article');card.className='v19-item';
+    const icon=document.createElement('div');icon.className='v19-item-icon '+(RESOURCE_ITEMS.includes(id)?'sprite':'gear');
+    if(RESOURCE_ITEMS.includes(id))icon.dataset.sprite=String(meta.sprite);else icon.textContent=meta.glyph||'?';
     const info=document.createElement('div');
     const title=document.createElement('div');title.className='v19-item-name';
     const name=document.createElement('span');name.textContent=meta.name;
@@ -185,21 +193,14 @@ function applyKeyboardMovement(){
   const v=keyboardVector(keys);
   try{joystickState.x=v.x;joystickState.y=v.y;}catch{}
 }
-function triggerDash(){
-  try{if(started&&!dead&&dashCd<=0){dashQueued=true;dashCd=1.35;}}catch{}
-}
+function triggerDash(){try{if(started&&!dead&&dashCd<=0){dashQueued=true;dashCd=1.35;}}catch{}}
 function triggerAttack(){try{attack();}catch{}}
-function triggerInteract(){
-  const button=document.getElementById('interactV12')||document.getElementById('useBtn');
-  try{button?.click();}catch{}
-}
+function triggerInteract(){const button=document.getElementById('interactV12')||document.getElementById('useBtn');try{button?.click();}catch{}}
 function movementCode(code){return ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].includes(code);}
 
 function onKeyDown(event){
   if(!isDesktop()||isTypingTarget(event.target))return;
-  if(movementCode(event.code)){
-    event.preventDefault();keys.add(event.code);applyKeyboardMovement();return;
-  }
+  if(movementCode(event.code)){event.preventDefault();keys.add(event.code);applyKeyboardMovement();return;}
   if((event.code==='KeyB'||event.code==='KeyI')&&!event.repeat){event.preventDefault();setPanelOpen(!API.panelOpen);return;}
   if(event.code==='Escape'&&API.panelOpen){event.preventDefault();setPanelOpen(false);return;}
   if(API.panelOpen)return;
@@ -220,7 +221,7 @@ function fitDesktopCanvas(){
   if(!isDesktop())return;
   const rect=arenaWrap.getBoundingClientRect();
   if(rect.width<100||rect.height<100)return;
-  const w=Math.max(640,Math.min(1100,Math.round(rect.width)));
+  const w=Math.max(560,Math.min(1100,Math.round(rect.width)));
   const h=Math.max(420,Math.min(820,Math.round(rect.height)));
   if(arenaCanvas.width!==w||arenaCanvas.height!==h){
     arenaCanvas.width=w;arenaCanvas.height=h;
@@ -237,23 +238,17 @@ function applyPlatform(){
 
 addStyles();
 makeInventory();
-
 const baseUpdateUI=typeof updateUI==='function'?updateUI:null;
-if(baseUpdateUI){
-  updateUI=function(){const result=baseUpdateUI.apply(this,arguments);refreshInventory();return result;};
-}
-
+if(baseUpdateUI){updateUI=function(){const result=baseUpdateUI.apply(this,arguments);refreshInventory();return result;};}
 const baseDraw=typeof draw==='function'?draw:null;
-if(baseDraw){
-  draw=function(){fitDesktopCanvas();return baseDraw.apply(this,arguments);};
-}
+if(baseDraw){draw=function(){fitDesktopCanvas();return baseDraw.apply(this,arguments);};}
 
 document.addEventListener('keydown',onKeyDown,true);
 document.addEventListener('keyup',onKeyUp,true);
 document.addEventListener('focusin',event=>{if(isTypingTarget(event.target))stopMovement();},true);
 window.addEventListener('blur',stopMovement);
 window.addEventListener('resize',()=>requestAnimationFrame(fitDesktopCanvas),{passive:true});
-if(media.addEventListener)media.addEventListener('change',applyPlatform);
+for(const m of [fineMedia,hoverMedia])if(m.addEventListener)m.addEventListener('change',applyPlatform);
 if('ResizeObserver' in window)new ResizeObserver(()=>requestAnimationFrame(fitDesktopCanvas)).observe(arenaWrap);
 applyPlatform();
 })();
