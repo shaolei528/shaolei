@@ -73,10 +73,10 @@ function addStyles(){
     .v19-item-name{display:flex;align-items:baseline;justify-content:space-between;gap:6px;font:900 9px ui-monospace,monospace}.v19-item-count{color:#f1d98e;font-size:11px}
     .v19-item-desc{margin-top:4px;color:#9fb3aa;font:600 7px/1.45 ui-monospace,monospace}.v19-item-state{margin-top:4px;color:#a9dfb4;font:800 7px ui-monospace,monospace}
     .v19-bag-foot{padding:0 10px 11px;color:#91a59c;font:600 7px/1.5 ui-monospace,monospace;text-align:center}
-    #desktopControlsV19{display:none;position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:13;padding:6px 9px;border:1px solid #465f55;background:#0a1714d9;color:#b7c9c1;font:700 7px ui-monospace,monospace;white-space:nowrap;pointer-events:none}
+    #desktopControlsV19{display:none;position:absolute;left:50%;bottom:60px;transform:translateX(-50%);z-index:13;padding:6px 9px;border:1px solid #465f55;background:#0a1714d9;color:#b7c9c1;font:700 7px ui-monospace,monospace;white-space:nowrap;pointer-events:none}
     @media(max-height:700px){#inventoryToggleV19{bottom:145px}}
     @media(min-width:820px) and (pointer:fine){
-      .app{width:100vw!important;max-width:1180px!important;height:100svh!important}
+      .app{width:100vw!important;max-width:1100px!important;height:100svh!important}
       .top{grid-template-columns:56px minmax(300px,430px) minmax(270px,1fr);padding-left:12px;padding-right:12px}
       .joystick,.actions{display:none!important}
       .inventory{bottom:12px!important}
@@ -208,8 +208,12 @@ function onKeyDown(event){
   if(event.code==='KeyE'&&!event.repeat){event.preventDefault();triggerInteract();}
 }
 function onKeyUp(event){
-  if(!isDesktop()||isTypingTarget(event.target))return;
-  if(movementCode(event.code)){event.preventDefault();keys.delete(event.code);applyKeyboardMovement();}
+  if(!isDesktop())return;
+  if(movementCode(event.code)){
+    keys.delete(event.code);
+    if(!API.panelOpen)applyKeyboardMovement();
+    if(!isTypingTarget(event.target))event.preventDefault();
+  }
 }
 
 function fitDesktopCanvas(){
@@ -246,6 +250,7 @@ if(baseDraw){
 
 document.addEventListener('keydown',onKeyDown,true);
 document.addEventListener('keyup',onKeyUp,true);
+document.addEventListener('focusin',event=>{if(isTypingTarget(event.target))stopMovement();},true);
 window.addEventListener('blur',stopMovement);
 window.addEventListener('resize',()=>requestAnimationFrame(fitDesktopCanvas),{passive:true});
 if(media.addEventListener)media.addEventListener('change',applyPlatform);
