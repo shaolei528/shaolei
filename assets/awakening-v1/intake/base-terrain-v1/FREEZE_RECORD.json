@@ -1,0 +1,45 @@
+{
+  "base": "4033ccc368b6dcb7464b6c168028346176ce675e",
+  "branch": "feat/awakening-terrain-normalization-v1",
+  "source": {
+    "dimensions": [1536, 614],
+    "format": "JPEG/RGB",
+    "productionAsset": false
+  },
+  "processing": {
+    "crop": "separator/border excluded",
+    "squareRepair": "duplicate final edge only when needed",
+    "normalization": "nearest-neighbor only to 64x64",
+    "bilinear": false,
+    "blur": false,
+    "antialias": false,
+    "note": "non-integer source-to-64 ratio; tile-specific feasibility only"
+  },
+  "freeze": {
+    "productionAccepted": false,
+    "candidateManifest": false,
+    "productionManifestModified": false,
+    "runtimeBindingsModified": false,
+    "worldOrGameplayModified": false,
+    "transitionWorkContinued": false,
+    "macroTerrainPrototypePending": true
+  },
+  "tiles": [
+    {"id":"aw_v1_terrain_cold_grass_a","status":"FIXABLE/HOLD","sourceCrop":[3,3,302,301],"normalized":[64,64],"seamPreview":[192,192]},
+    {"id":"aw_v1_terrain_cold_grass_b","status":"FIXABLE/HOLD","sourceCrop":[310,3,302,301],"normalized":[64,64],"seamPreview":[192,192]},
+    {"id":"aw_v1_terrain_cold_grass_detail","status":"FIXABLE/HOLD","sourceCrop":[617,3,302,301],"normalized":[64,64],"seamPreview":[192,192]},
+    {"id":"aw_v1_terrain_dirt_shoulder_a","status":"production-candidate","sourceCrop":[924,3,302,301],"normalized":[64,64],"seamPreview":[192,192]},
+    {"id":"aw_v1_terrain_dirt_shoulder_b","status":"production-candidate","sourceCrop":[1231,3,302,301],"normalized":[64,64],"seamPreview":[192,192]},
+    {"id":"aw_v1_terrain_asphalt_a","status":"production-candidate","sourceCrop":[3,310,302,301],"normalized":[64,64],"seamPreview":[192,192]},
+    {"id":"aw_v1_terrain_asphalt_b","status":"production-candidate","sourceCrop":[310,310,302,301],"normalized":[64,64],"seamPreview":[192,192]},
+    {"id":"aw_v1_terrain_asphalt_cracked","status":"production-candidate","sourceCrop":[617,310,302,301],"normalized":[64,64],"seamPreview":[192,192]},
+    {"id":"aw_v1_terrain_concrete_floor_a","status":"production-candidate","sourceCrop":[924,310,302,301],"normalized":[64,64],"seamPreview":[192,192]},
+    {"id":"aw_v1_terrain_concrete_floor_b","status":"production-candidate","sourceCrop":[1231,310,302,301],"normalized":[64,64],"seamPreview":[192,192]}
+  ],
+  "binaryEvidenceArchive": {
+    "file": "production-base-terrain-intake-v1-freeze.zip",
+    "storage": "conversation artifact",
+    "sha256": "f0a0fec9a5cb398a68fd74f570bc75bcee56e874a8e6503a6c3802e206ed1edf",
+    "contains": "10 normalized PNGs + 10 3x3 seam previews + freeze records"
+  }
+}
