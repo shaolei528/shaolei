@@ -1,0 +1,45 @@
+name: playable-feel-audio-v1-check
+
+on:
+  push:
+    paths:
+      - 'survival-v21.html'
+      - 'modules/combat/playable-feel-v1.js'
+      - 'modules/audio/playable-feel-audio-v1.js'
+      - 'modules/core/dev-performance-v1.js'
+      - 'tests/playable-slice-feel-audio-v1.test.mjs'
+      - 'tests/dev-performance-v1.test.mjs'
+      - '.github/workflows/playable-feel-audio-v1-check.yml'
+  pull_request:
+    paths:
+      - 'survival-v21.html'
+      - 'modules/combat/playable-feel-v1.js'
+      - 'modules/audio/playable-feel-audio-v1.js'
+      - 'modules/core/dev-performance-v1.js'
+      - 'tests/playable-slice-feel-audio-v1.test.mjs'
+      - 'tests/dev-performance-v1.test.mjs'
+      - '.github/workflows/playable-feel-audio-v1-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Playable slice audio and feel contract
+        run: node tests/playable-slice-feel-audio-v1.test.mjs
+      - name: Dev performance overlay contract
+        run: node tests/dev-performance-v1.test.mjs
+      - name: New module syntax
+        run: |
+          node --check modules/combat/playable-feel-v1.js
+          node --check modules/audio/playable-feel-audio-v1.js
+          node --check modules/core/dev-performance-v1.js
+      - name: Existing combat and cross-platform regressions
+        run: |
+          node tests/combat-hit-feedback.test.mjs
+          node tests/weapon-presentation-v1.test.mjs
+          node tests/game-shell-v1.test.mjs
+          node tests/platform-inventory-v19.test.mjs
