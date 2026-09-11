@@ -1,0 +1,50 @@
+name: platform-input-retry-idempotency-v1-check
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+    paths:
+      - 'platform-inventory-v19.js'
+      - 'modules/input/platform-inventory-v19.js'
+      - 'tests/platform-input-retry-idempotency-v1.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
+      - 'tests/interaction-v12.test.mjs'
+      - 'tests/module-sort.test.mjs'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - '.github/workflows/platform-input-retry-idempotency-v1-check.yml'
+  pull_request:
+    paths:
+      - 'platform-inventory-v19.js'
+      - 'modules/input/platform-inventory-v19.js'
+      - 'tests/platform-input-retry-idempotency-v1.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
+      - 'tests/interaction-v12.test.mjs'
+      - 'tests/module-sort.test.mjs'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - '.github/workflows/platform-input-retry-idempotency-v1-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Platform input retry ownership regression
+        run: node tests/platform-input-retry-idempotency-v1.test.mjs
+      - name: Existing platform inventory regression
+        run: node tests/platform-inventory-v19.test.mjs
+      - name: Existing interaction regression
+        run: node tests/interaction-v12.test.mjs
+      - name: Existing smoothness input regression
+        run: node tests/playable-slice-smoothness-v1.test.mjs
+      - name: Module-sort byte equivalence
+        run: node tests/module-sort.test.mjs
+      - name: Root and categorized platform syntax
+        run: |
+          node --check platform-inventory-v19.js
+          node --check modules/input/platform-inventory-v19.js
