@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ABYSSAL WAKE — Awakening Art Preview</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;background:#0b1014;color:#d9e1e8;font:13px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}body{padding:14px}.shell{max-width:1180px;margin:auto}.head{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:12px}.muted{opacity:.65}.status{padding:8px 10px;border:1px solid #33424d;background:#111a20;margin-bottom:12px;white-space:pre-wrap}.layout{display:grid;grid-template-columns:minmax(230px,310px) 1fr;gap:12px}.list{border:1px solid #33424d;background:#0f171d;max-height:78vh;overflow:auto}.asset{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #26343d;background:transparent;color:inherit;padding:9px;font:inherit;cursor:pointer}.asset:hover,.asset.active{background:#1a252c}.tag{opacity:.6;font-size:11px}.panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.panel{border:1px solid #33424d;background:#0f171d;padding:10px;min-height:230px}.panel h2{font-size:12px;margin:0 0 8px;color:#9fb7c7}.viewport{min-height:180px;display:grid;place-items:center;overflow:auto;background:
+linear-gradient(45deg,#1a2025 25%,transparent 25%),linear-gradient(-45deg,#1a2025 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1a2025 75%),linear-gradient(-45deg,transparent 75%,#1a2025 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}.pixel{image-rendering:pixelated;image-rendering:crisp-edges;max-width:100%;max-height:420px}canvas{image-rendering:pixelated;image-rendering:crisp-edges;max-width:100%;height:auto}.meta{white-space:pre-wrap;word-break:break-word;margin-top:8px;font-size:11px;opacity:.72}@media(max-width:780px){.layout{grid-template-columns:1fr}.list{max-height:240px}.panels{grid-template-columns:1fr}.head{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="head"><div><strong>ABYSSAL WAKE / Awakening Art Integration V1</strong><div class="muted">nearest-neighbor · presentation only · no gameplay runtime</div></div><div id="manifestLabel" class="muted"></div></div>
+  <div id="status" class="status">Loading manifest…</div>
+  <div class="layout">
+    <div id="list" class="list"></div>
+    <div class="panels">
+      <section class="panel"><h2>Asset</h2><div id="assetView" class="viewport"></div><div id="assetMeta" class="meta"></div></section>
+      <section class="panel"><h2>Terrain seam 3×3</h2><div class="viewport"><canvas id="seam" width="384" height="384"></canvas></div><div class="meta">Outer tile boundaries should disappear at nearest-neighbor scale.</div></section>
+      <section class="panel"><h2>Transparency</h2><div class="viewport"><canvas id="alpha" width="384" height="256"></canvas></div><div class="meta">Checkerboard makes baked rectangles, fringe, and halos visible.</div></section>
+      <section class="panel"><h2>Prop anchor / fallback</h2><div class="viewport"><canvas id="anchor" width="384" height="256"></canvas></div><div id="fallback" class="meta"></div></section>
+    </div>
+  </div>
+</div>
+<script>
+(()=>{'use strict';
+const $=s=>document.querySelector(s),params=new URLSearchParams(location.search);
+const manifestUrl=params.get('manifest')||'../../assets/awakening-v1/manifest.json';
+$('#manifestLabel').textContent=manifestUrl;
+const state={manifest:null,entries:[],selected:null,images:new Map()};
+function entriesOf(m){return Array.isArray(m)?m:Array.isArray(m?.assets)?m.assets:[]}
+function category(e){return e.category||(['terrain','decal','prop','fx'].find(c=>(e.id||'').startsWith('aw_v1_'+c+'_')))||'unknown'}
+function source(e){
+  if(e.atlas&&typeof e.atlas==='object')return{file:e.atlas.file||e.atlas.source,rect:e.atlas.sourceRect||e.atlas.source||(Number.isInteger(e.atlas.x)?{x:e.atlas.x,y:e.atlas.y,w:e.atlas.w??e.atlas.width,h:e.atlas.h??e.atlas.height}:null)};
+  if(typeof e.atlas==='string')return{file:e.atlas,rect:e.sourceRect||e.source||null};
+  return{file:e.file,rect:null};
+}
+function baseUrl(rel){return new URL(rel,new URL(manifestUrl,location.href)).href}
+function loadImage(rel){
+  const url=baseUrl(rel);if(state.images.has(url))return state.images.get(url);
+  const p=new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('failed to load '+rel));img.src=url});
+  state.images.set(url,p);return p;
+}
+function checker(ctx,w,h){
+  ctx.clearRect(0,0,w,h);for(let y=0;y<h;y+=16)for(let x=0;x<w;x+=16){ctx.fillStyle=((x+y)/16)%2?'#23313a':'#10171c';ctx.fillRect(x,y,16,16)}
+}
+function drawPiece(ctx,img,rect,dx,dy,dw,dh){ctx.imageSmoothingEnabled=false;if(rect)ctx.drawImage(img,rect.x,rect.y,rect.w??rect.width,rect.h??rect.height,dx,dy,dw,dh);else ctx.drawImage(img,dx,dy,dw,dh)}
+function dims(img,rect){return rect?{w:rect.w??rect.width,h:rect.h??rect.height}:{w:img.naturalWidth,h:img.naturalHeight}}
+function fit(d,w,h,cap=4){const s=Math.min(cap,w/d.w,h/d.h);return{w:Math.max(1,Math.floor(d.w*s)),h:Math.max(1,Math.floor(d.h*s)),s}}
+function renderList(){
+  $('#list').innerHTML='';state.entries.forEach((e,i)=>{const b=document.createElement('button');b.className='asset'+(state.selected===i?' active':'');b.innerHTML='<div>'+String(e.id||'(missing id)')+'</div><div class="tag">'+category(e)+'</div>';b.onclick=()=>select(i);$('#list').appendChild(b)})
+}
+async function select(i){
+  state.selected=i;renderList();const e=state.entries[i],src=source(e);$('#assetMeta').textContent=JSON.stringify(e,null,2);$('#fallback').textContent='fallback: '+(e.fallback||state.manifest?.fallbacks?.[e.id]||'—');
+  for(const id of ['seam','alpha','anchor']){const c=$('#'+id),ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;checker(ctx,c.width,c.height)}
+  $('#assetView').innerHTML='';
+  if(!src.file){$('#status').textContent='Selected asset has no file/atlas source.';return}
+  try{
+    const img=await loadImage(src.file),d=dims(img,src.rect),assetCanvas=document.createElement('canvas');assetCanvas.width=d.w;assetCanvas.height=d.h;assetCanvas.className='pixel';
+    const ac=assetCanvas.getContext('2d');ac.imageSmoothingEnabled=false;drawPiece(ac,img,src.rect,0,0,d.w,d.h);$('#assetView').appendChild(assetCanvas);
+    const alpha=$('#alpha'),actx=alpha.getContext('2d');checker(actx,alpha.width,alpha.height);const af=fit(d,alpha.width-24,alpha.height-24,6);drawPiece(actx,img,src.rect,(alpha.width-af.w)/2,(alpha.height-af.h)/2,af.w,af.h);
+    if(category(e)==='terrain'){
+      const seam=$('#seam'),sctx=seam.getContext('2d');sctx.imageSmoothingEnabled=false;sctx.fillStyle='#0b1014';sctx.fillRect(0,0,seam.width,seam.height);
+      const cell=Math.floor(Math.min(seam.width,seam.height)/3),f=fit(d,cell,cell,99);
+      for(let y=0;y<3;y++)for(let x=0;x<3;x++)drawPiece(sctx,img,src.rect,x*cell,y*cell,cell,cell);
+    }
+    if(category(e)==='prop'){
+      const c=$('#anchor'),ctx=c.getContext('2d');checker(ctx,c.width,c.height);ctx.strokeStyle='#92a7b4';ctx.beginPath();ctx.moveTo(12,c.height-28);ctx.lineTo(c.width-12,c.height-28);ctx.stroke();
+      const f=fit(d,c.width-40,c.height-60,4),x=(c.width-f.w)/2,y=c.height-28-f.h;drawPiece(ctx,img,src.rect,x,y,f.w,f.h);
+      const ax=e.anchor?.x??e.anchor?.anchorX??0.5,ay=e.anchor?.y??e.anchor?.anchorY??1,px=x+f.w*ax,py=y+f.h*ay;
+      ctx.strokeStyle='#ffdf82';ctx.beginPath();ctx.moveTo(px-8,py);ctx.lineTo(px+8,py);ctx.moveTo(px,py-8);ctx.lineTo(px,py+8);ctx.stroke();
+    }
+    $('#status').textContent='Loaded '+e.id+' · '+d.w+'×'+d.h+' · '+category(e);
+  }catch(err){$('#status').textContent=err.message}
+}
+fetch(manifestUrl,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status+' for '+manifestUrl);return r.json()}).then(m=>{
+  state.manifest=m;state.entries=entriesOf(m);$('#status').textContent='Manifest loaded · '+state.entries.length+' assets';renderList();if(state.entries.length)select(0)
+}).catch(err=>{$('#status').textContent='Manifest unavailable: '+err.message+'\nServe the repository root and provide a manifest with ?manifest=…';renderList()});
+})();
+</script>
+</body>
+</html>

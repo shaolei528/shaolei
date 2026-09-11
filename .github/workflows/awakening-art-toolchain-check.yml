@@ -1,0 +1,58 @@
+name: awakening-art-toolchain-check
+
+on:
+  push:
+    paths:
+      - 'AWAKENING_ASSET_CONTRACT.md'
+      - 'assets/awakening-v1/**'
+      - 'tools/awakening-art/**'
+      - 'tests/awakening-art-toolchain.test.mjs'
+      - '.github/workflows/awakening-art-toolchain-check.yml'
+  pull_request:
+    paths:
+      - 'AWAKENING_ASSET_CONTRACT.md'
+      - 'assets/awakening-v1/**'
+      - 'tools/awakening-art/**'
+      - 'tests/awakening-art-toolchain.test.mjs'
+      - '.github/workflows/awakening-art-toolchain-check.yml'
+
+jobs:
+  toolchain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Tool syntax
+        run: find tools/awakening-art -name '*.mjs' -print0 | xargs -0 -n1 node --check
+      - name: Toolchain tests
+        run: node tests/awakening-art-toolchain.test.mjs
+      - name: Validate production pack when present
+        run: |
+          if [ -f assets/awakening-v1/manifest.json ]; then
+            node tools/awakening-art/validator.mjs assets/awakening-v1
+          else
+            echo "Art Lab production manifest not present yet; validator self-tests cover fixture packs."
+          fi
+      - name: Preview inline script syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('tools/awakening-art/preview.html').read_text()
+          scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',html)
+          if not scripts:
+              raise SystemExit('preview inline script missing')
+          Path('/tmp/awakening-art-preview.js').write_text('\n'.join(scripts))
+          if 'image-rendering:pixelated' not in html:
+              raise SystemExit('nearest-neighbor preview CSS missing')
+          PY
+          node --check /tmp/awakening-art-preview.js
+      - name: Existing local regression suite
+        run: |
+          set -euxo pipefail
+          for test_file in tests/*.test.mjs; do
+            node "$test_file"
+          done
+          node cloudflare/test.mjs
