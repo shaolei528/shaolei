@@ -1,0 +1,42 @@
+name: playable-feel-retry-idempotency-v1-check
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+    paths:
+      - 'modules/combat/playable-feel-v1.js'
+      - 'tests/playable-feel-retry-idempotency-v1.test.mjs'
+      - 'tests/playable-slice-feel-audio-v1.test.mjs'
+      - 'tests/playable-combat-presentation-v1.test.mjs'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - '.github/workflows/playable-feel-retry-idempotency-v1-check.yml'
+  pull_request:
+    paths:
+      - 'modules/combat/playable-feel-v1.js'
+      - 'tests/playable-feel-retry-idempotency-v1.test.mjs'
+      - 'tests/playable-slice-feel-audio-v1.test.mjs'
+      - 'tests/playable-combat-presentation-v1.test.mjs'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - '.github/workflows/playable-feel-retry-idempotency-v1-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Playable feel retry wrapper ownership regression
+        run: node tests/playable-feel-retry-idempotency-v1.test.mjs
+      - name: Existing playable feel audio regression
+        run: node tests/playable-slice-feel-audio-v1.test.mjs
+      - name: Existing combat presentation regression
+        run: node tests/playable-combat-presentation-v1.test.mjs
+      - name: Existing smoothness input regression
+        run: node tests/playable-slice-smoothness-v1.test.mjs
+      - name: Feel bridge syntax
+        run: node --check modules/combat/playable-feel-v1.js
