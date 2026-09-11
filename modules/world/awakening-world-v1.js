@@ -38,6 +38,7 @@ function hash2(x,y,seed=0){let n=(Math.imul(x|0,374761393)+Math.imul(y|0,6682652
 function clamp01(v){return Math.max(0,Math.min(1,Number(v)||0));}
 function inRect(x,y,r){return x>=r.x&&y>=r.y&&x<r.x+r.w&&y<r.y+r.h;}
 function rectIntersectsView(r,W,H){const left=camera.x-W/2,right=camera.x+W/2,top=camera.y-H/2,bottom=camera.y+H/2;return right>=r.x&&left<=r.x+r.w&&bottom>=r.y&&top<=r.y+r.h;}
+function visibleTileBounds(W,H){const left=Math.max(REGION.x,camera.x-W/2),right=Math.min(REGION.x+REGION.w,camera.x+W/2),top=Math.max(REGION.y,camera.y-H/2),bottom=Math.min(REGION.y+REGION.h,camera.y+H/2);if(right<=left||bottom<=top)return{startX:0,startY:0,endX:0,endY:0,cols:0,rows:0};const startX=Math.max(REGION.x,Math.floor(left/TILE_SIZE)*TILE_SIZE),startY=Math.max(REGION.y,Math.floor(top/TILE_SIZE)*TILE_SIZE),endX=Math.min(REGION.x+REGION.w,Math.ceil(right/TILE_SIZE)*TILE_SIZE),endY=Math.min(REGION.y+REGION.h,Math.ceil(bottom/TILE_SIZE)*TILE_SIZE);return{startX,startY,endX,endY,cols:Math.max(0,Math.ceil((endX-startX)/TILE_SIZE)),rows:Math.max(0,Math.ceil((endY-startY)/TILE_SIZE))};}
 function screenRect(r){return{x:Math.round(r.x-camera.x+canvas.width/2),y:Math.round(r.y-camera.y+canvas.height/2),w:r.w,h:r.h};}
 function roadCenterAt(y){if(y>1720)return 2400;if(y>1480)return 2368;if(y>1240)return 2400;return 2432;}
 function regionMaterial(wx,wy){if(inRect(wx+32,wy+32,STORE))return'store_floor';if(inRect(wx+32,wy+32,STORE.parking))return'asphalt';const center=roadCenterAt(wy+32),dx=Math.abs((wx+32)-center);if(dx<=96)return'asphalt';if(dx<=224)return'dirt_shoulder';return'cold_grass';}
@@ -47,7 +48,7 @@ let sheet=null,sheetReady=false;
 if(typeof Image!=='undefined'){sheet=new Image();sheet.onload=()=>{sheetReady=true;};sheet.onerror=()=>{sheetReady=false;};sheet.src=SHEET_PATH;}
 function drawAtlasTile(tile,wx,wy){const x=sx(wx),y=sy(wy);if(sheetReady&&sheet&&Number.isFinite(tile)){const srcX=(tile%SHEET_COLS)*TILE_SIZE,srcY=Math.floor(tile/SHEET_COLS)*TILE_SIZE;ctx.drawImage(sheet,srcX,srcY,TILE_SIZE,TILE_SIZE,x,y,TILE_SIZE,TILE_SIZE);return;}ctx.fillStyle=tile===TILE.road_a||tile===TILE.road_b?'#444d50':(tile===TILE.sand_a||tile===TILE.sand_b?'#5d5b50':'#4d6259');ctx.fillRect(x,y,TILE_SIZE,TILE_SIZE);}
 function drawStoreFloor(){const r=screenRect(STORE);ctx.fillStyle='#343c40';ctx.fillRect(r.x,r.y,r.w,r.h);ctx.fillStyle='#3c4549';for(let y=STORE.y+16;y<STORE.y+STORE.h-16;y+=32)for(let x=STORE.x+16;x<STORE.x+STORE.w-16;x+=32)if(((x+y)>>5)&1)ctx.fillRect(sx(x),sy(y),32,32);ctx.fillStyle='rgba(118,142,148,.08)';ctx.fillRect(r.x,r.y,r.w,r.h);}
-function drawTerrainLayer(W,H){if(!rectIntersectsView(REGION,W,H))return;ctx.save();ctx.imageSmoothingEnabled=false;const startX=Math.floor(REGION.x/TILE_SIZE)*TILE_SIZE,startY=Math.floor(REGION.y/TILE_SIZE)*TILE_SIZE,endX=REGION.x+REGION.w,endY=REGION.y+REGION.h;for(let wy=startY;wy<endY;wy+=TILE_SIZE)for(let wx=startX;wx<endX;wx+=TILE_SIZE){const material=regionMaterial(wx,wy);if(material==='store_floor')continue;drawAtlasTile(tileForMaterial(material,wx,wy),wx,wy);const cold=clamp01((1900-(wy+32))/1050);if(cold>0){ctx.fillStyle=`rgba(38,55,65,${(.08+cold*.16).toFixed(3)})`;ctx.fillRect(sx(wx),sy(wy),TILE_SIZE,TILE_SIZE);}}drawStoreFloor();ctx.restore();}
+function drawTerrainLayer(W,H){if(!rectIntersectsView(REGION,W,H))return;const bounds=visibleTileBounds(W,H);if(!bounds.cols||!bounds.rows)return;ctx.save();ctx.imageSmoothingEnabled=false;for(let wy=bounds.startY;wy<bounds.endY;wy+=TILE_SIZE)for(let wx=bounds.startX;wx<bounds.endX;wx+=TILE_SIZE){const material=regionMaterial(wx,wy);if(material==='store_floor')continue;drawAtlasTile(tileForMaterial(material,wx,wy),wx,wy);const cold=clamp01((1900-(wy+32))/1050);if(cold>0){ctx.fillStyle=`rgba(38,55,65,${(.08+cold*.16).toFixed(3)})`;ctx.fillRect(sx(wx),sy(wy),TILE_SIZE,TILE_SIZE);}}if(rectIntersectsView(STORE,W,H))drawStoreFloor();ctx.restore();}
 function drawCrack(d){const x=sx(d.x),y=sy(d.y);ctx.fillStyle='#263034';ctx.fillRect(x,y+8,22,3);ctx.fillRect(x+18,y+10,3,12);ctx.fillRect(x+20,y+19,28,3);ctx.fillRect(x+44,y+20,3,12);ctx.fillRect(x+46,y+29,20,3);}
 function drawPuddle(d){const x=sx(d.x),y=sy(d.y);ctx.fillStyle='rgba(77,101,110,.45)';ctx.fillRect(x+8,y,d.w-16,d.h);ctx.fillRect(x,y+6,d.w,d.h-12);ctx.fillStyle='rgba(148,169,173,.18)';ctx.fillRect(x+14,y+5,Math.max(8,d.w-34),3);}
 function drawDecalLayer(W,H){ctx.save();ctx.imageSmoothingEnabled=false;for(const d of DECALS){if(Math.abs(sx(d.x))>W+180||Math.abs(sy(d.y))>H+180)continue;if(d.kind==='puddle')drawPuddle(d);else if(d.kind==='crack')drawCrack(d);else if(d.kind==='tire'){ctx.fillStyle='rgba(29,36,39,.30)';ctx.fillRect(sx(d.x),sy(d.y),d.w,d.h);}else if(d.kind==='glass'){const x=sx(d.x),y=sy(d.y);ctx.fillStyle='rgba(146,170,176,.35)';for(let i=0;i<7;i++)ctx.fillRect(x+(i*11)%d.w,y+(i*7)%d.h,3,2);}else if(d.kind==='residue'){const x=sx(d.x),y=sy(d.y);ctx.fillStyle='rgba(98,133,127,.26)';ctx.fillRect(x+10,y+18,56,8);ctx.fillRect(x+24,y+9,30,24);ctx.fillStyle='rgba(153,185,176,.18)';ctx.fillRect(x+34,y+2,12,42);}}ctx.restore();}
@@ -64,6 +65,8 @@ function drawFxLayer(W,H){if(!rectIntersectsView(STORE,W,H))return;const t=typeo
 function isBlockedPoint(x,y){return COLLISION.some(r=>inRect(Number(x),Number(y),r));}
 function isBlockedCircle(x,y,radius=10){const r=Math.max(0,Math.min(18,Number(radius)||0));if(isBlockedPoint(x,y))return true;for(let i=0;i<8;i++){const a=i*Math.PI/4;if(isBlockedPoint(x+Math.cos(a)*r,y+Math.sin(a)*r))return true;}return false;}
 function resolveMovement(fromX,fromY,toX,toY,radius=10){let x=Number(fromX),y=Number(fromY);const fx=x,fy=y,tx=Number(toX),ty=Number(toY);if(![fx,fy,tx,ty].every(Number.isFinite))return{x:fx||0,y:fy||0,blocked:false};const dist=Math.hypot(tx-fx,ty-fy),steps=Math.max(1,Math.ceil(dist/8)),stepX=(tx-fx)/steps,stepY=(ty-fy)/steps;let blocked=false;for(let i=0;i<steps;i++){const wantX=x+stepX,wantY=y+stepY;if(!isBlockedCircle(wantX,wantY,radius)){x=wantX;y=wantY;continue;}blocked=true;let moved=false;if(Math.abs(stepX)>.0001&&!isBlockedCircle(wantX,y,radius)){x=wantX;moved=true;}if(Math.abs(stepY)>.0001&&!isBlockedCircle(x,wantY,radius)){y=wantY;moved=true;}if(!moved)break;}return{x,y,blocked};}
+function hasLineOfSight(fromX,fromY,toX,toY){const ax=Number(fromX),ay=Number(fromY),bx=Number(toX),by=Number(toY);if(![ax,ay,bx,by].every(Number.isFinite))return false;const dist=Math.hypot(bx-ax,by-ay),steps=Math.max(1,Math.ceil(dist/4));for(let i=1;i<steps;i++){const t=i/steps;if(isBlockedPoint(ax+(bx-ax)*t,ay+(by-ay)*t))return false;}return true;}
+function resolveMobMovement(m,toX,toY){if(!m)return{blocked:false};const r=resolveMovement(m.x,m.y,toX,toY,10);m.x=r.x;m.y=r.y;return r;}
 function inStore(p=me){return !!p&&inRect(Number(p.x),Number(p.y),STORE);}
 
 function addPoiResources(zone){
@@ -78,6 +81,38 @@ const baseFreshMob=typeof window.freshMob==='function'?window.freshMob:null;
 if(baseFreshMob)window.freshMob=freshMob=function(zone,index){const def=ENTITIES.find(e=>String(zone)==='1:0'&&e.index===index);return def?makePoiMob(def):baseFreshMob(zone,index);};
 const baseSpawnMobs=typeof window.spawnMobs==='function'?window.spawnMobs:null;
 if(baseSpawnMobs)window.spawnMobs=spawnMobs=function(zone){baseSpawnMobs(zone);if(String(zone)==='1:0')for(const def of ENTITIES)if(!mobs.some(m=>m.id===def.id))mobs.push(makePoiMob(def));};
+const baseUpdateMobs=typeof window.updateMobs==='function'?window.updateMobs:null;
+if(baseUpdateMobs)window.updateMobs=updateMobs=function(dt){
+  if(String(currentZone)!=='1:0')return baseUpdateMobs(dt);
+  const actors=[me,...remotes.values()].filter(p=>p&&p.hp!==0&&campDist(p.x,p.y)>=CAMP.r&&!(p.id===SESSION_ID&&Date.now()<fieldGraceUntil));
+  for(let i=0;i<mobs.length;i++){
+    let m=mobs[i];
+    if(m.hp<=0){if(m.respawnAt&&Date.now()>=m.respawnAt){mobs[i]=freshMob(currentZone,i);m=mobs[i];}else continue;}
+    m.hitCd=Math.max(0,(m.hitCd||0)-dt);
+    const cd=campDist(m.x,m.y);
+    if(cd<CAMP.r+90){const a=Math.atan2(m.y-CAMP.y,m.x-CAMP.x);m.x=CAMP.x+Math.cos(a)*(CAMP.r+92);m.y=CAMP.y+Math.sin(a)*(CAMP.r+92);}
+    let t=null,bd=1e9;
+    for(const p of actors){const d=Math.hypot(m.x-p.x,m.y-p.y);if(d<bd){bd=d;t=p;}}
+    if(t&&bd<410){
+      const a=Math.atan2(t.y-m.y,t.x-m.x),sp=m.kind==='crawler'?57:(m.kind==='cultist'?39:33),nx=m.x+Math.cos(a)*sp*dt,ny=m.y+Math.sin(a)*sp*dt;
+      if(campDist(nx,ny)>CAMP.r+72)resolveMobMovement(m,nx,ny);
+      if(bd<(t.r||14)+18&&m.hitCd<=0&&hasLineOfSight(m.x,m.y,t.x,t.y)){m.hitCd=m.kind==='crawler'?.9:1.15;applyMobDamage(t.id,m.kind);}
+    }else{
+      m.phase+=dt*.48;
+      const nx=m.x+Math.cos(m.phase)*9*dt,ny=m.y+Math.sin(m.phase*.71)*9*dt;
+      if(campDist(nx,ny)>CAMP.r+72)resolveMobMovement(m,nx,ny);
+    }
+    const[zx,zy]=currentZone.split(':').map(Number),minX=zx*WORLD.zone+20,maxX=(zx+1)*WORLD.zone-20,minY=zy*WORLD.zone+20,maxY=(zy+1)*WORLD.zone-20;
+    m.x=clamp(m.x,minX,maxX);m.y=clamp(m.y,minY,maxY);
+  }
+};
+const baseHandleMobAttack=typeof window.handleMobAttack==='function'?window.handleMobAttack:null;
+if(baseHandleMobAttack)window.handleMobAttack=handleMobAttack=function(p){
+  if(String(currentZone)!=='1:0')return baseHandleMobAttack(p);
+  if(!zoneLeader||!p||campDist(finite(p.x,0),finite(p.y,0))<CAMP.r)return;
+  const px=finite(p.x,0),py=finite(p.y,0),range=finite(p.range,60),dir=finite(p.dir,0),damage=clamp(finite(p.damage,10),1,25);
+  for(const m of mobs){if(m.hp<=0)continue;const d=Math.hypot(m.x-px,m.y-py);if(d>range||!hasLineOfSight(px,py,m.x,m.y))continue;const a=Math.atan2(m.y-py,m.x-px),diff=Math.abs(Math.atan2(Math.sin(a-dir),Math.cos(a-dir)));if(diff<1.0){m.hp-=damage;if(m.hp<=0){m.hp=0;m.respawnAt=Date.now()+11000;rewardKill(p.id,m.kind);if(p.id===SESSION_ID)toast('Something ancient collapses.');}}}
+};
 const baseDrawGround=typeof window.drawGround==='function'?window.drawGround:null;if(baseDrawGround)window.drawGround=function(W,H){baseDrawGround(W,H);drawTerrainLayer(W,H);drawDecalLayer(W,H);};
 const baseDrawCamp=typeof window.drawCamp==='function'?window.drawCamp:null;if(baseDrawCamp)window.drawCamp=function(W,H){baseDrawCamp(W,H);drawPropLayer(W,H);};
 const baseDrawLighting=typeof window.drawLighting==='function'?window.drawLighting:null;if(baseDrawLighting)window.drawLighting=function(W,H){baseDrawLighting(W,H);drawFxLayer(W,H);};
@@ -91,5 +126,5 @@ function rewardReady(){return(Number(inventory.shard)||0)>=STARTING_SHARDS+2;}
 function objectiveText(){if(!started||dead||!inventory.knife)return null;if(inCamp()){if(hasLeftCamp&&rewardReady()){if(!returnAnnounced){returnAnnounced=true;try{toast('便利店调查完成 · 带回的异质碎片可以推进灯笼制作。');}catch{}}return inventory.lantern?'首次调查完成 · HOME 已补给。':'调查完成 · 工作台：准备灯笼与下一次外出。';}return '北门公路 → 调查停电的废弃便利店。';}if(inStore())return rewardReady()?'异常残留已取得 · 带着补给返回 Safe Camp。':'便利店：搜索货架、冰柜、碎屑与异常残留。';if(rewardReady())return '带着便利店补给返回 Safe Camp。';return '沿破损北路前进 · 寻找停电便利店。';}
 if(baseUpdateQuest)window.updateQuest=updateQuest=function(){baseUpdateQuest();const text=objectiveText();if(text&&questText)questText.textContent=text;};
 
-window.ABYSSAL_AWAKENING_WORLD_V1={version:VERSION,stage:WORLD_STAGE,region:REGION,poi:STORE,layers:LAYERS,placeholderArt:true,artContract:'AWAKENING_ASSET_CONTRACT.md',roadCenterAt,regionMaterial,inStore,isBlockedPoint,isBlockedCircle,resolveMovement,addPoiResources,objectiveText};
+window.ABYSSAL_AWAKENING_WORLD_V1={version:VERSION,stage:WORLD_STAGE,region:REGION,poi:STORE,layers:LAYERS,placeholderArt:true,artContract:'AWAKENING_ASSET_CONTRACT.md',roadCenterAt,regionMaterial,visibleTileBounds,inStore,isBlockedPoint,isBlockedCircle,resolveMovement,resolveMobMovement,hasLineOfSight,addPoiResources,objectiveText};
 })();
