@@ -1,0 +1,112 @@
+name: terrain-v21-check
+
+on:
+  push:
+    paths:
+      - 'ART_BIBLE.md'
+      - 'terrain-v21.js'
+      - 'terrain-v21-preview.html'
+      - 'survival-v21.html'
+      - 'assets/art-v21/**'
+      - 'assets/camp_props.png'
+      - 'modules/**'
+      - 'tests/terrain-v21.test.mjs'
+      - 'tests/camp-art-v21.test.mjs'
+      - 'tests/module-sort.test.mjs'
+      - 'tests/core-smoke.test.mjs'
+      - '.github/workflows/terrain-v21-check.yml'
+  pull_request:
+    paths:
+      - 'ART_BIBLE.md'
+      - 'terrain-v21.js'
+      - 'terrain-v21-preview.html'
+      - 'survival-v21.html'
+      - 'assets/art-v21/**'
+      - 'assets/camp_props.png'
+      - 'modules/**'
+      - 'tests/terrain-v21.test.mjs'
+      - 'tests/camp-art-v21.test.mjs'
+      - 'tests/module-sort.test.mjs'
+      - 'tests/core-smoke.test.mjs'
+      - '.github/workflows/terrain-v21-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Module-sort byte equivalence and load order
+        run: node tests/module-sort.test.mjs
+      - name: Categorized module syntax
+        run: find modules -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Camp art contract
+        run: node tests/camp-art-v21.test.mjs
+      - name: Terrain syntax
+        run: node --check terrain-v21.js
+      - name: Terrain vertical-slice regression
+        run: node tests/terrain-v21.test.mjs
+      - name: V21 boot and static preview syntax
+        if: ${{ always() }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          boot=Path('survival-v21.html').read_text()
+          match=re.search(r'<script>([\s\S]*?)</script>',boot)
+          if not match:
+              raise SystemExit('V21 inline boot script not found')
+          Path('/tmp/v21-boot.js').write_text(match.group(1))
+          if "'terrain-v21.js'" not in boot:
+              raise SystemExit('V21 terrain module missing')
+          if "const VER='21a'" not in boot:
+              raise SystemExit('V21a cache key missing')
+          preview=Path('terrain-v21-preview.html').read_text()
+          scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',preview)
+          if not scripts:
+              raise SystemExit('V21 static preview inline script missing')
+          Path('/tmp/v21-preview.js').write_text('\n'.join(scripts))
+          if './terrain-v21.js' not in preview or 'Collision: OFF' not in preview:
+              raise SystemExit('V21 static preview wiring missing')
+          PY
+          node --check /tmp/v21-boot.js
+          node --check /tmp/v21-preview.js
+      - name: Existing gameplay regression suite
+        if: ${{ always() }}
+        run: |
+          node tests/motion-v18.test.mjs
+          node tests/platform-inventory-v19.test.mjs
+          node tests/interaction-v12.test.mjs
+          node tests/ready-localization-v9.test.mjs
+          node tests/network-quality-v20.test.mjs
+      - name: Core survival and SafeCamp smoke
+        if: ${{ always() }}
+        run: node tests/core-smoke.test.mjs
+      - name: Relay protocol regression
+        if: ${{ always() }}
+        run: node cloudflare/test.mjs
+      - name: Worker bundle dry run
+        if: ${{ always() }}
+        run: |
+          npm install
+          npm run check:worker
+      - name: Current production relay health
+        if: ${{ always() }}
+        run: |
+          set -euxo pipefail
+          for i in 1 2 3; do
+            code=$(curl -sS -o /tmp/health.txt -w '%{http_code}' --connect-timeout 10 --max-time 20 \
+              -H 'Accept: application/json' \
+              https://abyssal-wake-relay.zuoranzhang.workers.dev/health || true)
+            if [ "$code" = "200" ] && grep -q '"ok":true' /tmp/health.txt; then exit 0; fi
+            sleep 8
+          done
+          cat /tmp/health.txt 2>/dev/null || true
+          exit 1
+      - name: Current production live two-client multiplayer
+        if: ${{ always() }}
+        env:
+          LIVE_RELAY_URL: wss://abyssal-wake-relay.zuoranzhang.workers.dev/ws
+        run: npm run test:live-relay
