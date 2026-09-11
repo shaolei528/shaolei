@@ -94,4 +94,54 @@ const header=inspectPngBuffer(png(64,64,255));assert.equal(header.width,64);asse
   ]);
 }
 
-console.log(JSON.stringify({ok:true,validator:['manifest','png-exists','terrain-64-grid','pixel-transparency','naming','duplicate-id','missing-file','source-sheet-normalize','prop-anchor','gameplay-field-ban','strict-required'],physicalSlicing:'pixel-exact',runtimeManifest:'pass'}));
+function stagedAssetMetrics(file,category){
+  const decoded=decodePng(fs.readFileSync(file));
+  assert.equal(decoded.bitDepth,8,`${file}: must be 8-bit PNG`);
+  assert.equal(decoded.colorType,6,`${file}: must be RGBA PNG (color type 6)`);
+  const{width,height,rgba}=decoded;
+  let transparent=0,semi=0,opaque=0,minX=width,minY=height,maxX=-1,maxY=-1,softBoundary=0;
+  const alphaAt=(x,y)=>rgba[(y*width+x)*4+3];
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+    const a=alphaAt(x,y);
+    if(a===0)transparent++;else{
+      if(a===255)opaque++;else semi++;
+      minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);
+      if(a>0&&a<255){
+        const neighbors=[[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
+        if(neighbors.some(([nx,ny])=>nx<0||ny<0||nx>=width||ny>=height||alphaAt(nx,ny)===0))softBoundary++;
+      }
+    }
+  }
+  assert.ok(transparent>0,`${file}: must contain real transparent pixels`);
+  assert.ok(maxX>=0,`${file}: contains no visible pixels`);
+  const margins={left:minX,right:width-1-maxX,top:minY,bottom:height-1-maxY};
+  const edgeTouch=Object.values(margins).filter(v=>v===0).length;
+  const warnings=[];
+  if(edgeTouch===4)warnings.push('content touches all four crop edges');
+  if(category==='decal'&&edgeTouch>=3)warnings.push('decal crop is unusually tight');
+  if(category==='prop'&&margins.top===0&&margins.left===0&&margins.right===0)warnings.push('prop crop touches top+left+right');
+  if(softBoundary>0)warnings.push(`semi-transparent silhouette boundary pixels: ${softBoundary}`);
+  return{file:path.basename(file),width,height,transparent,semiTransparent:semi,opaque,margins,softBoundary,warnings};
+}
+
+const stagedIntake={decals:[],props:[],warnings:[]};
+for(const[dir,category,expected,re]of[
+  ['decals','decal',16,/^aw_v1_decal_[a-z0-9]+(?:_[a-z0-9]+)*\.png$/],
+  ['props','prop',34,/^aw_v1_prop_[a-z0-9]+(?:_[a-z0-9]+)*\.png$/]
+]){
+  const fullDir=path.join(process.cwd(),'assets','awakening-v1',dir);
+  if(!fs.existsSync(fullDir))continue;
+  const files=fs.readdirSync(fullDir).filter(name=>name.endsWith('.png')).sort();
+  assert.equal(files.length,expected,`${dir}: expected ${expected} PNGs, found ${files.length}`);
+  for(const name of files){
+    assert.match(name,re,`${dir}/${name}: invalid canonical filename`);
+    const metrics=stagedAssetMetrics(path.join(fullDir,name),category);
+    stagedIntake[dir].push(metrics);
+    for(const warning of metrics.warnings)stagedIntake.warnings.push(`${dir}/${name}: ${warning}`);
+  }
+}
+if(stagedIntake.decals.length||stagedIntake.props.length){
+  console.log('AWAKENING_STAGED_INTAKE='+JSON.stringify(stagedIntake));
+}
+
+console.log(JSON.stringify({ok:true,validator:['manifest','png-exists','terrain-64-grid','pixel-transparency','naming','duplicate-id','missing-file','source-sheet-normalize','prop-anchor','gameplay-field-ban','strict-required','staged-rgba-intake'],physicalSlicing:'pixel-exact',runtimeManifest:'pass'}));
