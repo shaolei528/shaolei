@@ -26,7 +26,8 @@ assert.ok(preview.includes('imageSmoothingEnabled=false'),'preview must use near
 assert.ok(preview.includes('3×3 repeat'),'preview must expose terrain seam inspection');
 assert.ok(preview.includes('checker'),'preview must expose transparency checkerboard');
 
-const sandbox={window:null,console,camera:{x:0,y:0},canvas:{width:360,height:600},ctx:{save(){},restore(){},drawImage(){},imageSmoothingEnabled:true},fetch:async()=>({ok:false,status:404}),Image:class{}};sandbox.window=sandbox;vm.createContext(sandbox);vm.runInContext(art,sandbox,{filename:'awakening-art-assets-v1.js'});await Promise.resolve();await Promise.resolve();
-const api=sandbox.ABYSSAL_AWAKENING_ART_V1;assert.ok(api);assert.equal(api.version,1);assert.equal(api.manifestUrl,'assets/awakening-v1/manifest.json');assert.equal(api.status(),'fallback','404 manifest must not fail game boot');assert.equal(api.drawTerrain('cold_grass',0,0,0),false,'formal draw must decline when pack is absent so programmer fallback can render');
+const sandbox={window:null,console,camera:{x:0,y:0},canvas:{width:360,height:600},ctx:{save(){},restore(){},drawImage(){},imageSmoothingEnabled:true},fetch:async()=>({ok:false,status:404}),Image:class{}};sandbox.window=sandbox;vm.createContext(sandbox);vm.runInContext(art,sandbox,{filename:'awakening-art-assets-v1.js'});
+const api=sandbox.ABYSSAL_AWAKENING_ART_V1;assert.ok(api);await api.load();
+assert.equal(api.version,1);assert.equal(api.manifestUrl,'assets/awakening-v1/manifest.json');assert.equal(api.status(),'fallback','404 manifest must not fail game boot');assert.equal(api.drawTerrain('cold_grass',0,0,0),false,'formal draw must decline when pack is absent so programmer fallback can render');
 
 console.log(JSON.stringify({ok:true,mapping:'presentation-only',manifest404:'fallback',nearestNeighbor:true,sourceRect:true,preview:['seam','alpha','scale'],loadOrder:'art->world->motion'}));
