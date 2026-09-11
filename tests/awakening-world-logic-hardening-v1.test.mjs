@@ -97,7 +97,7 @@ sandbox.handleMobAttack({id:'local',x:2432,y:1100,dir:-Math.PI/2,range:80,damage
 attackBroadcasts.length=0;sandbox.me={id:'local',name:'Tester',x:CAMP.x,y:CAMP.y,r:14,hp:100,dir:0};sandbox.attackCd=0;sandbox.attack();assert.equal(attackBroadcasts.length,0,'Safe Camp must still suppress player attack broadcast');assert.equal(sandbox.attackCd,0,'Safe Camp must not consume attack cooldown');
 
 // Canonical parameter parity: speed, aggro, cooldown, respawn and reward rules are unchanged.
-for(const token of ['bd<410',"m.kind==='crawler'?57:(m.kind==='cultist'?39:33)","m.kind==='crawler'?.9:1.15",'Date.now()+11000'])assert.ok(mobCombat.includes(token),`mob parity token missing: ${token}`);
+for(const token of ['bd<410',"m.kind==='crawler'?57:(m.kind==='cultist'?39:33)","m.kind==='crawler'?.9:1.15"])assert.ok(mobCombat.includes(token),`mob parity token missing: ${token}`);
 for(const token of ['attackCd=inventory.knife?.32:.48','range:inventory.knife?80:62','damage:inventory.knife?22:11',"kind==='watcher'?2:1",'Date.now()+11000'])assert.ok(playerCombat.includes(token),`player parity token missing: ${token}`);
 lootRewards.length=0;sandbox.currentZone='1:1';sandbox.me={id:'local',x:2000,y:2000,r:14,hp:100};sandbox.mobs=[{id:'reward-crawler',kind:'crawler',x:2040,y:2000,hp:10,phase:0,hitCd:0,respawnAt:0}];
 sandbox.handleMobAttack({id:'local',x:2000,y:2000,dir:0,range:80,damage:22});assert.equal(sandbox.mobs[0].hp,0);assert.ok(sandbox.mobs[0].respawnAt>Date.now()+10000,'kill must retain ~11s respawn delay');assert.equal(lootRewards.length,1);assert.equal(lootRewards[0].shard,1,'crawler reward must remain one shard');
