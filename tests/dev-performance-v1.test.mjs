@@ -42,10 +42,14 @@ assert.match(dev.overlay.textContent,/DEV PERF/);
 assert.match(dev.overlay.textContent,/FPS \d/);
 assert.match(dev.overlay.textContent,/AVG \d/);
 assert.match(dev.overlay.textContent,/P95 \d/);
+assert.match(dev.overlay.textContent,/REFRESH/);
+assert.match(dev.overlay.textContent,/HITCH/);
 assert.ok(dev.sandbox.ABYSSAL_PERF_V1.fps>0);
 assert.ok(dev.sandbox.ABYSSAL_PERF_V1.avgFrameMs>0);
 assert.ok(dev.sandbox.ABYSSAL_PERF_V1.p95FrameMs>0);
+assert.ok(dev.sandbox.ABYSSAL_PERF_V1.refreshHz>0);
+assert.equal(typeof dev.sandbox.ABYSSAL_PERF_V1.snapshot,'function');
 let prevented=0;dev.keydown?.({code:'F3',preventDefault(){prevented++;}});
 assert.equal(prevented,1);assert.equal(dev.sandbox.ABYSSAL_PERF_V1.visible,false);assert.equal(dev.overlay.style.display,'none');
 
-console.log(JSON.stringify({ok:true,gate:'?devperf=1',normalPath:'zero-overlay-raf',metrics:['fps','avgFrameMs','p95FrameMs'],toggle:'F3'}));
+console.log(JSON.stringify({ok:true,gate:'?devperf=1',normalPath:'zero-overlay-raf',metrics:['fps','avgFrameMs','p95FrameMs','refreshHz','longFrameCount','hitchCount','fpsDriftPct','localInputToPresentation'],toggle:'F3'}));

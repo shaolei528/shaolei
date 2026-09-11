@@ -1,0 +1,74 @@
+name: playable-smoothness-v1-check
+
+on:
+  push:
+    paths:
+      - 'modules/main-loop/legacy-scheduler.js'
+      - 'modules/main-loop/smooth-motion-v18.js'
+      - 'modules/input/joystick.js'
+      - 'modules/input/platform-inventory-v19.js'
+      - 'modules/input/interaction-v12.js'
+      - 'modules/combat/player-combat.js'
+      - 'modules/combat/playable-feel-v1.js'
+      - 'modules/combat/hit-feedback.js'
+      - 'modules/combat/weapon-presentation-v1.js'
+      - 'modules/audio/playable-feel-audio-v1.js'
+      - 'modules/core/dev-performance-v1.js'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - 'tests/dev-performance-v1.test.mjs'
+      - 'tests/motion-v18.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
+      - 'tests/interaction-v12.test.mjs'
+      - 'tests/playable-slice-feel-audio-v1.test.mjs'
+      - '.github/workflows/playable-smoothness-v1-check.yml'
+  pull_request:
+    paths:
+      - 'modules/main-loop/legacy-scheduler.js'
+      - 'modules/main-loop/smooth-motion-v18.js'
+      - 'modules/input/joystick.js'
+      - 'modules/input/platform-inventory-v19.js'
+      - 'modules/input/interaction-v12.js'
+      - 'modules/combat/player-combat.js'
+      - 'modules/combat/playable-feel-v1.js'
+      - 'modules/combat/hit-feedback.js'
+      - 'modules/combat/weapon-presentation-v1.js'
+      - 'modules/audio/playable-feel-audio-v1.js'
+      - 'modules/core/dev-performance-v1.js'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - 'tests/dev-performance-v1.test.mjs'
+      - 'tests/motion-v18.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
+      - 'tests/interaction-v12.test.mjs'
+      - 'tests/playable-slice-feel-audio-v1.test.mjs'
+      - '.github/workflows/playable-smoothness-v1-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Smoothness input and soak baseline
+        run: node tests/playable-slice-smoothness-v1.test.mjs
+      - name: Dev performance instrumentation contract
+        run: node tests/dev-performance-v1.test.mjs
+      - name: Motion 30 60 120Hz regression
+        run: node tests/motion-v18.test.mjs
+      - name: PC and mobile input regressions
+        run: |
+          node tests/platform-inventory-v19.test.mjs
+          node tests/interaction-v12.test.mjs
+      - name: Combat feel and audio regressions
+        run: |
+          node tests/combat-hit-feedback.test.mjs
+          node tests/weapon-presentation-v1.test.mjs
+          node tests/playable-slice-feel-audio-v1.test.mjs
+      - name: Changed module syntax
+        run: |
+          node --check modules/main-loop/legacy-scheduler.js
+          node --check modules/input/joystick.js
+          node --check modules/combat/player-combat.js
+          node --check modules/core/dev-performance-v1.js
+          node --check tests/playable-slice-smoothness-v1.test.mjs
