@@ -27,6 +27,7 @@ on:
       - 'tests/core-smoke.test.mjs'
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
+      - 'tests/v21-loader-retry-idempotency-v1.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
   pull_request:
     paths:
@@ -54,6 +55,7 @@ on:
       - 'tests/core-smoke.test.mjs'
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
+      - 'tests/v21-loader-retry-idempotency-v1.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
 
 jobs:
@@ -93,6 +95,8 @@ jobs:
         run: node tests/awakening-world-v1.test.mjs
       - name: Awakening world logic hardening integration
         run: node tests/awakening-world-logic-hardening-v1.test.mjs
+      - name: V21 boot retry idempotency
+        run: node tests/v21-loader-retry-idempotency-v1.test.mjs
       - name: V21 boot and static preview syntax
         if: ${{ always() }}
         run: |
@@ -124,6 +128,7 @@ jobs:
       - name: Existing gameplay regression suite
         if: ${{ always() }}
         run: |
+          node tests/playable-slice-smoothness-v1.test.mjs
           node tests/game-shell-v1.test.mjs
           node tests/motion-v18.test.mjs
           node tests/platform-inventory-v19.test.mjs
