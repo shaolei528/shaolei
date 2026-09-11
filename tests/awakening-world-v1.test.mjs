@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const source=fs.readFileSync(new URL('../modules/world/awakening-world-v1.js',import.meta.url),'utf8');
+const spatialSource=fs.readFileSync(new URL('../modules/world/world-spatial-v1.js',import.meta.url),'utf8');
 const boot=fs.readFileSync(new URL('../survival-v21.html',import.meta.url),'utf8');
 const interaction=fs.readFileSync(new URL('../modules/input/interaction-v12.js',import.meta.url),'utf8');
 const runtime=fs.readFileSync(new URL('../modules/core/runtime-state.js',import.meta.url),'utf8');
@@ -31,6 +32,7 @@ sandbox.seedZone=zone=>{sandbox.resources.length=0;if(String(zone)==='1:0')sandb
 sandbox.freshMob=(zone,index)=>({id:`base-${zone}-${index}`,kind:'crawler',x:2000+index*20,y:500,hp:58,phase:index,hitCd:0,respawnAt:0});
 sandbox.spawnMobs=zone=>{sandbox.mobs=Array.from({length:6},(_,i)=>sandbox.freshMob(zone,i));};
 vm.createContext(sandbox);
+vm.runInContext(spatialSource,sandbox,{filename:'world-spatial-v1.js'});
 vm.runInContext(source,sandbox,{filename:'awakening-world-v1.js'});
 await Promise.resolve();
 
@@ -43,6 +45,7 @@ assert.deepEqual(layerNames,['collision','decals','entities','fx','interactions'
 assert.equal(api.layers.terrain.tileSize,64,'Awakening terrain must keep the V21 64x64 art grid');assert.ok(api.layers.decals.length>=8,'transition road/POI must have authored decal density');assert.ok(api.layers.props.length>=10,'POI must have composed prop density');assert.ok(api.layers.collision.length>=10,'POI collision must be explicit gameplay data');assert.ok(api.layers.interactions.length>=5,'POI must contain real search/loot locations');assert.ok(api.layers.entities.length>=2,'POI must contain a deliberate enemy encounter');assert.ok(api.layers.fx.some(v=>v.kind==='anomaly'),'POI must contain a restrained early anomaly');
 
 const store=api.poi;
+assert.deepEqual([...sandbox.ABYSSAL_WORLD_SPATIAL_V1.geometryIds('1:0')],[store.id],'MIRE MART must register its authored geometry exactly once');
 assert.equal(store.label,'Abandoned Convenience Store');assert.equal(Math.floor(store.x/1600),1,'first POI must remain in the camp world column');assert.equal(Math.floor(store.y/1600),0,'first POI must sit north of the camp in zone 1:0');assert.ok(store.w>=512&&store.h>=320,'store must have readable interior scale, not a decorative icon');
 assert.equal(api.isBlockedPoint(store.x+80,store.y+store.h-8),true,'solid south exterior wall must block the player');assert.equal(api.isBlockedPoint(store.entrance.x+store.entrance.w/2,store.y+store.h-8),false,'store entrance must remain physically open');assert.equal(api.isBlockedPoint(2300,812),true,'shelf footprint must block the player independently of art');assert.equal(api.isBlockedPoint(CAMP.x,CAMP.y),false,'Safe Camp center must remain unaffected by POI collision');
 const wallCross=api.resolveMovement(store.x-40,900,store.x+80,900,10);assert.equal(wallCross.blocked,true,'high-speed movement must not tunnel through store walls');assert.ok(wallCross.x<store.x+8,'wall collision must resolve outside the building shell');
@@ -66,10 +69,11 @@ sandbox.currentZone='1:0';sandbox.me.x=2400;sandbox.me.y=850;sandbox.updateQuest
 
 sandbox.currentZone='1:0';sandbox.camera.x=2400;sandbox.camera.y=1250;const beforeRects=fillRects;sandbox.drawGround(360,600);sandbox.drawCamp(360,600);sandbox.drawLighting(360,600);assert.equal(groundCalls,1,'existing ground renderer must remain in the chain');assert.equal(campCalls,1,'existing prop/camp renderer must remain in the chain');assert.equal(lightingCalls,1,'existing lighting renderer must remain in the chain');assert.ok(fillRects>beforeRects,'authored terrain/decal/prop/FX layers must actually draw');assert.equal(ctx.imageSmoothingEnabled,false,'world slice rendering must preserve crisp nearest-neighbor art');
 
-const terrainIndex=boot.indexOf("'terrain-v21.js'"),awakeningIndex=boot.indexOf("'modules/world/awakening-world-v1.js'"),smoothIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");assert.ok(terrainIndex>=0&&awakeningIndex>terrainIndex,'Awakening world must extend the existing V21 terrain architecture');assert.ok(smoothIndex>awakeningIndex,'Awakening collision must install before Smooth Motion captures update()');
+const spatialIndex=boot.indexOf("'modules/world/world-spatial-v1.js'"),terrainIndex=boot.indexOf("'terrain-v21.js'"),awakeningIndex=boot.indexOf("'modules/world/awakening-world-v1.js'"),smoothIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");assert.ok(spatialIndex>=0&&spatialIndex<awakeningIndex,'World Spatial must load before MIRE MART registers geometry');assert.ok(terrainIndex>=0&&awakeningIndex>terrainIndex,'Awakening world must extend the existing V21 terrain architecture');assert.ok(smoothIndex>awakeningIndex,'Awakening collision must install before Smooth Motion captures update()');
 assert.ok(runtime.includes("STORAGE_KEY='abyssal_wake_save_v5'"),'player save schema must remain v5');assert.ok(runtime.includes("inventory={wood:0,stone:0,food:2,shard:0,knife:false,lantern:false}"),'inventory schema must remain unchanged');assert.ok(combat.includes('attackCd=inventory.knife?.32:.48'));assert.ok(combat.includes('range:inventory.knife?80:62'));assert.ok(combat.includes('damage:inventory.knife?22:11'));assert.ok(interaction.includes('triggerContextInteraction'),'PC/mobile must continue through the shared context-action API');
 for(const forbidden of ['new WebSocket(',"event:'attack'","event:'move'",'RELAY_URL','STORAGE_KEY=','localStorage.setItem'])assert.equal(source.includes(forbidden),false,`Awakening world must not alter transport/save authority: ${forbidden}`);
+assert.equal(source.includes('baseUpdateMobs'),false,'Awakening World must not monkey-patch the canonical mob update');assert.equal(source.includes('baseHandleMobAttack'),false,'Awakening World must not monkey-patch canonical player melee');
 assert.equal(source.toLowerCase().includes('purple'),false,'Stage 0/early Stage 1 slice must not use a purple horror treatment');assert.equal(source.includes('rgba(65,25,69'),false,'Stage 0/early Stage 1 slice must not reuse the insanity purple overlay as world art');
 for(const required of ['64×64','nearest-neighbor','bottom-center','Collision','transparent PNG','2–4 frames','assets/awakening-v1/','aw_v1_terrain_','aw_v1_decal_','aw_v1_prop_store_','manifest.json'])assert.ok(contract.includes(required),`asset contract missing ${required}`);assert.ok(contract.includes('Never infer collision from PNG alpha'),'asset contract must forbid alpha-derived collision');
 
-console.log(JSON.stringify({ok:true,stage:'0+early1',layers:layerNames,poi:store.label,route:'HOME->north road->store->combat/loot->HOME',loot:{nodes:poiResources.length,highValue:'shard',schema:'unchanged',randomPoiClutter:'cleared'},collision:'explicit-independent+tunneling-blocked',network:'existing-harvest-and-mob-paths',save:'v5-unchanged',art:'placeholder-contract-ready'}));
+console.log(JSON.stringify({ok:true,stage:'0+early1',layers:layerNames,poi:store.label,route:'HOME->north road->store->combat/loot->HOME',loot:{nodes:poiResources.length,highValue:'shard',schema:'unchanged',randomPoiClutter:'cleared'},collision:'shared-world-spatial+tunneling-blocked',network:'existing-harvest-and-mob-paths',save:'v5-unchanged',art:'placeholder-contract-ready'}));
