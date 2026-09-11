@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "task": "Awakening Production Art Integration V1",
+  "branch": "feat/awakening-production-art-integration-v1",
+  "base": "61864a4394a5a9d30e36a1a56b4901259d7cedb6",
+  "sources": {
+    "terrainTooling": {
+      "branch": "feat/awakening-terrain-normalization-v1",
+      "head": "2036ad752c8ff0e6fb73b7441b19dfc76f1217bc"
+    },
+    "macroContract": {
+      "branch": "feat/awakening-macro-terrain-prototype-v1",
+      "head": "a36e2976b745c963d43b83848384b1528ad36b5c",
+      "path": "docs/contracts/MACRO_TERRAIN_ROLLOUT_CONTRACT_V1.md"
+    },
+    "gFinal": {
+      "branch": "feat/awakening-props-decals-intake-v1",
+      "head": "33419d0da7401bc142bc6edf9aa282cf7c7c6cc6",
+      "props": 34,
+      "decals": 16,
+      "markers": 0,
+      "nonArtChanges": 0
+    }
+  },
+  "phase1": {
+    "status": "PASS_WITH_CROP_WARNINGS",
+    "checks": [
+      "PNG decode",
+      "8-bit RGBA",
+      "real transparent pixels",
+      "semi-transparent silhouette fringe inspection",
+      "visible crop bounds",
+      "canonical lowercase snake_case naming",
+      "prop bottom-center anchor compatibility",
+      "presentation-only branch cleanliness"
+    ],
+    "validated": {
+      "decals": 16,
+      "props": 34,
+      "total": 50,
+      "semiTransparentFringeAssets": 0,
+      "propBottomEdgeCompatible": 34
+    },
+    "anchorNote": "Raw PNGs do not carry manifest anchor metadata. All 34 prop crops reach the bottom edge, so they are compatible with future {x:0.5,y:1} metadata; the metadata itself remains deferred until a production manifest is authorized.",
+    "cropWarnings": [
+      "aw_v1_decal_store_grime_01.png: unusually tight crop",
+      "aw_v1_decal_tire_mark_curve_01.png: unusually tight crop",
+      "aw_v1_prop_store_counter_02.png: visible content touches all four crop edges"
+    ]
+  },
+  "phase2": {
+    "status": "FAIL_REDRAW_REQUIRED",
+    "assets": [
+      "aw_v1_terrain_cold_grass_a",
+      "aw_v1_terrain_cold_grass_b",
+      "aw_v1_terrain_cold_grass_detail"
+    ],
+    "mechanicalMethods": [
+      "nearest-neighbor normalization to 64x64",
+      "no-dither palette reduction at 16/12/8 colors",
+      "no-dither palette reduction at 16/12/8/6 colors followed by dominant palette-index sampling over each output pixel source footprint",
+      "3x3 repetition inspection"
+    ],
+    "forbiddenMethodsUsed": [],
+    "failureReason": "Color reduction removes colors but does not convert painterly tuft structure into deliberate final-scale pixel clusters. High-frequency grass structure, moire/single-pixel noise and strong 3x3 macro repetition remain visible.",
+    "verdicts": {
+      "aw_v1_terrain_cold_grass_a": "REDRAW REQUIRED",
+      "aw_v1_terrain_cold_grass_b": "REDRAW REQUIRED",
+      "aw_v1_terrain_cold_grass_detail": "REDRAW REQUIRED"
+    }
+  },
+  "phase3": {
+    "runtimeSemantics": 19,
+    "terrainSemantics": 4,
+    "decalSemantics": 5,
+    "propSemantics": 8,
+    "fxSemantics": 2,
+    "missingExactCandidates": [
+      "aw_v1_decal_early_residue_01",
+      "aw_v1_prop_store_debris_01",
+      "aw_v1_fx_store_failing_light_01",
+      "aw_v1_fx_store_early_residue_01"
+    ],
+    "grassBlockers": [
+      "aw_v1_terrain_cold_grass_a",
+      "aw_v1_terrain_cold_grass_b",
+      "aw_v1_terrain_cold_grass_detail"
+    ]
+  },
+  "phase4": {
+    "authorized": false,
+    "manifestCreated": false,
+    "presentationOnlyAllowlistRefactor": false,
+    "expandedStrictRequired": false,
+    "reason": "Required asset gate is not satisfied."
+  }
+}
