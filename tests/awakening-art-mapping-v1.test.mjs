@@ -23,8 +23,8 @@ const worldIndex=boot.indexOf("'modules/world/awakening-world-v1.js'");
 const motionIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");
 assert.ok(artIndex>=0&&artIndex<worldIndex&&worldIndex<motionIndex,'asset adapter must load before Awakening World and preserve collision-before-motion ordering');
 assert.ok(preview.includes('imageSmoothingEnabled=false'),'preview must use nearest-neighbor canvas rendering');
-assert.ok(preview.includes('3×3 repeat'),'preview must expose terrain seam inspection');
-assert.ok(preview.includes('checker'),'preview must expose transparency checkerboard');
+assert.ok(preview.includes("for(let y=0;y<3;y++)for(let x=0;x<3;x++)"),'preview must render terrain as an actual 3x3 repeat for seam inspection');
+assert.ok(preview.includes("className='checker'"),'preview must expose transparency checkerboard');
 
 const sandbox={window:null,console,camera:{x:0,y:0},canvas:{width:360,height:600},ctx:{save(){},restore(){},drawImage(){},imageSmoothingEnabled:true},fetch:async()=>({ok:false,status:404}),Image:class{}};sandbox.window=sandbox;vm.createContext(sandbox);vm.runInContext(art,sandbox,{filename:'awakening-art-assets-v1.js'});
 const api=sandbox.ABYSSAL_AWAKENING_ART_V1;assert.ok(api);await api.load();
