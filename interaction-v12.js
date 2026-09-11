@@ -244,6 +244,10 @@
     if(target.type==='resource'){harvestResource(target.resource);return;}
   }
 
+  function triggerContextInteraction(){
+    return interact();
+  }
+
   function replaceInteractionButton(){
     const old=document.getElementById('useBtn');
     if(!old)return null;
@@ -251,7 +255,7 @@
     button.id='interactV12';
     button.textContent='互动';
     old.replaceWith(button);
-    button.addEventListener('pointerdown',event=>{event.preventDefault();interact();},{passive:false});
+    button.addEventListener('pointerdown',event=>{event.preventDefault();triggerContextInteraction();},{passive:false});
     button.addEventListener('click',event=>event.preventDefault());
     return button;
   }
@@ -343,6 +347,7 @@
 
   window.ABYSSAL_INTERACTION_V12={
     version:12,
+    triggerContextInteraction,
     openGuide:openGuideDialog,
     closeGuide:closeGuideDialog,
     getTarget:interactionTarget,

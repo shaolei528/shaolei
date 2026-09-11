@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const source=fs.readFileSync(new URL('../interaction-v12.js',import.meta.url),'utf8');
@@ -11,11 +12,14 @@ function block(startToken,endToken){
   return source.slice(start,end);
 }
 
-const interact=block('function interact(){','function replaceInteractionButton(){');
+const harvest=block('function harvestResource(r){','function restAtFire(){');
+const interact=block('function interact(){','function triggerContextInteraction(){');
+const trigger=block('function triggerContextInteraction(){','function replaceInteractionButton(){');
 const guide=block('function openGuideDialog(){','function closeGuideDialog(){');
 
 assert.ok(interact.includes('const target=interactionTarget();'),'interaction target must be resolved before deciding movement policy');
 assert.equal(interact.includes('function interact(){\n    safeStop();'),false,'all interactions must not stop the joystick unconditionally');
+assert.ok(trigger.includes('return interact();'),'public context-action entry point must delegate to the canonical interaction action');
 
 const fireStart=interact.indexOf("if(target.type==='fire')");
 const workbenchStart=interact.indexOf("if(target.type==='workbench')");
@@ -34,12 +38,80 @@ assert.equal(chestBranch.includes('safeStop()'),false,'chest interaction must pr
 assert.equal(resourceBranch.includes('safeStop()'),false,'resource collection must preserve an active joystick gesture');
 assert.ok(guide.includes('safeStop()'),'guide dialog must still stop movement because it is modal');
 
-assert.ok(source.includes("button.addEventListener('pointerdown',event=>{event.preventDefault();interact();},{passive:false})"),'mobile interaction button must remain pointer-driven');
+function exerciseTarget(target){
+  const calls={guide:0,fire:0,workbenchStop:0,hidePanels:0,workbenchOpen:0,chest:0,resource:0,resourceValue:null,toast:0};
+  const sandbox={
+    interactionTarget:()=>target,
+    toast(){calls.toast++;},
+    openGuideDialog(){calls.guide++;},
+    restAtFire(){calls.fire++;},
+    safeStop(){calls.workbenchStop++;},
+    hideOtherPanels(){calls.hidePanels++;},
+    craftPanel:{classList:{remove(name){if(name==='hidden')calls.workbenchOpen++;}}},
+    openChest(){calls.chest++;},
+    harvestResource(value){calls.resource++;calls.resourceValue=value;}
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(`${interact}\ninteract();`,sandbox,{filename:'interaction-target-test.js'});
+  return calls;
+}
+
+{
+  const calls=exerciseTarget({type:'guide'});
+  assert.equal(calls.guide,1,'context action must open the Guide dialog for a Guide target');
+}
+{
+  const calls=exerciseTarget({type:'fire'});
+  assert.equal(calls.fire,1,'context action must preserve campfire interaction');
+}
+{
+  const calls=exerciseTarget({type:'workbench'});
+  assert.equal(calls.workbenchStop,1,'workbench interaction must stop movement');
+  assert.equal(calls.hidePanels,1,'workbench interaction must hide competing panels');
+  assert.equal(calls.workbenchOpen,1,'context action must preserve workbench interaction');
+}
+{
+  const calls=exerciseTarget({type:'chest'});
+  assert.equal(calls.chest,1,'context action must preserve chest interaction');
+}
+{
+  const resource={id:'camp:test',type:'wood'};
+  const calls=exerciseTarget({type:'resource',resource});
+  assert.equal(calls.resource,1,'context action must dispatch resource targets to harvesting');
+  assert.equal(calls.resourceValue,resource,'resource target must be forwarded intact to harvesting');
+}
+
+{
+  const sandbox={
+    resource:{id:'camp:test',type:'wood'},
+    harvested:new Map(),
+    inventory:{wood:0},
+    zoneConnected:false,
+    zoneCh:null,
+    currentZone:'1:1',
+    saved:0,
+    updated:0,
+    toasted:0,
+    saveLocal(){this.saved++;},
+    updateUI(){this.updated++;},
+    toast(){this.toasted++;}
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(`${harvest}\nharvestResource(resource);`,sandbox,{filename:'resource-harvest-test.js'});
+  assert.equal(sandbox.inventory.wood,1,'canonical resource harvest must increment the resource count');
+  assert.ok(sandbox.harvested.get('camp:test')>Date.now(),'canonical resource harvest must start its local respawn cooldown');
+}
+
+assert.ok(source.includes("button.addEventListener('pointerdown',event=>{event.preventDefault();triggerContextInteraction();},{passive:false})"),'mobile interaction button must call the canonical context-action entry point');
+assert.ok(source.includes('triggerContextInteraction,'),'interaction public API must expose the canonical context-action entry point');
 assert.ok(source.includes("window.ABYSSAL_INTERACTION_V12={"),'interaction public API must remain available');
 
 console.log(JSON.stringify({
   ok:true,
+  contextEntry:'shared',
+  resourceHarvest:'pass',
+  guideInteraction:'pass',
   instantInteractions:'preserve-joystick',
   modalInteractions:'stop-movement',
-  mobilePointerControl:'preserved'
+  mobilePointerControl:'shared-context-action'
 }));

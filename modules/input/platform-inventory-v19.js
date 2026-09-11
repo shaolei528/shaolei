@@ -206,7 +206,9 @@ function applyKeyboardMovement(){
 }
 function triggerDash(){try{if(started&&!dead&&dashCd<=0){dashQueued=true;dashCd=1.35;}}catch{}}
 function triggerAttack(){try{attack();}catch{}}
-function triggerInteract(){const button=document.getElementById('interactV12')||document.getElementById('useBtn');try{button?.click();}catch{}}
+function triggerInteract(){
+  try{return window.ABYSSAL_INTERACTION_V12?.triggerContextInteraction?.();}catch{}
+}
 function movementCode(code){return ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].includes(code);}
 
 function onKeyDown(event){

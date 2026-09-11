@@ -25,6 +25,13 @@ assert.ok(api,'platform API must be exposed');
 assert.equal(api.version,19,'platform API version mismatch');
 
 function set(...codes){return new Set(codes);}
+function block(startToken,endToken){
+  const start=source.indexOf(startToken);
+  const end=source.indexOf(endToken,start);
+  assert.ok(start>=0,`missing block start: ${startToken}`);
+  assert.ok(end>start,`missing block end: ${endToken}`);
+  return source.slice(start,end);
+}
 
 {
   const v=api.keyboardVector(set('KeyW'));
@@ -41,7 +48,7 @@ function set(...codes){return new Set(codes);}
 }
 
 assert.equal(api.isTypingTarget({tagName:'INPUT'}),true,'INPUT must suppress game hotkeys');
-assert.equal(api.isTypingTarget({tagName:'textarea'}),true,'TEXTAREA must suppress game hotkeys');
+assert.equal(api.isTypingTarget({tagName:'textarea'}),true,'TEXTAREA must suppress hotkeys');
 assert.equal(api.isTypingTarget({tagName:'DIV',isContentEditable:true}),true,'contenteditable must suppress hotkeys');
 assert.equal(api.isTypingTarget({tagName:'DIV'}),false,'normal game surface must accept hotkeys');
 
@@ -81,6 +88,71 @@ assert.equal(api.detectDesktop({
   navigatorLike:{platform:'MacIntel',userAgent:'Mozilla/5.0',maxTouchPoints:5}
 }),false,'iPad desktop UA must remain touch mode');
 
+const triggerInteractSource=block('function triggerInteract(){','function movementCode(code){');
+assert.ok(triggerInteractSource.includes('window.ABYSSAL_INTERACTION_V12?.triggerContextInteraction?.()'),'desktop interaction must call the public context-action API');
+assert.equal(triggerInteractSource.includes('.click()'),false,'desktop interaction must not simulate a DOM button click');
+
+const keyboardSource=[
+  triggerInteractSource,
+  block('function movementCode(code){','function onKeyDown(event){'),
+  block('function onKeyDown(event){','function onKeyUp(event){')
+].join('\n');
+
+const keySandbox={
+  API:{panelOpen:false},
+  keys:new Set(),
+  shellBlocked:false,
+  contextCalls:0,
+  isDesktop:()=>true,
+  isTypingTarget:target=>api.isTypingTarget(target),
+  applyKeyboardMovement(){},
+  setPanelOpen(){},
+  triggerDash(){},
+  triggerAttack(){},
+  window:null
+};
+keySandbox.window=keySandbox;
+keySandbox.ABYSSAL_SHELL_V1={blocksGameInput:()=>keySandbox.shellBlocked};
+keySandbox.ABYSSAL_INTERACTION_V12={triggerContextInteraction(){keySandbox.contextCalls++;}};
+vm.createContext(keySandbox);
+vm.runInContext(keyboardSource,keySandbox,{filename:'platform-keyboard-context-test.js'});
+
+function keyE(target={tagName:'DIV'},repeat=false){
+  return{code:'KeyE',repeat,target,prevented:false,preventDefault(){this.prevented=true;}};
+}
+
+{
+  const event=keyE();
+  keySandbox.onKeyDown(event);
+  assert.equal(keySandbox.contextCalls,1,'PC KeyE must invoke the canonical context-action entry point exactly once');
+  assert.equal(event.prevented,true,'handled PC KeyE must prevent browser default behavior');
+}
+{
+  const event=keyE({tagName:'DIV'},true);
+  keySandbox.onKeyDown(event);
+  assert.equal(keySandbox.contextCalls,1,'held/repeated KeyE must not repeat context interaction');
+}
+{
+  keySandbox.shellBlocked=true;
+  const event=keyE();
+  keySandbox.onKeyDown(event);
+  assert.equal(keySandbox.contextCalls,1,'Game Shell blocked state must prevent KeyE context interaction');
+  assert.equal(event.prevented,true,'Game Shell blocked KeyE must prevent browser default behavior');
+  keySandbox.shellBlocked=false;
+}
+{
+  const event=keyE({tagName:'INPUT'});
+  keySandbox.onKeyDown(event);
+  assert.equal(keySandbox.contextCalls,1,'typing/name input must prevent KeyE context interaction');
+}
+{
+  keySandbox.API.panelOpen=true;
+  const event=keyE();
+  keySandbox.onKeyDown(event);
+  assert.equal(keySandbox.contextCalls,1,'inventory panel must prevent KeyE context interaction');
+  keySandbox.API.panelOpen=false;
+}
+
 const interactionIndex=boot.indexOf("'interaction-v12.js'");
 const platformIndex=boot.indexOf("'platform-inventory-v19.js'");
 const relayIndex=boot.indexOf("'network-relay-v16.js'");
@@ -114,6 +186,8 @@ assert.ok(regression.includes("updateUI=function(){const result=baseUpdateUIV14.
 console.log(JSON.stringify({
   ok:true,
   keyboard:'wasd+arrows',
+  pcContextInteraction:'pass',
+  shellInputBlock:'pass',
   typingIsolation:'pass',
   inventoryMapping:'pass',
   inventoryHiddenRender:'suppressed',
