@@ -1,0 +1,11 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const source=fs.readFileSync(new URL('../modules/render/awakening-macro-terrain-prototype-v1.js',import.meta.url),'utf8');
+for(const forbidden of ['COLLISION','resolveMovement','harvestResource','handleMobAttack','RELAY_URL','saveLocal','sendMove'])assert.equal(source.includes(forbidden),false,`prototype must remain presentation-only: ${forbidden}`);
+const sandbox={window:null,console,Image:class{constructor(){this.naturalWidth=384;this.naturalHeight=384;}set src(v){this._src=v;}},performance:{now:()=>16}};sandbox.window=sandbox;vm.createContext(sandbox);vm.runInContext(source,sandbox);
+const api=sandbox.ABYSSAL_MACRO_TERRAIN_PROTOTYPE_V1;assert.ok(api);assert.equal(api.tileSize,64);assert.deepEqual([...api.allowedCells],[3,4,6]);
+api.setPatches([{id:'p3',x:64,y:64,cells:3,src:'S03.png'},{id:'p4',x:640,y:640,cells:4,src:'S04.png'},{id:'p6',x:1280,y:1280,cells:6,src:'S05.png'}]);
+assert.equal(api.state.patches[0].w,192);assert.equal(api.state.patches[1].w,256);assert.equal(api.state.patches[2].w,384);
+assert.equal(api.visiblePatches({x:160,y:160},320,320).some(p=>p.id==='p3'),true);assert.equal(api.visiblePatches({x:160,y:160},320,320).some(p=>p.id==='p6'),false,'offscreen macro patch must be culled');
+const ctx={save(){},restore(){},drawImage(){this.calls=(this.calls||0)+1;},imageSmoothingEnabled:true,globalAlpha:1};api.state.images.set('S03.png',{image:{naturalWidth:192,naturalHeight:192},ready:true});api.beginFrame(10);let r=api.render({ctx,camera:{x:160,y:160},W:320,H:320,mode:'A'});assert.equal(r.drawn,0,'A is existing 64x64 base only');r=api.render({ctx,camera:{x:160,y:160},W:320,H:320,mode:'C'});assert.equal(r.drawn,1);assert.equal(ctx.imageSmoothingEnabled,true,'renderer must restore caller state after forcing nearest-neighbor');const stats=api.endFrame(14);assert.equal(stats.drawCalls,1);
+const a=api.normalizePatch({id:'stable',x:129,y:191,cells:4}),b=api.normalizePatch({id:'stable',x:129,y:191,cells:4});assert.deepEqual(a,b,'placement must be deterministic and cell-snapped');
+console.log(JSON.stringify({ok:true,presentationOnly:true,tileSize:64,macroCells:api.allowedCells,culling:true,deterministic:true,modes:['A','B','C']}));
