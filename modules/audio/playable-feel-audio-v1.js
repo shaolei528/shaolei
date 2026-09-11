@@ -1,6 +1,12 @@
 (()=>{
 'use strict';
 
+const existingRuntime=window.ABYSSAL_AUDIO_RUNTIME_V1;
+if(existingRuntime?.bound&&window.ABYSSAL_AUDIO_V1){
+  existingRuntime.reentryCount=(Number(existingRuntime.reentryCount)||0)+1;
+  return;
+}
+
 const AudioCtor=window.AudioContext||window.webkitAudioContext;
 const MASTER_GAIN=.72;
 const BUS_DEFAULTS=Object.freeze({master:MASTER_GAIN,sfx:1,ambience:1,ui:1,swing:1,impact:1,hurt:1,crawler:1,campfire:1,wind:1});
@@ -358,7 +364,7 @@ document.addEventListener('visibilitychange',()=>{
   applyBusGain('master');
   if(STATE.unlocked)resumeContext();
 });
-setInterval(updateAmbience,250);
+const ambienceIntervalId=setInterval(updateAmbience,250);
 
 Object.assign(STATE,{
   unlock,playUiClick,playSwing,playImpact,playHurt,playCrawler,updateAmbience,
@@ -369,4 +375,8 @@ Object.assign(STATE,{
   setAmbienceGain:value=>setGain('ambience',value),
   startAmbience,stopAmbience,restartAmbience
 });
+window.ABYSSAL_AUDIO_RUNTIME_V1={
+  version:1,bound:true,intervalId:ambienceIntervalId,
+  reentryCount:Number(existingRuntime?.reentryCount)||0
+};
 })();
