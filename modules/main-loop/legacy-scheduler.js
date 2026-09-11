@@ -1,0 +1,1 @@
+setInterval(()=>{const now=performance.now(),dt=clamp((now-lastTick)/1000,0,.05);lastTick=now;update(dt)},33);requestAnimationFrame(draw);updateUI();
