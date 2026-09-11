@@ -6,6 +6,21 @@ const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const approx=(actual,expected,label)=>assert.ok(Math.abs(actual-expected)<1e-9,`${label}: expected ${expected}, got ${actual}`);
 
+// V21 is Relay-only: no dead Supabase shim or fallback may re-enter the active path.
+const v21Boot=read('survival-v21.html');
+const relay=read('modules/network/network-relay-v16.js');
+const runtimeState=read('modules/core/runtime-state.js');
+const sessionZone=read('modules/network/session-zone.js');
+assert.ok(v21Boot.includes("Cloudflare relay URL is not configured"),'V21 boot must require a configured Relay URL');
+assert.equal(v21Boot.includes('installRelayShim'),false,'V21 boot must not install a dead Supabase shim');
+assert.equal(v21Boot.includes('@supabase/supabase-js'),false,'V21 boot must not load the Supabase SDK fallback');
+assert.equal(runtimeState.includes('window.supabase.createClient'),false,'active V21 runtime state must not require a Supabase client');
+assert.ok(sessionZone.includes('cfg.RELAY_URL'),'V21 entry guard must require the Relay URL');
+assert.equal(sessionZone.includes('supabase'),false,'active V21 zone wiring must not retain Supabase runtime paths');
+assert.ok(v21Boot.indexOf("'modules/network/network-v9.js'")<v21Boot.indexOf("'modules/network/network-relay-v16.js'"),'Relay must continue to load after the preserved V9 compatibility layer');
+for(const deadFallback of ['fallBackToSupabase','Supabase 备用','originalConnectGlobal','originalSwitchZone','originalMeasurePing','originalConnectionQuality'])assert.equal(relay.includes(deadFallback),false,`dead V21 fallback must be absent: ${deadFallback}`);
+assert.ok(relay.includes('if(NET_V9)NET_V9.disposed=true'),'Relay must disable the retained V9 compatibility lifecycle');
+
 // Survival state: execute the exact active split module with controlled globals.
 const survival={
   console,

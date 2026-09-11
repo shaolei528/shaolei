@@ -4,7 +4,7 @@ Classification means only what current evidence proves. `DEAD` is used narrowly:
 
 | Area | Classification | Evidence | Why it remains | Deletion risk / required validation |
 |---|---|---|---|---|
-| Supabase mechanics in `modules/network/network-v9.js` | `COMPATIBILITY`; Supabase fallback is `DEAD` for configured V21 Relay boot | V21 loads it, then loads `network-relay-v16.js`; V21 installs a nonconnecting shim when `RELAY_URL` exists | Relay adapter still references `ABYSSAL_NET_V9` lifecycle state | High. Prove Relay-only boot, reconnect, UI diagnostics, and all V21 network tests without it before removal. |
+| Supabase mechanics in `modules/network/network-v9.js` | `COMPATIBILITY`; Supabase fallback is `DEAD` for V21 | V21 loads it before `network-relay-v16.js`; Relay disables its lifecycle and V21 no longer installs a shim or fallback | Relay adapter still references `ABYSSAL_NET_V9` lifecycle state to prevent old reconnect handling | High. Prove Relay-only boot, reconnect, UI diagnostics, and all V21 network tests without it before removal. |
 | `game-core.js`, `game-play.js`, `game-render.js` | `COMPATIBILITY` | V21 does not load them; `tests/module-sort.test.mjs` rebuilds and compares them | Regression contract / compatibility aggregates | High. Replace or intentionally retire the reconstruction contract first. |
 | `modules/core/game-core.js`, `modules/combat/game-play.js`, `modules/render/game-render.js` | `LEGACY candidate` | V21 explicitly asserts it does not load these paths; this pass found no active-V21 reference | Historical split/aggregate transition artifacts | Medium. Search old page and external usage, then load V21 and historical pages chosen for support before deciding. |
 | Root V9/V16 helper copies such as `network-v9.js`, `network-relay-v16.js`, `gameplay-v9.js`, `render-v9.js` | `COMPATIBILITY` / `LEGACY candidate` | V21 loads `modules/...` paths; module-sort test byte-compares several root/module pairs | Test contract and older page support may depend on root copies | Medium/high. Preserve byte-pair tests or migrate old entrypoints in a dedicated branch. |
@@ -17,8 +17,8 @@ Classification means only what current evidence proves. `DEAD` is used narrowly:
 
 These are proposals only. None was changed in this branch.
 
-1. **`chore/document-relay-only-runtime`** — make the Relay-only V21 requirement explicit next to the compatibility adapter. Evidence: V21's shim makes the supposed Supabase fallback nonfunctional. Risk: comments/docs can drift unless paired with a narrow boot test.
-2. **`fix/retire-v21-supabase-fallback`** — remove or isolate dead fallback behavior only after Relay boot, reconnect, real A/B multiplayer, and compatibility decisions are verified. Risk: high; `network-relay-v16.js` currently calls legacy lifecycle code.
+1. **`chore/document-relay-only-runtime`** — keep the Relay-only V21 requirement explicit next to the compatibility adapter. Evidence: V21 now has a narrow boot regression that rejects a Supabase fallback. Risk: comments/docs can drift unless the test remains.
+2. **`fix/retire-v21-supabase-fallback`** — completed by this branch for V21 boot/runtime fallback paths. The retained V9 compatibility layer remains a separate retirement decision.
 3. **`chore/archive-historical-entrypoints`** — move old V3–V17 pages and boot files into a documented archive after checking host routes and bookmarks. Risk: high if any deployment still exposes them.
 4. **`chore/define-aggregate-generation`** — declare one mechanical owner for the three root aggregate compatibility files, or retire the byte-reconstruction test in a separate approved change. Risk: medium; a manual edit can desynchronize active split modules and aggregates.
 5. **`chore/archive-snapshots-policy`** — inventory `backups/**`, define which snapshots Git already preserves, and move only confirmed redundant snapshots to an archive. Risk: medium; backups are explicitly useful recovery points.

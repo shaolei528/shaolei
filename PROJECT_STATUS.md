@@ -16,11 +16,11 @@ This document is an audit of commit `f15129ff4a3843dc880757df2adb7064b4fa62dd`. 
 The intended V21 route is Cloudflare WebSocket Relay:
 
 1. `survival-v21.html` sees `ABYSSAL_CONFIG.RELAY_URL`.
-2. It installs `window.supabase.__abyssalRelayShim` instead of loading the real Supabase SDK.
-3. `modules/network/network-relay-v16.js`, loaded later in V21, replaces the earlier global/zone connection functions with Relay channels.
+2. It requires that Relay URL and does not load a Supabase SDK or shim.
+3. `modules/network/network-relay-v16.js`, loaded later in V21, installs Relay channels and disables the retained V9 compatibility lifecycle.
 4. The Relay protocol is `abyssal-relay-v1`.
 
-The old Supabase route is not a working V21 production fallback when `RELAY_URL` exists: the shim's `subscribe`, `track`, and `send` return failure-style results and create no connection. Treat it as legacy/dead fallback code, not an available recovery path.
+The old Supabase route is not a V21 production fallback. V21 now reports a missing Relay configuration and does not attempt a Supabase connection when the Relay fails. Treat retained Supabase code as legacy compatibility, not an available recovery path.
 
 ## Explicitly not established as current gameplay
 

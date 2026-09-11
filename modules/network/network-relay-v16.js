@@ -2,10 +2,7 @@
 'use strict';
 
 const NET_V9=window.ABYSSAL_NET_V9;
-const originalConnectGlobal=connectGlobal;
-const originalSwitchZone=switchZone;
-const originalMeasurePing=measurePing;
-const originalConnectionQuality=connectionQuality;
+if(NET_V9)NET_V9.disposed=true;
 
 const params=new URLSearchParams(location.search);
 const configuredUrl=String(params.get('relay')||cfg.RELAY_URL||'').trim();
@@ -32,7 +29,6 @@ const RELAY={
   pingLost:0,
   lastPacketAt:0,
   lastError:'',
-  fallbackReason:'',
   route:'relay'
 };
 window.ABYSSAL_RELAY_V16=RELAY;
@@ -43,7 +39,7 @@ function badge(){
   el=document.createElement('div');
   el.id='routeBadgeV16';
   el.style.cssText='position:absolute;left:8px;top:137px;z-index:15;padding:4px 6px;border:1px solid #5e786d;background:#0c1d19ed;color:#c9d8d1;font:700 7px ui-monospace,monospace;touch-action:manipulation';
-  el.textContent=RELAY.enabled?'联机线路：公网中继':'联机线路：Supabase';
+  el.textContent=RELAY.enabled?'联机线路：公网中继':'联机线路：未配置';
   game?.appendChild(el);
   el.addEventListener('click',()=>{const d=diag();d.style.display=d.style.display==='none'?'block':'none';refreshDiag();});
   return el;
@@ -65,7 +61,7 @@ function refreshDiag(){
   const loss=total?(RELAY.pingLost/total*100).toFixed(1)+'%':'--';
   el.textContent=[
     'V16 公网联机诊断',
-    '线路: '+(RELAY.active?'公网 WebSocket 中继':(RELAY.enabled?'准备中':'Supabase 备用')),
+    '线路: '+(RELAY.active?'公网 WebSocket 中继':(RELAY.enabled?'准备中':'Relay 未配置')),
     '地址: '+(RELAY.url||'未配置'),
     'WebSocket: '+(RELAY.connected?'OPEN':'CLOSED'),
     'Global: '+(globalConnected?'已订阅':'未订阅'),
@@ -186,7 +182,7 @@ class RelayChannel{
 RelayChannel.prototype.presence=new Map();
 
 async function connectGlobalRelay(){
-  await ensureSocket();RELAY.active=true;if(NET_V9)NET_V9.disposed=true;
+  await ensureSocket();RELAY.active=true;
   if(globalCh instanceof RelayChannel&&globalCh.subscribed){globalConnected=true;return globalCh;}
   if(globalCh instanceof RelayChannel)globalCh.close();
   const key=cfg.WORLD_CHANNEL+':global',ch=new RelayChannel(key);ch.presence=new Map();globalCh=ch;
@@ -199,7 +195,7 @@ async function connectGlobalRelay(){
   await ch.ready;globalConnected=true;await ch.track(globalMeta());measurePingRelay();updateUI();return ch;
 }
 async function switchZoneRelay(z){
-  await ensureSocket();RELAY.active=true;if(NET_V9)NET_V9.disposed=true;
+  await ensureSocket();RELAY.active=true;
   const target=String(z||currentZone);const nonce=++switchNonce;switching=true;currentZone=target;me.zone=target;seedZone(target);remotes.clear();lastSeqById.clear();recvSeq=0;missedSeq=0;zonePresenceIds.clear();zoneConnected=false;zoneLeader=false;zoneLeaderId='';mobs=[];
   const previous=zoneCh;if(previous instanceof RelayChannel)previous.close();zoneCh=null;
   if(nonce!==switchNonce){switching=false;return null;}
@@ -223,21 +219,14 @@ async function reconnectRelay(){
   if(!RELAY.enabled)return;
   try{try{RELAY.socket?.close();}catch{}RELAY.connected=false;RELAY.helloAck=false;await ensureSocket();globalConnected=false;zoneConnected=false;await connectGlobalRelay();await switchZoneRelay(currentZone);}catch(error){RELAY.lastError=String(error?.message||error);scheduleReconnect();}
 }
-function fallBackToSupabase(reason){
-  RELAY.active=false;RELAY.enabled=false;RELAY.fallbackReason=String(reason||'relay unavailable');if(NET_V9)NET_V9.disposed=false;setBadge('联机线路：Supabase 备用','#f0d58a');
-}
-
 connectGlobal=async function(){
-  if(!RELAY.enabled)return originalConnectGlobal();
-  try{return await connectGlobalRelay();}catch(error){RELAY.lastError=String(error?.message||error);fallBackToSupabase(RELAY.lastError);return originalConnectGlobal();}
+  return connectGlobalRelay();
 };
 switchZone=async function(z){
-  if(!RELAY.enabled)return originalSwitchZone(z);
-  try{return await switchZoneRelay(z);}catch(error){RELAY.lastError=String(error?.message||error);fallBackToSupabase(RELAY.lastError);return originalSwitchZone(z);}
+  return switchZoneRelay(z);
 };
-measurePing=function(){if(RELAY.active)return measurePingRelay();return originalMeasurePing();};
+measurePing=function(){return measurePingRelay();};
 connectionQuality=function(){
-  if(!RELAY.active)return originalConnectionQuality();
   if(!isOpen()||!globalConnected||!zoneConnected)return ['重新连接','reconnect'];
   if(!pingSamples.length)return ['测量中','reconnect'];
   const p=pingSamples.at(-1),total=RELAY.pingReplies+RELAY.pingLost,loss=total?RELAY.pingLost/total:0;if(p<180&&loss<.06)return ['良好','good'];if(p<330&&loss<.15)return ['一般','fair'];return ['较差','poor'];

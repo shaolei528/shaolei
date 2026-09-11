@@ -4,7 +4,7 @@
 
 - `survival-v21.html` is the active V21 boot authority. A file existing in the repository does not make it active.
 - Cloudflare WebSocket Relay (`abyssal-relay-v1`) is the formal V21 multiplayer route when `RELAY_URL` is configured.
-- The apparent Supabase fallback is legacy/dead for that V21 configuration: the boot installs a shim instead of the real SDK. Do not automatically restore or design new gameplay around it.
+- Supabase is legacy/dead for V21: the boot does not load an SDK/shim and Relay failure does not trigger a Supabase fallback. Do not automatically restore or design new gameplay around it.
 - Client input is not automatically trusted. Damage, movement, world state, and leader behavior require an explicit authority decision before they become security boundaries.
 
 ## Development shape
