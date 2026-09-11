@@ -7,13 +7,18 @@ on:
       - 'AWAKENING_ASSET_CONTRACT.md'
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
+      - 'awakening-assets-preview.html'
       - 'survival-v21.html'
+      - 'package.json'
       - 'assets/art-v21/**'
       - 'assets/awakening-v1/**'
       - 'assets/camp_props.png'
       - 'modules/**'
+      - 'tools/awakening-assets/**'
       - 'tests/terrain-v21.test.mjs'
       - 'tests/awakening-world-v1.test.mjs'
+      - 'tests/awakening-assets-validator.test.mjs'
+      - 'tests/awakening-art-mapping-v1.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
       - 'tests/combat-hit-feedback.test.mjs'
       - 'tests/weapon-presentation-v1.test.mjs'
@@ -28,13 +33,18 @@ on:
       - 'AWAKENING_ASSET_CONTRACT.md'
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
+      - 'awakening-assets-preview.html'
       - 'survival-v21.html'
+      - 'package.json'
       - 'assets/art-v21/**'
       - 'assets/awakening-v1/**'
       - 'assets/camp_props.png'
       - 'modules/**'
+      - 'tools/awakening-assets/**'
       - 'tests/terrain-v21.test.mjs'
       - 'tests/awakening-world-v1.test.mjs'
+      - 'tests/awakening-assets-validator.test.mjs'
+      - 'tests/awakening-art-mapping-v1.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
       - 'tests/combat-hit-feedback.test.mjs'
       - 'tests/weapon-presentation-v1.test.mjs'
@@ -55,7 +65,11 @@ jobs:
       - name: Module-sort byte equivalence and load order
         run: node tests/module-sort.test.mjs
       - name: Categorized module syntax
-        run: find modules -name '*.js' -print0 | xargs -0 -n1 node --check
+        run: find modules tools -name '*.js' -o -name '*.mjs' | xargs -n1 node --check
+      - name: Awakening asset validator
+        run: node tests/awakening-assets-validator.test.mjs
+      - name: Awakening art mapping and fallback
+        run: node tests/awakening-art-mapping-v1.test.mjs
       - name: Camp art contract
         run: node tests/camp-art-v21.test.mjs
       - name: Combat hit-feedback contract
@@ -79,22 +93,23 @@ jobs:
           if not match:
               raise SystemExit('V21 inline boot script not found')
           Path('/tmp/v21-boot.js').write_text(match.group(1))
-          if "'terrain-v21.js'" not in boot:
-              raise SystemExit('V21 terrain module missing')
-          if "'modules/world/awakening-world-v1.js'" not in boot:
-              raise SystemExit('Awakening World V1 module missing')
-          if "const VER='21b'" not in boot:
-              raise SystemExit('V21b cache key missing')
-          preview=Path('terrain-v21-preview.html').read_text()
-          scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',preview)
-          if not scripts:
-              raise SystemExit('V21 static preview inline script missing')
-          Path('/tmp/v21-preview.js').write_text('\n'.join(scripts))
-          if './terrain-v21.js' not in preview or 'Collision: OFF' not in preview:
+          for required in ["'terrain-v21.js'", "'modules/render/awakening-art-assets-v1.js'", "'modules/world/awakening-world-v1.js'"]:
+              if required not in boot:
+                  raise SystemExit('V21 module missing: '+required)
+          if "const VER='21c'" not in boot:
+              raise SystemExit('V21c cache key missing')
+          for name in ['terrain-v21-preview.html','awakening-assets-preview.html']:
+              source=Path(name).read_text()
+              scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',source)
+              if not scripts:
+                  raise SystemExit(name+' inline script missing')
+              Path('/tmp/'+name+'.js').write_text('\n'.join(scripts))
+          if './terrain-v21.js' not in Path('terrain-v21-preview.html').read_text() or 'Collision: OFF' not in Path('terrain-v21-preview.html').read_text():
               raise SystemExit('V21 static preview wiring missing')
           PY
           node --check /tmp/v21-boot.js
-          node --check /tmp/v21-preview.js
+          node --check /tmp/terrain-v21-preview.html.js
+          node --check /tmp/awakening-assets-preview.html.js
       - name: Existing gameplay regression suite
         if: ${{ always() }}
         run: |
