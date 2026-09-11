@@ -25,51 +25,59 @@ function makeChunk(type,data){
   return Buffer.concat([length,name,data,crc]);
 }
 
+console.log('PNG_BYTES='+png.length);
+console.log('PNG_TAIL_HEX='+png.subarray(Math.max(0,png.length-48)).toString('hex'));
 const chunks=[];
-let off=8,width=0,height=0,colorType=-1,bitDepth=-1;
-while(off<png.length){
+let off=8,width=0,height=0,colorType=-1,bitDepth=-1,truncated=null;
+while(off+8<=png.length){
   const length=png.readUInt32BE(off);
   const type=png.toString('ascii',off+4,off+8);
+  const end=off+12+length;
+  console.log(`CHUNK offset=${off} type=${JSON.stringify(type)} length=${length} end=${end} available=${png.length-off}`);
+  if(end>png.length){
+    truncated={off,length,type,end,missing:end-png.length};
+    console.log('TRUNCATED_CHUNK='+JSON.stringify(truncated));
+    console.log('TRUNCATED_REMAINDER_HEX='+png.subarray(off).toString('hex'));
+    break;
+  }
   const data=png.subarray(off+8,off+8+length);
   const stored=png.readUInt32BE(off+8+length);
   const actual=crc32(Buffer.concat([Buffer.from(type),data]));
   chunks.push({type,data,stored,actual,crcOk:stored===actual});
+  console.log(`CHUNK_CRC type=${type} stored=${stored.toString(16).padStart(8,'0')} actual=${actual.toString(16).padStart(8,'0')} ok=${stored===actual}`);
   if(type==='IHDR'){
     width=data.readUInt32BE(0);height=data.readUInt32BE(4);bitDepth=data[8];colorType=data[9];
   }
-  off+=12+length;
+  off=end;
   if(type==='IEND')break;
 }
-assert.equal(width,320);assert.equal(height,256);assert.equal(bitDepth,8);assert.equal(colorType,2);
-const idat=Buffer.concat(chunks.filter(c=>c.type==='IDAT').map(c=>c.data));
-let normalOk=true,raw;
-try{raw=zlib.inflateSync(idat);}catch(error){
-  normalOk=false;
-  console.log('NORMAL_INFLATE_ERROR='+String(error?.code||error?.message||error));
-  assert.ok(idat.length>6,'IDAT zlib stream must contain header/body/checksum');
-  raw=zlib.inflateRawSync(idat.subarray(2,-4));
-}
-const expected=height*(1+width*3);
-assert.equal(raw.length,expected,'raw scanline length must exactly match 320x256 RGB8');
-const repairedIdat=zlib.deflateSync(raw,{level:9});
-assert.deepEqual(zlib.inflateSync(repairedIdat),raw,'repaired zlib stream must round-trip');
+console.log('PARSED_TYPES='+chunks.map(c=>c.type).join(','));
+console.log('DIMENSIONS='+width+'x'+height+' depth='+bitDepth+' color='+colorType);
 
-const out=[signature];
-let inserted=false;
-for(const chunk of chunks){
-  if(chunk.type==='IDAT'){
-    if(!inserted){out.push(makeChunk('IDAT',repairedIdat));inserted=true;}
-    continue;
+if(!truncated&&chunks.some(c=>c.type==='IDAT')){
+  const idat=Buffer.concat(chunks.filter(c=>c.type==='IDAT').map(c=>c.data));
+  try{
+    const raw=zlib.inflateSync(idat);
+    console.log('NORMAL_INFLATE_OK=true');
+    console.log('RAW_BYTES='+raw.length);
+    console.log('PIXEL_STREAM_SHA256='+crypto.createHash('sha256').update(raw).digest('hex'));
+  }catch(error){
+    console.log('NORMAL_INFLATE_OK=false');
+    console.log('NORMAL_INFLATE_ERROR='+String(error?.code||error?.message||error));
+    if(idat.length>6){
+      try{
+        const raw=zlib.inflateRawSync(idat.subarray(2,-4));
+        console.log('RAW_INFLATE_OK=true');
+        console.log('RAW_BYTES='+raw.length);
+        console.log('PIXEL_STREAM_SHA256='+crypto.createHash('sha256').update(raw).digest('hex'));
+      }catch(rawError){
+        console.log('RAW_INFLATE_OK=false');
+        console.log('RAW_INFLATE_ERROR='+String(rawError?.code||rawError?.message||rawError));
+      }
+    }
   }
-  out.push(makeChunk(chunk.type,chunk.data));
 }
-const repaired=Buffer.concat(out);
-const chunkSummary=chunks.map(c=>`${c.type}:${c.data.length}:${c.crcOk?'crc-ok':'crc-bad'}`).join(',');
-console.log('PNG_CHUNKS='+chunkSummary);
-console.log('RAW_BYTES='+raw.length);
-console.log('ORIGINAL_SHA256='+crypto.createHash('sha256').update(png).digest('hex'));
-console.log('REPAIRED_SHA256='+crypto.createHash('sha256').update(repaired).digest('hex'));
-console.log('REPAIRED_BYTES='+repaired.length);
-console.log('PIXEL_STREAM_SHA256='+crypto.createHash('sha256').update(raw).digest('hex'));
-console.log('NORMAL_INFLATE_OK='+normalOk);
-console.log('REPAIRED_BASE64='+repaired.toString('base64'));
+
+// This diagnostic intentionally exits non-zero while the source PNG is structurally invalid.
+if(truncated)throw new Error(`PNG truncated in ${JSON.stringify(truncated.type)}: missing ${truncated.missing} bytes`);
+assert.equal(width,320);assert.equal(height,256);assert.equal(bitDepth,8);assert.equal(colorType,2);
