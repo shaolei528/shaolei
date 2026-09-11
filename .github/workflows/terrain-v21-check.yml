@@ -24,6 +24,7 @@ on:
       - 'tests/combat-hit-feedback.test.mjs'
       - 'tests/weapon-presentation-v1.test.mjs'
       - 'tests/module-sort.test.mjs'
+      - 'tests/smooth-motion-retry-idempotency-v1.test.mjs'
       - 'tests/core-smoke.test.mjs'
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
@@ -51,6 +52,7 @@ on:
       - 'tests/combat-hit-feedback.test.mjs'
       - 'tests/weapon-presentation-v1.test.mjs'
       - 'tests/module-sort.test.mjs'
+      - 'tests/smooth-motion-retry-idempotency-v1.test.mjs'
       - 'tests/core-smoke.test.mjs'
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
@@ -66,6 +68,8 @@ jobs:
           node-version: '20'
       - name: Module-sort byte equivalence and load order
         run: node tests/module-sort.test.mjs
+      - name: V18 retry ownership regression
+        run: node tests/smooth-motion-retry-idempotency-v1.test.mjs
       - name: Categorized module syntax
         run: find modules tools -name '*.js' -o -name '*.mjs' | xargs -n1 node --check
       - name: Awakening asset validator
