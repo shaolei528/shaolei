@@ -1,0 +1,23 @@
+{
+  "artifacts": [
+    {"file":"raw/s03/aw_v1_terrain_s03_r0_c0.png","bytes":335315,"sha256":"7bcb89d34de26823644307d3ca775284f12a6a1b12aef8b016705cb4d1ee1467"},
+    {"file":"raw/s03/aw_v1_terrain_s03_r1_c2.png","bytes":335548,"sha256":"40d8b02eeede346ba8bab0ade77f0e9395fccec239c6832eb3c41fae1affef93"},
+    {"file":"raw/s04/aw_v1_terrain_s04_r0_c0.png","bytes":268046,"sha256":"70d27afcb21cc36468f765a1f1c7d1ce4b328a69e65f08544f902e69258fe1bb"},
+    {"file":"raw/s04/aw_v1_terrain_s04_r1_c2.png","bytes":261652,"sha256":"cef619f9309297073f407fd2eaca35025639d1f6cd0fa804cadff7d471085158"},
+    {"file":"raw/s05/aw_v1_terrain_s05_r0_c0.png","bytes":327381,"sha256":"c142951f2e1e87137323d68e7aff428629065722873c02f60972aded4236e32d"},
+    {"file":"raw/s05/aw_v1_terrain_s05_r1_c3.png","bytes":325895,"sha256":"068dc44200f6e39114fb2653aff56ee867f0d32f544da63cc25a9435820a8b41"},
+    {"file":"normalized64/s03/aw_v1_terrain_s03_r0_c0.png","bytes":11490,"sha256":"db6466c66d883729c6ab14d1e85822efec7c3fa9b385d7d0510003afb8b6ff0b"},
+    {"file":"normalized64/s03/aw_v1_terrain_s03_r1_c2.png","bytes":11528,"sha256":"65afb51cfa53942d48fa2394cee6d09e4c2af99c4b48b40ea6e0c552459a3920"},
+    {"file":"normalized64/s04/aw_v1_terrain_s04_r0_c0.png","bytes":10599,"sha256":"9d7b5caf5d304f0bcc09aa7ec30102d121bd98da1dbfb1545a5309c06cd838d2"},
+    {"file":"normalized64/s04/aw_v1_terrain_s04_r1_c2.png","bytes":10478,"sha256":"c24cb650f1bd74e6c1f6fe3da3d1c984a13ff2fb5192450c0679d586005d36b3"},
+    {"file":"normalized64/s05/aw_v1_terrain_s05_r0_c0.png","bytes":11580,"sha256":"3a601c58d6aa4df46399213fdc31bc9e32abbb3ac52bce129fc93272318cc2b0"},
+    {"file":"normalized64/s05/aw_v1_terrain_s05_r1_c3.png","bytes":11561,"sha256":"8ccb564e1b0af6ad8cdf45a6e9cbb979c59ffd729aea5d172f4ff48471b60c65"},
+    {"file":"seam3x3/s03/aw_v1_terrain_s03_r0_c0.png","bytes":35624,"sha256":"a01691e3f3d00f516b7044845af0a9feac3036377e5c03db94ece239aaca36cc"},
+    {"file":"seam3x3/s03/aw_v1_terrain_s03_r1_c2.png","bytes":35752,"sha256":"3b7f888b31c842eadc253b699aa8ae17980216100e2c106e922013401f6bd591"},
+    {"file":"seam3x3/s04/aw_v1_terrain_s04_r0_c0.png","bytes":32814,"sha256":"dbd801eda697c52fee5b5638db2c2e7e92df8600502fa653ee0c74eb50c9d57a"},
+    {"file":"seam3x3/s04/aw_v1_terrain_s04_r1_c2.png","bytes":32515,"sha256":"92db29e9366782248a7611b31a3a82b897ad50053445bf59177423b554e872aa"},
+    {"file":"seam3x3/s05/aw_v1_terrain_s05_r0_c0.png","bytes":35821,"sha256":"6726b2e4d5c15fbd3ef00595c585275dc400d642fe2d6b1053348743394efb04"},
+    {"file":"seam3x3/s05/aw_v1_terrain_s05_r1_c3.png","bytes":35843,"sha256":"3cc9a2a951e625becff4adae9780a115bdb6e9b457ff29fb0bcefe35c06d4813"}
+  ],
+  "bundle": {"file":"terrain-normalization-feasibility-v1-artifacts.zip","bytes":3857652,"sha256":"34433f08a6fe82aa5ddc876e5d9a73249bebcbd44a55ebb582b4e686067adc5c"}
+}
