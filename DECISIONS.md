@@ -13,6 +13,8 @@
 - New systems are added incrementally: complete a small subsystem, test it, preserve a stable point, then integrate the next one.
 - Long-term separation is: stable core state, gameplay systems, and content data. Existing browser-global modules are mapped before changing ownership or APIs.
 - A non-core system must have a clear relationship to core combat, survival, multiplayer, or SafeCamp before it is added.
+- The product is a modern post-apocalyptic cosmic-horror co-op survival sandbox: Adventure, Home & Life, Survival, and Progression are its four pillars. Detailed target design belongs in `GAME_DESIGN.md`; it does not imply those systems are current runtime features.
+- A future persistent world is a logical co-op instance with shared world progression and individual World Survivor progression. World owner/access is not combat or world authority. The current public Relay DO is not that future system.
 
 ## Branch and release discipline
 

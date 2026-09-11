@@ -7,7 +7,7 @@ Source of truth: the ordered `files` array in `survival-v21.html`. Every item be
 | `modules/core/runtime-state.js` | Shared game state and local save v5/v4 migration | `saveLocal`, `loadLocal`; shared state declarations | V21 first; used by later gameplay | transport policy, rendering decisions |
 | `modules/ui/base-ui.js` | Base DOM/UI setup | DOM handles used later | V21 | simulation, network transport |
 | `modules/world/world-state.js` | World/zone state helpers | world-state broadcast helper is present | V21 | connection lifecycle |
-| `modules/network/session-zone.js` | Original channel/presence/leader wiring | `connectGlobal`, `switchZone`, `electLeader` | V21; later Relay layer wraps connection functions | Relay socket implementation |
+| `modules/network/session-zone.js` | Retained session metadata and leader-election helpers | `electLeader`; V21 Relay entry uses this shared session state | V21; Relay lifecycle consumes its state | Relay socket implementation or Supabase fallback |
 | `modules/network/inbound-events.js` | Applies inbound movement, combat, world, loot events | `onMove`, `onAttack`, `onMobs`, `onMobHit`, `onLoot` | zone event registrations | outbound transport |
 | `modules/network/outbound-sync.js` | Outbound movement synchronization | `sendMove` | simulation update | inbound state application |
 | `modules/network/chat-sync.js` | Chat receive/send behavior | chat sync handlers | V21 and global channel wiring | zone combat |
@@ -23,7 +23,7 @@ Source of truth: the ordered `files` array in `survival-v21.html`. Every item be
 | `modules/main-loop/legacy-scheduler.js` | Render/update scheduling | scheduler hooks | V21 | gameplay rules |
 | `modules/safe-camp/game-v7-patch.js` | Loaded SafeCamp compatibility extension | harvest event use is visible | V21 after base systems | Relay implementation |
 | `modules/input/mobile-fixes.js` | Loaded mobile compatibility extension | module-specific hooks not audited in this pass | V21 | save/network protocol |
-| `modules/network/network-v9.js` | Legacy Supabase networking compatibility layer | Supabase channel functions | V21 before Relay override | active Relay transport |
+| `modules/network/network-v9.js` | Retained V9 networking compatibility surface | compatibility helpers retained for load order/legacy contracts | V21 before Relay override | active Relay transport or a Supabase fallback |
 | `modules/survival/gameplay-v9.js` | Loaded survival/gameplay compatibility extension | module-specific hooks not audited in this pass | V21 | base save schema |
 | `modules/safe-camp/content-v9.js` | Loaded SafeCamp content extension | module-specific hooks not audited in this pass | V21 | multiplayer protocol |
 | `terrain-v21.js` | V21 terrain generation/render support | terrain API consumed by active game | V21 | player authority |
@@ -32,7 +32,7 @@ Source of truth: the ordered `files` array in `survival-v21.html`. Every item be
 | `modules/ui/ux-cn-v11.js` | Loaded Chinese UI/UX extension | UI extension hooks | V21 | simulation/network authority |
 | `modules/input/interaction-v12.js` | Interaction targets, harvest, rest, chest | `harvestResource`, `restAtFire`, `openChest` | input/UI | relay socket |
 | `modules/input/platform-inventory-v19.js` | Platform inventory/input behavior | module-specific hooks not audited in this pass | V21 | persistence ownership |
-| `modules/network/network-relay-v16.js` | Cloudflare WebSocket Relay adapter | `connectGlobalRelay`, `switchZoneRelay`; replaces global/zone connectors | V21 after `network-v9.js` | save format, gameplay rules |
+| `modules/network/network-relay-v16.js` | Cloudflare WebSocket Relay adapter | Relay channel lifecycle, reconnect/resubscribe, diagnostics; replaces the retained V9 lifecycle | V21 after `network-v9.js` | save format, gameplay rules |
 | `modules/network/network-quality-v20.js` | Network quality display/logic extension | quality hooks | V21 after Relay | transport protocol |
 | `modules/main-loop/smooth-motion-v18.js` | Smooth movement extension | motion hooks | V21 after main loop | authoritative world state |
 | `modules/ui/regression-v14.js` | UI regression compatibility extension | module-specific hooks not audited in this pass | V21 | gameplay/network policy |

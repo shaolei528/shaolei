@@ -1,6 +1,6 @@
 # Project Status — V21
 
-This document is an audit of commit `f15129ff4a3843dc880757df2adb7064b4fa62dd`. It is a map, not a runtime contract. `survival-v21.html` is the active boot authority.
+This document began as an audit of commit `f15129ff4a3843dc880757df2adb7064b4fa62dd` and was reconciled through the Project Hygiene commits ending at `e6acde7`. It is a map, not a runtime contract. `survival-v21.html` is the active boot authority. Product direction and future ownership boundaries are documented separately in `SYSTEM_BLUEPRINT.md`, `GAME_DESIGN.md`, and `ROADMAP.md`.
 
 ## Current playable foundation
 
