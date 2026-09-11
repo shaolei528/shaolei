@@ -5,7 +5,14 @@ const AudioCtor=window.AudioContext||window.webkitAudioContext;
 const MASTER_GAIN=.72;
 const BUS_DEFAULTS=Object.freeze({master:MASTER_GAIN,sfx:1,ambience:1,ui:1,swing:1,impact:1,hurt:1,crawler:1,campfire:1,wind:1});
 const BUS_GRAPH=Object.freeze({master:['sfx','ambience'],sfx:['ui','swing','impact','hurt','crawler'],ambience:['campfire','wind']});
-const STATE={version:1,mixerVersion:1,supported:!!AudioCtor,unlocked:false,contextState:'unavailable',nextCrawlerAt:0,ambienceActive:false,gains:{...BUS_DEFAULTS}};
+const ATMOSPHERE=Object.freeze({HOME:'HOME',OUTSIDE:'OUTSIDE',MIRE_MART:'MIRE_MART'});
+const ATMOSPHERE_CROSSFADE_SECONDS=.48;
+const STATE={
+  version:1,mixerVersion:1,supported:!!AudioCtor,unlocked:false,contextState:'unavailable',
+  nextCrawlerAt:0,nextOutsideDetailAt:0,nextStoreFlickerAt:0,nextAnomalyAt:0,
+  ambienceActive:false,atmosphereState:ATMOSPHERE.HOME,atmosphereTransitions:0,atmosphereChangedAt:0,
+  gains:{...BUS_DEFAULTS}
+};
 window.ABYSSAL_AUDIO_V1=STATE;
 
 let ctx=null,master=null,sfxBus=null,ambienceBus=null;
@@ -22,6 +29,17 @@ function safeMe(){try{return me||null;}catch{return null;}}
 function safeCamp(){try{return CAMP||null;}catch{return null;}}
 function safeMobs(){try{return Array.isArray(mobs)?mobs:[];}catch{return [];}}
 function safeInCamp(){try{return typeof inCamp==='function'&&!!inCamp();}catch{return false;}}
+function safeWorld(){try{return window.ABYSSAL_AWAKENING_WORLD_V1||null;}catch{return null;}}
+function safeInStore(){
+  const world=safeWorld(),player=safeMe();
+  if(!world||!player||typeof world.inStore!=='function')return false;
+  try{return !!world.inStore(player);}catch{return false;}
+}
+function resolveAtmosphereState(){
+  if(safeInStore())return ATMOSPHERE.MIRE_MART;
+  if(safeInCamp())return ATMOSPHERE.HOME;
+  return ATMOSPHERE.OUTSIDE;
+}
 function syncContextState(){STATE.contextState=ctx?.state||'unavailable';return STATE.contextState;}
 function disconnectNode(node){try{node?.disconnect?.();}catch{}}
 function applyBusGain(name){
@@ -37,7 +55,14 @@ function setGain(name,value){
 }
 function getGain(name){return Object.prototype.hasOwnProperty.call(STATE.gains,name)?STATE.gains[name]:null;}
 function getMixerState(){
-  return{version:STATE.mixerVersion,gains:{...STATE.gains},graph:{master:[...BUS_GRAPH.master],sfx:[...BUS_GRAPH.sfx],ambience:[...BUS_GRAPH.ambience]},ambienceActive:STATE.ambienceActive,contextState:syncContextState()};
+  return{
+    version:STATE.mixerVersion,
+    gains:{...STATE.gains},
+    graph:{master:[...BUS_GRAPH.master],sfx:[...BUS_GRAPH.sfx],ambience:[...BUS_GRAPH.ambience]},
+    ambienceActive:STATE.ambienceActive,
+    contextState:syncContextState(),
+    atmosphere:{state:STATE.atmosphereState,transitions:STATE.atmosphereTransitions,crossfadeMs:ATMOSPHERE_CROSSFADE_SECONDS*1000}
+  };
 }
 
 function makeNoiseBuffer(seconds=2){
@@ -134,6 +159,16 @@ function setTarget(gain,value,seconds=.08){
   const v=Math.max(0,Number(value)||0),t=ctx.currentTime;
   try{gain.gain.cancelScheduledValues(t);gain.gain.setTargetAtTime(v,t,seconds);}catch{gain.gain.value=v;}
 }
+function setParamTarget(param,value,seconds=.12){
+  if(!ctx||!param)return;
+  const v=Math.max(0,Number(value)||0),t=ctx.currentTime;
+  try{param.cancelScheduledValues(t);param.setTargetAtTime(v,t,seconds);}catch{param.value=v;}
+}
+function tuneLoop(loop,{frequency,q},seconds=.3){
+  if(!loop?.filter)return;
+  setParamTarget(loop.filter.frequency,frequency,seconds);
+  setParamTarget(loop.filter.Q,q,seconds);
+}
 function panNode(value=0){
   if(!ctx||typeof ctx.createStereoPanner!=='function')return null;
   const p=ctx.createStereoPanner();p.pan.value=clamp(value,-1,1);return p;
@@ -210,21 +245,81 @@ function nearestCrawler(){
   }
   return best&&bestDistance<=320?{mob:best,distance:bestDistance}:null;
 }
+function markAtmosphere(next,now=nowMs()){
+  if(next===STATE.atmosphereState)return false;
+  STATE.atmosphereState=next;
+  STATE.atmosphereTransitions++;
+  STATE.atmosphereChangedAt=now;
+  return true;
+}
+function applyAtmosphereProfile(state,player=safeMe(),camp=safeCamp()){
+  const fade=ATMOSPHERE_CROSSFADE_SECONDS;
+  if(state===ATMOSPHERE.MIRE_MART){
+    tuneLoop(fireNoise,{frequency:118,q:7.2},fade*.72);
+    tuneLoop(windNoise,{frequency:1750,q:2.2},fade*.72);
+    setTarget(fireGain,.0115,fade);
+    setTarget(windGain,.0055,fade);
+    return{fire:.0115,wind:.0055};
+  }
+  if(state===ATMOSPHERE.OUTSIDE){
+    tuneLoop(fireNoise,{frequency:820,q:.62},fade*.72);
+    tuneLoop(windNoise,{frequency:470,q:.24},fade*.72);
+    let fire=0;
+    if(player&&camp){
+      const dist=Math.hypot((Number(player.x)||0)-(Number(camp.x)||0),(Number(player.y)||0)-(Number(camp.y)||0));
+      fire=.007*(1-clamp((dist-Number(camp.r||0))/300));
+    }
+    const wind=.031;
+    setTarget(fireGain,fire,fade);
+    setTarget(windGain,wind,fade);
+    return{fire,wind};
+  }
+  tuneLoop(fireNoise,{frequency:980,q:.72},fade*.72);
+  tuneLoop(windNoise,{frequency:520,q:.2},fade*.72);
+  let fire=.018;
+  if(player&&camp){
+    const dist=Math.hypot((Number(player.x)||0)-(Number(camp.x)||0),(Number(player.y)||0)-(Number(camp.y)||0));
+    fire=.034*(1-clamp(dist/430));
+  }
+  const wind=.0035;
+  setTarget(fireGain,fire,fade*.8);
+  setTarget(windGain,wind,fade);
+  return{fire,wind};
+}
+function updateAtmosphereDetails(state,levels,now=nowMs()){
+  if(state===ATMOSPHERE.HOME){
+    if(levels.fire>.008&&Math.random()<.22){
+      noiseBurst({duration:.025+.03*Math.random(),gain:.014+.016*Math.random(),frequency:1450+900*Math.random(),type:'highpass',bus:'campfire'});
+    }
+    return;
+  }
+  if(state===ATMOSPHERE.OUTSIDE){
+    if(now>=STATE.nextOutsideDetailAt){
+      noiseBurst({duration:.18+.12*Math.random(),gain:.003+.002*Math.random(),frequency:260+140*Math.random(),type:'lowpass',pan:(Math.random()-.5)*1.1,bus:'ambience'});
+      STATE.nextOutsideDetailAt=now+7000+Math.random()*6000;
+    }
+    return;
+  }
+  if(now>=STATE.nextStoreFlickerAt){
+    noiseBurst({duration:.018+.016*Math.random(),gain:.0035+.0015*Math.random(),frequency:1900+900*Math.random(),type:'highpass',pan:(Math.random()-.5)*.7,bus:'ambience'});
+    STATE.nextStoreFlickerAt=now+2800+Math.random()*3400;
+  }
+  if(now>=STATE.nextAnomalyAt){
+    tone({frequency:50,endFrequency:45,duration:.32,gain:.0022,type:'triangle',pan:(Math.random()-.5)*.35,bus:'ambience'});
+    STATE.nextAnomalyAt=now+14000+Math.random()*12000;
+  }
+}
 function updateAmbience(){
   if(!ambienceEnabled||isHidden()||!ensureContext()||!master)return;
   if(!fireNoise||!windNoise)startAmbience();
-  if(!safeStarted()){setTarget(fireGain,0,.12);setTarget(windGain,0,.12);return;}
-  const player=safeMe(),camp=safeCamp();
-  let fire=0,wind=safeInCamp() ? .004 : .027;
-  if(player&&camp){
-    const dist=Math.hypot((Number(player.x)||0)-(Number(camp.x)||0),(Number(player.y)||0)-(Number(camp.y)||0));
-    fire=.032*(1-clamp(dist/430));
-    if(dist>Number(camp.r||0)+90)wind=.035;
+  const state=resolveAtmosphereState(),now=nowMs();
+  markAtmosphere(state,now);
+  if(!safeStarted()){
+    setTarget(fireGain,0,.12);setTarget(windGain,0,.12);return;
   }
-  setTarget(fireGain,fire,.16);setTarget(windGain,wind,.22);
+  const levels=applyAtmosphereProfile(state);
+  updateAtmosphereDetails(state,levels,now);
 
-  const now=nowMs();
-  if(fire>.008&&Math.random()<.22)noiseBurst({duration:.025+.03*Math.random(),gain:.014+.016*Math.random(),frequency:1450+900*Math.random(),type:'highpass',bus:'campfire'});
   if(now>=STATE.nextCrawlerAt){
     const nearest=nearestCrawler();
     if(nearest){
@@ -267,6 +362,7 @@ setInterval(updateAmbience,250);
 
 Object.assign(STATE,{
   unlock,playUiClick,playSwing,playImpact,playHurt,playCrawler,updateAmbience,
+  resolveAtmosphereState,getAtmosphereState:()=>STATE.atmosphereState,
   setGain,getGain,getMixerState,
   setMasterGain:value=>setGain('master',value),
   setSfxGain:value=>setGain('sfx',value),
