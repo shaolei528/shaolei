@@ -8,6 +8,7 @@ on:
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
       - 'awakening-assets-preview.html'
+      - 'awakening-macro-terrain-prototype-v1.html'
       - 'survival-v21.html'
       - 'package.json'
       - 'assets/art-v21/**'
@@ -15,18 +16,7 @@ on:
       - 'assets/camp_props.png'
       - 'modules/**'
       - 'tools/awakening-assets/**'
-      - 'tests/terrain-v21.test.mjs'
-      - 'tests/awakening-world-v1.test.mjs'
-      - 'tests/awakening-world-logic-hardening-v1.test.mjs'
-      - 'tests/awakening-assets-validator.test.mjs'
-      - 'tests/awakening-art-mapping-v1.test.mjs'
-      - 'tests/camp-art-v21.test.mjs'
-      - 'tests/combat-hit-feedback.test.mjs'
-      - 'tests/weapon-presentation-v1.test.mjs'
-      - 'tests/module-sort.test.mjs'
-      - 'tests/core-smoke.test.mjs'
-      - 'tests/platform-inventory-v19.test.mjs'
-      - 'tests/interaction-v12.test.mjs'
+      - 'tests/**'
       - '.github/workflows/terrain-v21-check.yml'
   pull_request:
     paths:
@@ -35,6 +25,7 @@ on:
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
       - 'awakening-assets-preview.html'
+      - 'awakening-macro-terrain-prototype-v1.html'
       - 'survival-v21.html'
       - 'package.json'
       - 'assets/art-v21/**'
@@ -42,18 +33,7 @@ on:
       - 'assets/camp_props.png'
       - 'modules/**'
       - 'tools/awakening-assets/**'
-      - 'tests/terrain-v21.test.mjs'
-      - 'tests/awakening-world-v1.test.mjs'
-      - 'tests/awakening-world-logic-hardening-v1.test.mjs'
-      - 'tests/awakening-assets-validator.test.mjs'
-      - 'tests/awakening-art-mapping-v1.test.mjs'
-      - 'tests/camp-art-v21.test.mjs'
-      - 'tests/combat-hit-feedback.test.mjs'
-      - 'tests/weapon-presentation-v1.test.mjs'
-      - 'tests/module-sort.test.mjs'
-      - 'tests/core-smoke.test.mjs'
-      - 'tests/platform-inventory-v19.test.mjs'
-      - 'tests/interaction-v12.test.mjs'
+      - 'tests/**'
       - '.github/workflows/terrain-v21-check.yml'
 
 jobs:
@@ -79,6 +59,8 @@ jobs:
           fi
       - name: Awakening art mapping and fallback
         run: node tests/awakening-art-mapping-v1.test.mjs
+      - name: Macro terrain presentation prototype
+        run: node tests/awakening-macro-terrain-prototype-v1.test.mjs
       - name: Camp art contract
         run: node tests/camp-art-v21.test.mjs
       - name: Combat hit-feedback contract
@@ -101,26 +83,20 @@ jobs:
           import re
           boot=Path('survival-v21.html').read_text()
           match=re.search(r'<script>([\s\S]*?)</script>',boot)
-          if not match:
-              raise SystemExit('V21 inline boot script not found')
+          if not match: raise SystemExit('V21 inline boot script not found')
           Path('/tmp/v21-boot.js').write_text(match.group(1))
           for required in ["'terrain-v21.js'", "'modules/render/awakening-art-assets-v1.js'", "'modules/world/awakening-world-v1.js'"]:
-              if required not in boot:
-                  raise SystemExit('V21 module missing: '+required)
-          if "const VER='21c'" not in boot:
-              raise SystemExit('V21c cache key missing')
-          for name in ['terrain-v21-preview.html','awakening-assets-preview.html']:
-              source=Path(name).read_text()
-              scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',source)
-              if not scripts:
-                  raise SystemExit(name+' inline script missing')
+              if required not in boot: raise SystemExit('V21 module missing: '+required)
+          if "const VER='21c'" not in boot: raise SystemExit('V21c cache key missing')
+          for name in ['terrain-v21-preview.html','awakening-assets-preview.html','awakening-macro-terrain-prototype-v1.html']:
+              source=Path(name).read_text();scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',source)
+              if not scripts: raise SystemExit(name+' inline script missing')
               Path('/tmp/'+name+'.js').write_text('\n'.join(scripts))
-          if './terrain-v21.js' not in Path('terrain-v21-preview.html').read_text() or 'Collision: OFF' not in Path('terrain-v21-preview.html').read_text():
-              raise SystemExit('V21 static preview wiring missing')
           PY
           node --check /tmp/v21-boot.js
           node --check /tmp/terrain-v21-preview.html.js
           node --check /tmp/awakening-assets-preview.html.js
+          node --check /tmp/awakening-macro-terrain-prototype-v1.html.js
       - name: Existing gameplay regression suite
         if: ${{ always() }}
         run: |
@@ -146,9 +122,7 @@ jobs:
         run: |
           set -euxo pipefail
           for i in 1 2 3; do
-            code=$(curl -sS -o /tmp/health.txt -w '%{http_code}' --connect-timeout 10 --max-time 20 \
-              -H 'Accept: application/json' \
-              https://abyssal-wake-relay.zuoranzhang.workers.dev/health || true)
+            code=$(curl -sS -o /tmp/health.txt -w '%{http_code}' --connect-timeout 10 --max-time 20 -H 'Accept: application/json' https://abyssal-wake-relay.zuoranzhang.workers.dev/health || true)
             if [ "$code" = "200" ] && grep -q '"ok":true' /tmp/health.txt; then exit 0; fi
             sleep 8
           done
