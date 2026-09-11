@@ -1,6 +1,12 @@
 (()=>{
 'use strict';
 
+const existingRuntime=window.ABYSSAL_HIT_FEEDBACK_RUNTIME_V1;
+if(existingRuntime?.bound&&window.ABYSSAL_HIT_FEEDBACK){
+  existingRuntime.reentryCount=(Number(existingRuntime.reentryCount)||0)+1;
+  return;
+}
+
 const FX={sparks:[],impacts:[],hurtUntil:0,hurtPulseUntil:0,lastVibrateAt:0};
 window.ABYSSAL_HIT_FEEDBACK=FX;
 const nowMs=()=>typeof performance!=='undefined'?performance.now():Date.now();
@@ -145,5 +151,8 @@ drawLighting=function(W,H){
     ctx.fillRect(Math.max(5,W-5-notch),Math.max(5,H-7),notch,2);ctx.fillRect(Math.max(5,W-7),Math.max(5,H-5-notch),2,notch);
   }
   ctx.restore();
+};
+window.ABYSSAL_HIT_FEEDBACK_RUNTIME_V1={
+  version:1,bound:true,reentryCount:Number(existingRuntime?.reentryCount)||0
 };
 })();
