@@ -19,6 +19,7 @@ on:
       - 'tests/awakening-world-v1.test.mjs'
       - 'tests/awakening-world-logic-hardening-v1.test.mjs'
       - 'tests/awakening-assets-validator.test.mjs'
+      - 'tests/awakening-production-manifest-gate-hardening-v1.test.mjs'
       - 'tests/awakening-art-mapping-v1.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
       - 'tests/combat-hit-feedback.test.mjs'
@@ -46,6 +47,7 @@ on:
       - 'tests/awakening-world-v1.test.mjs'
       - 'tests/awakening-world-logic-hardening-v1.test.mjs'
       - 'tests/awakening-assets-validator.test.mjs'
+      - 'tests/awakening-production-manifest-gate-hardening-v1.test.mjs'
       - 'tests/awakening-art-mapping-v1.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
       - 'tests/combat-hit-feedback.test.mjs'
@@ -70,6 +72,8 @@ jobs:
         run: find modules tools -name '*.js' -o -name '*.mjs' | xargs -n1 node --check
       - name: Awakening asset validator
         run: node tests/awakening-assets-validator.test.mjs
+      - name: Production manifest gate hardening
+        run: node tests/awakening-production-manifest-gate-hardening-v1.test.mjs
       - name: Production Awakening asset pack
         run: |
           if [ -f assets/awakening-v1/manifest.json ]; then
