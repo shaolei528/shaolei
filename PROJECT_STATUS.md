@@ -4,7 +4,7 @@ This document began as an audit of commit `f15129ff4a3843dc880757df2adb7064b4fa6
 
 ## Current playable foundation
 
-- The active page is `survival-v21.html` (`VER='21a'`). It loads 33 split/extension modules in an explicit order.
+- The active page is `survival-v21.html` (`VER='21a'`). It loads 34 split/extension modules in an explicit order, including the Game Shell V1 menu/settings layer.
 - Player state is local-save v5: position, HP, hunger, sanity, inventory, and `hasLeftCamp` (`modules/core/runtime-state.js`). v4 migration remains present.
 - SafeCamp is an active gameplay boundary: combat is blocked there; recovery and camp interactions are covered by `tests/core-smoke.test.mjs`.
 - Field combat is active: player attacks, mobs, loot, player damage, death/respawn, and hit feedback are loaded from the active V21 boot list.

@@ -20,7 +20,7 @@ This roadmap is ordered by dependency, not by a promise that later phases are al
 
 ## Current placement
 
-The repository has completed only the documentation deliverable for Phase 0 in this branch. V21 contains ingredients relevant to Phases 1–4, but it has not completed those phases as product vertical slices. Frozen experimental branches are not roadmap completion evidence.
+The repository has completed Phase 0 documentation and a partial Phase 1 Game Shell V1: main menu, current Relay entry presentation, independent local menu settings and a multiplayer-safe in-game menu. V21 still has not completed Phase 1 as a whole, nor Phases 2–4 as product vertical slices. Frozen experimental branches are not roadmap completion evidence.
 
 ## Sequencing rules
 

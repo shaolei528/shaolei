@@ -36,6 +36,7 @@ Source of truth: the ordered `files` array in `survival-v21.html`. Every item be
 | `modules/network/network-quality-v20.js` | Network quality display/logic extension | quality hooks | V21 after Relay | transport protocol |
 | `modules/main-loop/smooth-motion-v18.js` | Smooth movement extension | motion hooks | V21 after main loop | authoritative world state |
 | `modules/ui/regression-v14.js` | UI regression compatibility extension | module-specific hooks not audited in this pass | V21 | gameplay/network policy |
+| `modules/ui/game-shell-v1.js` | Main menu, local shell settings, game menu and input isolation | `ABYSSAL_SHELL_V1`; independent `abyssal_wake_settings_v1` storage | V21 after platform controls | player save schema, Relay protocol, world persistence or account/friends backend |
 | `modules/combat/hit-feedback.js` | Local visual/haptic combat feedback | feedback hooks | V21 last | damage/range/cooldown authority |
 
 ## Wiring constraints for future changes

@@ -80,6 +80,7 @@ jobs:
       - name: Existing gameplay regression suite
         if: ${{ always() }}
         run: |
+          node tests/game-shell-v1.test.mjs
           node tests/motion-v18.test.mjs
           node tests/platform-inventory-v19.test.mjs
           node tests/interaction-v12.test.mjs

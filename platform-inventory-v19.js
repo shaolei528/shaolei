@@ -210,6 +210,10 @@ function triggerInteract(){const button=document.getElementById('interactV12')||
 function movementCode(code){return ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].includes(code);}
 
 function onKeyDown(event){
+  if(window.ABYSSAL_SHELL_V1?.blocksGameInput?.(event)){
+    event.preventDefault();
+    return;
+  }
   if(!isDesktop()||isTypingTarget(event.target))return;
   if(movementCode(event.code)){event.preventDefault();keys.add(event.code);applyKeyboardMovement();return;}
   if((event.code==='KeyB'||event.code==='KeyI')&&!event.repeat){event.preventDefault();setPanelOpen(!API.panelOpen);return;}
@@ -220,6 +224,11 @@ function onKeyDown(event){
   if(event.code==='KeyE'&&!event.repeat){event.preventDefault();triggerInteract();}
 }
 function onKeyUp(event){
+  if(window.ABYSSAL_SHELL_V1?.blocksGameInput?.(event)){
+    if(movementCode(event.code))keys.delete(event.code);
+    event.preventDefault();
+    return;
+  }
   if(!isDesktop())return;
   if(movementCode(event.code)){
     keys.delete(event.code);
@@ -249,6 +258,7 @@ function applyPlatform(){
 
 addStyles();
 makeInventory();
+API.stopMovement=stopMovement;
 const baseUpdateUI=typeof updateUI==='function'?updateUI:null;
 if(baseUpdateUI){updateUI=function(){const result=baseUpdateUI.apply(this,arguments);if(API.panelOpen)refreshInventory();return result;};}
 
