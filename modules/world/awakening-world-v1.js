@@ -1,80 +1,37 @@
 (()=>{
 'use strict';
 
-/*
-  Awakening World Vertical Slice V1
-  Stage 0 + very early Stage 1 only.
-  Extends the existing V21 world without changing Relay protocol, save schema,
-  combat authority, or Safe Camp rules. Programmer art is temporary by design.
-*/
-
-const VERSION=1;
-const TILE_SIZE=64;
+/* Awakening World Vertical Slice V1 — Stage 0 + very early Stage 1. */
+const VERSION=1,TILE_SIZE=64;
 const REGION={id:'north-road-stage0',x:1792,y:320,w:1280,h:1664,zones:['1:0','1:1']};
-const STORE={
-  id:'poi:abandoned-convenience-store',label:'Abandoned Convenience Store',
-  x:2112,y:640,w:640,h:448,
-  entrance:{x:2392,y:1072,w:80,h:16},
-  parking:{x:2048,y:1088,w:768,h:288}
-};
+const STORE={id:'poi:abandoned-convenience-store',label:'Abandoned Convenience Store',x:2112,y:640,w:640,h:448,entrance:{x:2392,y:1072,w:80,h:16},parking:{x:2048,y:1088,w:768,h:288}};
+const POI_CLEAR={x:STORE.parking.x-32,y:STORE.y-32,w:STORE.parking.w+64,h:(STORE.parking.y+STORE.parking.h-STORE.y)+64};
 const WORLD_STAGE={id:'stage0-early1',stage:0,earlyStage1:true,corruptionIntensity:.08,rule:'local-authored-overlays-only'};
 const STARTING_SHARDS=Math.max(0,Number(inventory?.shard)||0);
-
 const terrainApi=window.ABYSSAL_TERRAIN_V21||null;
 const TILE=terrainApi?.tile||{grass_a:0,grass_b:1,grass_flowers:2,sand_a:3,sand_b:4,road_a:5,road_b:6,water_a:7,water_b:8};
-const SHEET_COLS=5;
-const SHEET_PATH=terrainApi?.sheetPath||'assets/art-v21/terrain-v21.png';
+const SHEET_COLS=5,SHEET_PATH=terrainApi?.sheetPath||'assets/art-v21/terrain-v21.png';
 
 const COLLISION=[
-  {id:'store-wall-n',x:STORE.x,y:STORE.y,w:STORE.w,h:16,kind:'wall'},
-  {id:'store-wall-w',x:STORE.x,y:STORE.y,w:16,h:STORE.h,kind:'wall'},
-  {id:'store-wall-e',x:STORE.x+STORE.w-16,y:STORE.y,w:16,h:STORE.h,kind:'wall'},
-  {id:'store-wall-s-left',x:STORE.x,y:STORE.y+STORE.h-16,w:280,h:16,kind:'wall'},
-  {id:'store-wall-s-right',x:STORE.entrance.x+STORE.entrance.w,y:STORE.y+STORE.h-16,w:280,h:16,kind:'wall'},
-  {id:'store-counter',x:2160,y:704,w:160,h:48,kind:'counter'},
-  {id:'store-shelf-a',x:2288,y:800,w:128,h:32,kind:'shelf'},
-  {id:'store-shelf-b',x:2464,y:800,w:128,h:32,kind:'shelf'},
-  {id:'store-shelf-c',x:2288,y:880,w:128,h:32,kind:'shelf'},
-  {id:'store-fridges',x:2584,y:688,w:112,h:48,kind:'fridge'},
-  {id:'store-debris',x:2504,y:936,w:80,h:56,kind:'debris'},
-  {id:'road-barrier-left',x:2080,y:1392,w:96,h:24,kind:'barrier'},
-  {id:'road-barrier-right',x:2688,y:1456,w:96,h:24,kind:'barrier'},
-  {id:'fence-west-a',x:2024,y:1192,w:16,h:176,kind:'fence'},
-  {id:'fence-east-a',x:2824,y:1208,w:16,h:160,kind:'fence'}
-];
-
+{id:'store-wall-n',x:STORE.x,y:STORE.y,w:STORE.w,h:16,kind:'wall'},{id:'store-wall-w',x:STORE.x,y:STORE.y,w:16,h:STORE.h,kind:'wall'},{id:'store-wall-e',x:STORE.x+STORE.w-16,y:STORE.y,w:16,h:STORE.h,kind:'wall'},
+{id:'store-wall-s-left',x:STORE.x,y:STORE.y+STORE.h-16,w:280,h:16,kind:'wall'},{id:'store-wall-s-right',x:STORE.entrance.x+STORE.entrance.w,y:STORE.y+STORE.h-16,w:280,h:16,kind:'wall'},
+{id:'store-counter',x:2160,y:704,w:160,h:48,kind:'counter'},{id:'store-shelf-a',x:2288,y:800,w:128,h:32,kind:'shelf'},{id:'store-shelf-b',x:2464,y:800,w:128,h:32,kind:'shelf'},{id:'store-shelf-c',x:2288,y:880,w:128,h:32,kind:'shelf'},
+{id:'store-fridges',x:2584,y:688,w:112,h:48,kind:'fridge'},{id:'store-debris',x:2504,y:936,w:80,h:56,kind:'debris'},
+{id:'road-barrier-left',x:2080,y:1392,w:96,h:24,kind:'barrier'},{id:'road-barrier-right',x:2688,y:1456,w:96,h:24,kind:'barrier'},{id:'fence-west-a',x:2024,y:1192,w:16,h:176,kind:'fence'},{id:'fence-east-a',x:2824,y:1208,w:16,h:160,kind:'fence'}];
 const DECALS=[
-  {id:'puddle-1',kind:'puddle',x:2336,y:1744,w:72,h:26},{id:'puddle-2',kind:'puddle',x:2472,y:1572,w:52,h:20},{id:'puddle-3',kind:'puddle',x:2232,y:1324,w:68,h:24},
-  {id:'crack-1',kind:'crack',x:2412,y:1816,w:72,h:40},{id:'crack-2',kind:'crack',x:2356,y:1492,w:84,h:44},{id:'crack-3',kind:'crack',x:2488,y:1250,w:62,h:34},
-  {id:'tire-1',kind:'tire',x:2384,y:1650,w:10,h:96},{id:'tire-2',kind:'tire',x:2472,y:1650,w:10,h:96},
-  {id:'store-glass',kind:'glass',x:2440,y:1128,w:76,h:38},{id:'residue-1',kind:'residue',x:2624,y:950,w:84,h:54}
-];
-
+{id:'puddle-1',kind:'puddle',x:2336,y:1744,w:72,h:26},{id:'puddle-2',kind:'puddle',x:2472,y:1572,w:52,h:20},{id:'puddle-3',kind:'puddle',x:2232,y:1324,w:68,h:24},
+{id:'crack-1',kind:'crack',x:2412,y:1816,w:72,h:40},{id:'crack-2',kind:'crack',x:2356,y:1492,w:84,h:44},{id:'crack-3',kind:'crack',x:2488,y:1250,w:62,h:34},
+{id:'tire-1',kind:'tire',x:2384,y:1650,w:10,h:96},{id:'tire-2',kind:'tire',x:2472,y:1650,w:10,h:96},{id:'store-glass',kind:'glass',x:2440,y:1128,w:76,h:38},{id:'residue-1',kind:'residue',x:2624,y:950,w:84,h:54}];
 const PROPS=[
-  {id:'fence-west-a',kind:'fence',x:2024,y:1192,w:16,h:176},{id:'fence-east-a',kind:'fence',x:2824,y:1208,w:16,h:160},
-  {id:'barrier-left',kind:'barrier',x:2080,y:1392,w:96,h:24},{id:'barrier-right',kind:'barrier',x:2688,y:1456,w:96,h:24},
-  {id:'store-wall-n',kind:'wall',x:STORE.x,y:STORE.y,w:STORE.w,h:16},{id:'store-wall-w',kind:'wall',x:STORE.x,y:STORE.y,w:16,h:STORE.h},{id:'store-wall-e',kind:'wall',x:STORE.x+STORE.w-16,y:STORE.y,w:16,h:STORE.h},
-  {id:'store-wall-s-left',kind:'wall',x:STORE.x,y:STORE.y+STORE.h-16,w:280,h:16},{id:'store-wall-s-right',kind:'wall',x:STORE.entrance.x+STORE.entrance.w,y:STORE.y+STORE.h-16,w:280,h:16},
-  {id:'store-counter',kind:'counter',x:2160,y:704,w:160,h:48},{id:'store-shelf-a',kind:'shelf',x:2288,y:800,w:128,h:32},{id:'store-shelf-b',kind:'shelf',x:2464,y:800,w:128,h:32},{id:'store-shelf-c',kind:'shelf',x:2288,y:880,w:128,h:32},
-  {id:'store-fridges',kind:'fridge',x:2584,y:688,w:112,h:48},{id:'store-debris',kind:'debris',x:2504,y:936,w:80,h:56}
-];
-
+{id:'fence-west-a',kind:'fence',x:2024,y:1192,w:16,h:176},{id:'fence-east-a',kind:'fence',x:2824,y:1208,w:16,h:160},{id:'barrier-left',kind:'barrier',x:2080,y:1392,w:96,h:24},{id:'barrier-right',kind:'barrier',x:2688,y:1456,w:96,h:24},
+{id:'store-wall-n',kind:'wall',x:STORE.x,y:STORE.y,w:STORE.w,h:16},{id:'store-wall-w',kind:'wall',x:STORE.x,y:STORE.y,w:16,h:STORE.h},{id:'store-wall-e',kind:'wall',x:STORE.x+STORE.w-16,y:STORE.y,w:16,h:STORE.h},
+{id:'store-wall-s-left',kind:'wall',x:STORE.x,y:STORE.y+STORE.h-16,w:280,h:16},{id:'store-wall-s-right',kind:'wall',x:STORE.entrance.x+STORE.entrance.w,y:STORE.y+STORE.h-16,w:280,h:16},
+{id:'store-counter',kind:'counter',x:2160,y:704,w:160,h:48},{id:'store-shelf-a',kind:'shelf',x:2288,y:800,w:128,h:32},{id:'store-shelf-b',kind:'shelf',x:2464,y:800,w:128,h:32},{id:'store-shelf-c',kind:'shelf',x:2288,y:880,w:128,h:32},{id:'store-fridges',kind:'fridge',x:2584,y:688,w:112,h:48},{id:'store-debris',kind:'debris',x:2504,y:936,w:80,h:56}];
 const INTERACTIONS=[
-  {id:'poi:store:shelf-food-a',type:'food',x:2350,y:850,r:18,source:'shelf'},
-  {id:'poi:store:shelf-food-b',type:'food',x:2518,y:850,r:18,source:'shelf'},
-  {id:'poi:store:fridge-food',type:'food',x:2638,y:770,r:18,source:'fridge'},
-  {id:'poi:store:debris-wood',type:'wood',x:2538,y:1012,r:18,source:'debris'},
-  {id:'poi:store:residue-shard-a',type:'shard',x:2630,y:1008,r:18,source:'residue'},
-  {id:'poi:store:residue-shard-b',type:'shard',x:2690,y:1008,r:18,source:'residue'}
-];
-const ENTITIES=[
-  {id:'poi:store:crawler-a',kind:'crawler',x:2304,y:1248,hp:58,phase:.8,index:6},
-  {id:'poi:store:crawler-b',kind:'crawler',x:2576,y:1288,hp:58,phase:2.6,index:7}
-];
-const FX=[
-  {id:'store-failing-light',kind:'flicker',x:2640,y:720,w:72,h:18},
-  {id:'store-residue',kind:'anomaly',x:2664,y:976,w:96,h:72,intensity:.08}
-];
+{id:'poi:store:shelf-food-a',type:'food',x:2350,y:850,r:18,source:'shelf'},{id:'poi:store:shelf-food-b',type:'food',x:2518,y:850,r:18,source:'shelf'},{id:'poi:store:fridge-food',type:'food',x:2638,y:770,r:18,source:'fridge'},
+{id:'poi:store:debris-wood',type:'wood',x:2538,y:1012,r:18,source:'debris'},{id:'poi:store:residue-shard-a',type:'shard',x:2630,y:1008,r:18,source:'residue'},{id:'poi:store:residue-shard-b',type:'shard',x:2690,y:1008,r:18,source:'residue'}];
+const ENTITIES=[{id:'poi:store:crawler-a',kind:'crawler',x:2304,y:1248,hp:58,phase:.8,index:6},{id:'poi:store:crawler-b',kind:'crawler',x:2576,y:1288,hp:58,phase:2.6,index:7}];
+const FX=[{id:'store-failing-light',kind:'flicker',x:2640,y:720,w:72,h:18},{id:'store-residue',kind:'anomaly',x:2664,y:976,w:96,h:72,intensity:.08}];
 const LAYERS={terrain:{region:REGION,store:STORE,tileSize:TILE_SIZE},decals:DECALS,props:PROPS,collision:COLLISION,interactions:INTERACTIONS,entities:ENTITIES,fx:FX};
 
 function hash2(x,y,seed=0){let n=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(seed|0,69069))|0;n=Math.imul(n^(n>>>13),1274126177);n^=n>>>16;return(n>>>0)/4294967295;}
@@ -106,24 +63,14 @@ function drawFxLayer(W,H){if(!rectIntersectsView(STORE,W,H))return;const t=typeo
 
 function isBlockedPoint(x,y){return COLLISION.some(r=>inRect(Number(x),Number(y),r));}
 function isBlockedCircle(x,y,radius=10){const r=Math.max(0,Math.min(18,Number(radius)||0));if(isBlockedPoint(x,y))return true;for(let i=0;i<8;i++){const a=i*Math.PI/4;if(isBlockedPoint(x+Math.cos(a)*r,y+Math.sin(a)*r))return true;}return false;}
-function resolveMovement(fromX,fromY,toX,toY,radius=10){
-  let x=Number(fromX),y=Number(fromY);const fx=x,fy=y,tx=Number(toX),ty=Number(toY);
-  if(![fx,fy,tx,ty].every(Number.isFinite))return{x:fx||0,y:fy||0,blocked:false};
-  const dist=Math.hypot(tx-fx,ty-fy),steps=Math.max(1,Math.ceil(dist/8));
-  const stepX=(tx-fx)/steps,stepY=(ty-fy)/steps;let blocked=false;
-  for(let i=0;i<steps;i++){
-    const wantX=x+stepX,wantY=y+stepY;
-    if(!isBlockedCircle(wantX,wantY,radius)){x=wantX;y=wantY;continue;}
-    blocked=true;let moved=false;
-    if(Math.abs(stepX)>.0001&&!isBlockedCircle(wantX,y,radius)){x=wantX;moved=true;}
-    if(Math.abs(stepY)>.0001&&!isBlockedCircle(x,wantY,radius)){y=wantY;moved=true;}
-    if(!moved)break;
-  }
-  return{x,y,blocked};
-}
+function resolveMovement(fromX,fromY,toX,toY,radius=10){let x=Number(fromX),y=Number(fromY);const fx=x,fy=y,tx=Number(toX),ty=Number(toY);if(![fx,fy,tx,ty].every(Number.isFinite))return{x:fx||0,y:fy||0,blocked:false};const dist=Math.hypot(tx-fx,ty-fy),steps=Math.max(1,Math.ceil(dist/8)),stepX=(tx-fx)/steps,stepY=(ty-fy)/steps;let blocked=false;for(let i=0;i<steps;i++){const wantX=x+stepX,wantY=y+stepY;if(!isBlockedCircle(wantX,wantY,radius)){x=wantX;y=wantY;continue;}blocked=true;let moved=false;if(Math.abs(stepX)>.0001&&!isBlockedCircle(wantX,y,radius)){x=wantX;moved=true;}if(Math.abs(stepY)>.0001&&!isBlockedCircle(x,wantY,radius)){y=wantY;moved=true;}if(!moved)break;}return{x,y,blocked};}
 function inStore(p=me){return !!p&&inRect(Number(p.x),Number(p.y),STORE);}
 
-function addPoiResources(zone){if(String(zone)!=='1:0')return;for(const def of INTERACTIONS){if(resources.some(r=>r.id===def.id))continue;resources.push({id:def.id,type:def.type,x:def.x,y:def.y,r:def.r,poi:STORE.id,source:def.source});}}
+function addPoiResources(zone){
+  if(String(zone)!=='1:0')return;
+  resources=resources.filter(r=>String(r.id).startsWith('poi:store:')||!inRect(Number(r.x),Number(r.y),POI_CLEAR));
+  for(const def of INTERACTIONS){if(resources.some(r=>r.id===def.id))continue;resources.push({id:def.id,type:def.type,x:def.x,y:def.y,r:def.r,poi:STORE.id,source:def.source});}
+}
 function makePoiMob(def){return{id:def.id,kind:def.kind,x:def.x,y:def.y,hp:def.hp,phase:def.phase,hitCd:0,respawnAt:0,poi:STORE.id};}
 const baseSeedZone=typeof window.seedZone==='function'?window.seedZone:null;
 if(baseSeedZone)window.seedZone=seedZone=function(zone){const result=baseSeedZone(zone);addPoiResources(zone);return result;};
@@ -131,41 +78,18 @@ const baseFreshMob=typeof window.freshMob==='function'?window.freshMob:null;
 if(baseFreshMob)window.freshMob=freshMob=function(zone,index){const def=ENTITIES.find(e=>String(zone)==='1:0'&&e.index===index);return def?makePoiMob(def):baseFreshMob(zone,index);};
 const baseSpawnMobs=typeof window.spawnMobs==='function'?window.spawnMobs:null;
 if(baseSpawnMobs)window.spawnMobs=spawnMobs=function(zone){baseSpawnMobs(zone);if(String(zone)==='1:0')for(const def of ENTITIES)if(!mobs.some(m=>m.id===def.id))mobs.push(makePoiMob(def));};
-
-const baseDrawGround=typeof window.drawGround==='function'?window.drawGround:null;
-if(baseDrawGround)window.drawGround=function(W,H){baseDrawGround(W,H);drawTerrainLayer(W,H);drawDecalLayer(W,H);};
-const baseDrawCamp=typeof window.drawCamp==='function'?window.drawCamp:null;
-if(baseDrawCamp)window.drawCamp=function(W,H){baseDrawCamp(W,H);drawPropLayer(W,H);};
-const baseDrawLighting=typeof window.drawLighting==='function'?window.drawLighting:null;
-if(baseDrawLighting)window.drawLighting=function(W,H){baseDrawLighting(W,H);drawFxLayer(W,H);};
-
+const baseDrawGround=typeof window.drawGround==='function'?window.drawGround:null;if(baseDrawGround)window.drawGround=function(W,H){baseDrawGround(W,H);drawTerrainLayer(W,H);drawDecalLayer(W,H);};
+const baseDrawCamp=typeof window.drawCamp==='function'?window.drawCamp:null;if(baseDrawCamp)window.drawCamp=function(W,H){baseDrawCamp(W,H);drawPropLayer(W,H);};
+const baseDrawLighting=typeof window.drawLighting==='function'?window.drawLighting:null;if(baseDrawLighting)window.drawLighting=function(W,H){baseDrawLighting(W,H);drawFxLayer(W,H);};
 let movementOrigin=null;
-const baseSendMove=typeof window.sendMove==='function'?window.sendMove:null;
-if(baseSendMove)window.sendMove=function(...args){if(movementOrigin&&typeof me!=='undefined'){const resolved=resolveMovement(movementOrigin.x,movementOrigin.y,me.x,me.y,Math.min(12,me.r||10));me.x=resolved.x;me.y=resolved.y;}return baseSendMove(...args);};
-const baseUpdate=typeof window.update==='function'?window.update:null;
-if(baseUpdate)window.update=function(dt){if(typeof me==='undefined')return baseUpdate(dt);movementOrigin={x:me.x,y:me.y};try{const result=baseUpdate(dt),resolved=resolveMovement(movementOrigin.x,movementOrigin.y,me.x,me.y,Math.min(12,me.r||10));me.x=resolved.x;me.y=resolved.y;return result;}finally{movementOrigin=null;}};
+const baseSendMove=typeof window.sendMove==='function'?window.sendMove:null;if(baseSendMove)window.sendMove=function(...args){if(movementOrigin&&typeof me!=='undefined'){const r=resolveMovement(movementOrigin.x,movementOrigin.y,me.x,me.y,Math.min(12,me.r||10));me.x=r.x;me.y=r.y;}return baseSendMove(...args);};
+const baseUpdate=typeof window.update==='function'?window.update:null;if(baseUpdate)window.update=function(dt){if(typeof me==='undefined')return baseUpdate(dt);movementOrigin={x:me.x,y:me.y};try{const result=baseUpdate(dt),r=resolveMovement(movementOrigin.x,movementOrigin.y,me.x,me.y,Math.min(12,me.r||10));me.x=r.x;me.y=r.y;return result;}finally{movementOrigin=null;}};
 
 let returnAnnounced=false;
 const baseUpdateQuest=typeof window.updateQuest==='function'?window.updateQuest:null;
 function rewardReady(){return(Number(inventory.shard)||0)>=STARTING_SHARDS+2;}
-function objectiveText(){
-  if(!started||dead||!inventory.knife)return null;
-  if(inCamp()){
-    if(hasLeftCamp&&rewardReady()){
-      if(!returnAnnounced){returnAnnounced=true;try{toast('便利店调查完成 · 带回的异质碎片可以推进灯笼制作。');}catch{}}
-      return inventory.lantern?'首次调查完成 · HOME 已补给。':'调查完成 · 工作台：准备灯笼与下一次外出。';
-    }
-    return '北门公路 → 调查停电的废弃便利店。';
-  }
-  if(inStore())return rewardReady()?'异常残留已取得 · 带着补给返回 Safe Camp。':'便利店：搜索货架、冰柜、碎屑与异常残留。';
-  if(rewardReady())return '带着便利店补给返回 Safe Camp。';
-  return '沿破损北路前进 · 寻找停电便利店。';
-}
+function objectiveText(){if(!started||dead||!inventory.knife)return null;if(inCamp()){if(hasLeftCamp&&rewardReady()){if(!returnAnnounced){returnAnnounced=true;try{toast('便利店调查完成 · 带回的异质碎片可以推进灯笼制作。');}catch{}}return inventory.lantern?'首次调查完成 · HOME 已补给。':'调查完成 · 工作台：准备灯笼与下一次外出。';}return '北门公路 → 调查停电的废弃便利店。';}if(inStore())return rewardReady()?'异常残留已取得 · 带着补给返回 Safe Camp。':'便利店：搜索货架、冰柜、碎屑与异常残留。';if(rewardReady())return '带着便利店补给返回 Safe Camp。';return '沿破损北路前进 · 寻找停电便利店。';}
 if(baseUpdateQuest)window.updateQuest=updateQuest=function(){baseUpdateQuest();const text=objectiveText();if(text&&questText)questText.textContent=text;};
 
-window.ABYSSAL_AWAKENING_WORLD_V1={
-  version:VERSION,stage:WORLD_STAGE,region:REGION,poi:STORE,layers:LAYERS,
-  placeholderArt:true,artContract:'AWAKENING_ASSET_CONTRACT.md',
-  roadCenterAt,regionMaterial,inStore,isBlockedPoint,isBlockedCircle,resolveMovement,addPoiResources,objectiveText
-};
+window.ABYSSAL_AWAKENING_WORLD_V1={version:VERSION,stage:WORLD_STAGE,region:REGION,poi:STORE,layers:LAYERS,placeholderArt:true,artContract:'AWAKENING_ASSET_CONTRACT.md',roadCenterAt,regionMaterial,inStore,isBlockedPoint,isBlockedCircle,resolveMovement,addPoiResources,objectiveText};
 })();
