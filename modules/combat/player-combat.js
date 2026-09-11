@@ -1,5 +1,5 @@
-if(!window.ABYSSAL_PLAYER_COMBAT_INPUT_V1){
-  window.ABYSSAL_PLAYER_COMBAT_INPUT_V1={version:1,bound:true};
+if(!globalThis.ABYSSAL_PLAYER_COMBAT_INPUT_V1){
+  globalThis.ABYSSAL_PLAYER_COMBAT_INPUT_V1={version:1,bound:true};
   dashBtn.addEventListener('pointerdown',()=>{if(started&&!dead&&dashCd<=0){dashQueued=true;dashCd=1.35}});
   attackBtn.addEventListener('pointerdown',()=>attack());
 }

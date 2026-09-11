@@ -1,13 +1,59 @@
 function use(){if(dead)return;let target=null,best=70;for(const r of resources){const until=harvested.get(r.id)||0;if(until>Date.now())continue;const d=distance(me,r);if(d<best){best=d;target=r}}if(target){inventory[target.type]++;const until=Date.now()+(target.id.startsWith('camp:')?30000:60000);harvested.set(target.id,until);zoneCh?.send({type:'broadcast',event:'harvest',payload:{zone:currentZone,rid:target.id,until}});toast(target.type==='shard'?'Cold light stains your hands.':`Collected ${target.type}`);saveLocal();updateUI();return}craftPanel.classList.remove('hidden')}
 useBtn.addEventListener('click',use);closeCraft.addEventListener('click',()=>craftPanel.classList.add('hidden'));
 craftPanel.addEventListener('click',e=>{const b=e.target.closest('[data-craft]');if(!b)return;const c=b.dataset.craft;if(c==='knife'){if(inventory.knife)toast('You already carry a Bone Knife.');else if(inventory.wood>=4&&inventory.stone>=3){inventory.wood-=4;inventory.stone-=3;inventory.knife=true;toast('Bone Knife crafted.')}else toast('Need 4 wood + 3 stone.')}if(c==='lantern'){if(inventory.lantern)toast('Your lantern is already awake.');else if(inventory.wood>=3&&inventory.shard>=2){inventory.wood-=3;inventory.shard-=2;inventory.lantern=true;toast('Lantern crafted.')}else toast('Need 3 wood + 2 shard.')}if(c==='meal'){if(inventory.food>=2){inventory.food-=2;me.hunger=clamp(me.hunger+48,0,100);me.hp=clamp(me.hp+10,0,100);toast('You eat by the fire.')}else toast('Need 2 food.')}saveLocal();updateUI()});
-dashBtn.addEventListener('pointerdown',()=>{if(started&&!dead&&dashCd<=0){dashQueued=true;dashCd=1.35}});attackBtn.addEventListener('pointerdown',attack);
+if(!globalThis.ABYSSAL_PLAYER_COMBAT_INPUT_V1){
+  globalThis.ABYSSAL_PLAYER_COMBAT_INPUT_V1={version:1,bound:true};
+  dashBtn.addEventListener('pointerdown',()=>{if(started&&!dead&&dashCd<=0){dashQueued=true;dashCd=1.35}});
+  attackBtn.addEventListener('pointerdown',()=>attack());
+}
 function attack(){if(!started||dead||attackCd>0||!zoneConnected)return;if(inCamp()){toast('Weapons stay lowered inside Safe Camp.');return}attackCd=inventory.knife?.32:.48;attackFlash=.15;const p={id:SESSION_ID,name:me.name,x:me.x,y:me.y,dir:me.dir,range:inventory.knife?80:62,damage:inventory.knife?22:11,zone:currentZone};zoneCh.send({type:'broadcast',event:'attack',payload:p});if(zoneLeader)handleMobAttack(p)}
 function rewardKill(targetId,kind){const payload={target:targetId,shard:kind==='watcher'?2:1,food:kind==='cultist'&&Math.random()<.4?1:0};if(targetId===SESSION_ID)onLoot(payload);else zoneCh?.send({type:'broadcast',event:'loot',payload})}
 function handleMobAttack(p){if(!zoneLeader||!p||campDist(finite(p.x,0),finite(p.y,0))<CAMP.r)return;for(const m of mobs){if(m.hp<=0)continue;const d=Math.hypot(m.x-finite(p.x,0),m.y-finite(p.y,0));if(d>finite(p.range,60))continue;const a=Math.atan2(m.y-p.y,m.x-p.x),diff=Math.abs(Math.atan2(Math.sin(a-finite(p.dir,0)),Math.cos(a-finite(p.dir,0))));if(diff<1.0){m.hp-=clamp(finite(p.damage,10),1,25);if(m.hp<=0){m.hp=0;m.respawnAt=Date.now()+11000;rewardKill(p.id,m.kind);if(p.id===SESSION_ID)toast('Something ancient collapses.')}}}}
+
 function die(){if(dead)return;dead=true;me.hp=0;inventory.wood=Math.floor(inventory.wood*.8);inventory.stone=Math.floor(inventory.stone*.8);inventory.food=Math.floor(inventory.food*.8);inventory.shard=Math.floor(inventory.shard*.75);deathEl.classList.remove('hidden');saveLocal();updateUI()}
 respawnBtn.addEventListener('click',async()=>{dead=false;deathEl.classList.add('hidden');me.x=CAMP.x+(Math.random()-.5)*110;me.y=CAMP.y+60+(Math.random()-.5)*70;me.hp=100;me.hunger=78;me.sanity=100;invulnerableUntil=Date.now()+5000;fieldGraceUntil=0;const z=zoneOf(me.x,me.y);if(z!==currentZone)await switchZone(z);toast('You wake beside the campfire.');saveLocal();updateUI()});
-let joyActive=false,joyPid=null;function moveJoy(e){const r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,max=r.width*.31;let dx=e.clientX-cx,dy=e.clientY-cy,l=Math.hypot(dx,dy)||1;if(l>max){dx=dx/l*max;dy=dy/l*max}joystickState.x=dx/max;joystickState.y=dy/max;stick.style.transform=`translate(${dx}px,${dy}px)`}joystick.addEventListener('pointerdown',e=>{joyActive=true;joyPid=e.pointerId;joystick.setPointerCapture(e.pointerId);moveJoy(e)});joystick.addEventListener('pointermove',e=>{if(joyActive&&e.pointerId===joyPid)moveJoy(e)});function stopJoy(){joyActive=false;joystickState.x=0;joystickState.y=0;stick.style.transform='translate(0,0)'}joystick.addEventListener('pointerup',stopJoy);joystick.addEventListener('pointercancel',stopJoy);
+(()=>{
+'use strict';
+
+if(window.ABYSSAL_JOYSTICK_V1?.bound)return;
+
+const API={version:1,bound:true,active:false,pointerId:null};
+window.ABYSSAL_JOYSTICK_V1=API;
+let joyActive=false,joyPid=null;
+
+function syncState(){API.active=joyActive;API.pointerId=joyPid;}
+function moveJoy(e){
+  const r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,max=r.width*.31;
+  let dx=e.clientX-cx,dy=e.clientY-cy,l=Math.hypot(dx,dy)||1;
+  if(l>max){dx=dx/l*max;dy=dy/l*max;}
+  joystickState.x=dx/max;joystickState.y=dy/max;
+  stick.style.transform=`translate(${dx}px,${dy}px)`;
+}
+function onPointerDown(e){
+  if(joyActive&&e.pointerId!==joyPid)return;
+  joyActive=true;joyPid=e.pointerId;syncState();
+  try{joystick.setPointerCapture(e.pointerId);}catch{}
+  moveJoy(e);
+}
+function onPointerMove(e){if(joyActive&&e.pointerId===joyPid)moveJoy(e);}
+function stopJoy(event){
+  const pointerId=event?.pointerId;
+  if(joyActive&&pointerId!=null&&pointerId!==joyPid)return false;
+  const owned=joyPid;
+  joyActive=false;joyPid=null;syncState();
+  joystickState.x=0;joystickState.y=0;stick.style.transform='translate(0,0)';
+  if(owned!=null){try{if(joystick.hasPointerCapture?.(owned))joystick.releasePointerCapture?.(owned);}catch{}}
+  return true;
+}
+
+joystick.addEventListener('pointerdown',onPointerDown);
+joystick.addEventListener('pointermove',onPointerMove);
+joystick.addEventListener('pointerup',stopJoy);
+joystick.addEventListener('pointercancel',stopJoy);
+window.stopJoy=stopJoy;
+Object.assign(API,{stop:stopJoy});
+})();
+
 function applyLocalSurvival(dt){if(inCamp()){me.hp=clamp(me.hp+dt*.65,0,100);me.sanity=clamp(me.sanity+dt*2.1,0,100);me.hunger=clamp(me.hunger-dt*.018,0,100);return}me.hunger=clamp(me.hunger-dt*.095,0,100);const night=nightLevel();let drain=.009+night*.055;if(inventory.lantern)drain*=.43;for(const m of mobs)if(m.hp>0&&Math.hypot(me.x-m.x,me.y-m.y)<220)drain+=m.kind==='watcher'?.10:.032;me.sanity=clamp(me.sanity-dt*drain,0,100);if(me.hunger<=0)me.hp-=dt*1.7;if(me.sanity<=0)me.hp-=dt*.26;if(me.hp<=0)die()}
 function update(dt){if(!started)return;attackCd=Math.max(0,attackCd-dt);dashCd=Math.max(0,dashCd-dt);attackFlash=Math.max(0,attackFlash-dt);if(!dead){let mx=joystickState.x,my=joystickState.y,l=Math.hypot(mx,my);if(l>1){mx/=l;my/=l}isMoving=l>.08;if(isMoving){walkClock+=dt*8;me.dir=Math.atan2(my,mx)}let speed=inCamp()?154:146;if(dashQueued){speed=inCamp()?270:390;dashQueued=false}me.x=clamp(me.x+mx*speed*dt,25,WORLD.w-25);me.y=clamp(me.y+my*speed*dt,25,WORLD.h-25);const nowSafe=inCamp();if(wasInCamp&&!nowSafe){hasLeftCamp=true;fieldGraceUntil=Date.now()+15000;toast('You left Safe Camp · 15s field ward.')}if(!wasInCamp&&nowSafe)toast('Safe Camp · monsters cannot enter.');wasInCamp=nowSafe;const z=zoneOf(me.x,me.y);if(z!==currentZone&&!switching)switchZone(z);applyLocalSurvival(dt)}for(const r of remotes.values()){r.x=lerp(r.x,r.tx,.19);r.y=lerp(r.y,r.ty,.19);r.attack=Math.max(0,(r.attack||0)-dt)}if(zoneLeader)updateMobs(dt);moveTimer+=dt;if(moveTimer>=adaptiveInterval()){moveTimer=0;sendMove()}mobSendTimer+=dt;if(zoneLeader&&mobSendTimer>=.45){mobSendTimer=0;zoneCh?.send({type:'broadcast',event:'mobs',payload:{zone:currentZone,mobs:mobs.map(m=>({id:m.id,kind:m.kind,x:Math.round(m.x),y:Math.round(m.y),hp:Math.round(m.hp),phase:m.phase,respawnAt:m.respawnAt||0}))}})}pingTimer+=dt;if(pingTimer>=5){pingTimer=0;measurePing()}globalTrackTimer+=dt;if(globalTrackTimer>=9){globalTrackTimer=0;globalCh?.track(globalMeta())}saveTimer+=dt;if(saveTimer>=6){saveTimer=0;saveLocal()}uiTimer+=dt;if(uiTimer>=.25){uiTimer=0;updateUI()}}
 function applyMobDamage(target,kind){const damage=kind==='watcher'?8:(kind==='crawler'?4:5),sanity=kind==='watcher'?7:(kind==='cultist'?3:1);if(target===SESSION_ID)onMobHit({target,damage,sanity,kind});else zoneCh?.send({type:'broadcast',event:'mob_hit',payload:{target,damage,sanity,kind}})}

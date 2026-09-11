@@ -9,4 +9,26 @@ function drawResources(W,H){const frameMap={wood:0,stone:1,food:2,shard:3};for(c
 function drawMobs(W,H){const t=performance.now()/180;for(const m of mobs){if(m.hp<=0)continue;const x=sx(m.x),y=sy(m.y);if(x<-45||y<-45||x>W+45||y>H+45)continue;const row=m.kind==='watcher'?0:(m.kind==='cultist'?1:2),frame=Math.floor(t+m.phase)%4;if(!drawSprite(img.monsters,32,32,frame,row,x,y,1.2)){ctx.fillStyle='#223b33';ctx.fillRect(x-10,y-10,20,20)}}}
 function drawPlayer(p,self){const x=sx(p.x),y=sy(p.y),row=directionRow(p.dir||0),moving=self?isMoving:!!p.moving,frame=moving?(self?Math.floor(walkClock)%4:Math.floor(performance.now()/150+(p.id?.length||0))%4):0;drawSprite(img.player,24,32,frame,row,x,y,1.18);if(!self){ctx.strokeStyle=p.color||'#9cb0a7';ctx.lineWidth=1;ctx.strokeRect(x-9,y-20,18,26)}if((self?attackFlash:p.attack)>0){ctx.strokeStyle='#f0ddb2';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,27,(p.dir||0)-.8,(p.dir||0)+.8);ctx.stroke()}if(self&&(Date.now()<invulnerableUntil||Date.now()<fieldGraceUntil)){ctx.strokeStyle='#b3ead2';ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.stroke()}ctx.fillStyle='#f6f3de';ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.fillText(clean(p.name),x,y-25)}
 function drawLighting(W,H){let n=nightLevel();if(inCamp())n=Math.min(n,.08);const insanity=1-me.sanity/100;if(n>0){ctx.fillStyle=`rgba(3,10,14,${n*.42})`;ctx.fillRect(0,0,W,H)}if(!inCamp()&&(n>.18||insanity>.32)){const radius=inventory.lantern?150:105,px=sx(me.x),py=sy(me.y),g=ctx.createRadialGradient(px,py,20,px,py,radius);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.6,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,4,7,${.34+n*.36})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}if(insanity>.35){ctx.fillStyle=`rgba(65,25,69,${insanity*.075})`;ctx.fillRect(0,0,W,H)}}
-setInterval(()=>{const now=performance.now(),dt=clamp((now-lastTick)/1000,0,.05);lastTick=now;update(dt)},33);requestAnimationFrame(draw);updateUI();
+(()=>{
+'use strict';
+
+const existing=window.ABYSSAL_LEGACY_SCHEDULER;
+if(existing?.started)return;
+
+const STATE={version:1,started:true,intervalId:null,intervalCleared:false,rafStarts:1};
+window.ABYSSAL_LEGACY_SCHEDULER=STATE;
+
+STATE.intervalId=setInterval(()=>{
+  if(window.ABYSSAL_MOTION_V18?.active){
+    clearInterval(STATE.intervalId);
+    STATE.intervalId=null;
+    STATE.intervalCleared=true;
+    return;
+  }
+  const now=performance.now(),dt=clamp((now-lastTick)/1000,0,.05);
+  lastTick=now;
+  update(dt);
+},33);
+requestAnimationFrame(draw);
+updateUI();
+})();
