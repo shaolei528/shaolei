@@ -1,0 +1,46 @@
+name: combat-presentation-retry-idempotency-v1-check
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+    paths:
+      - 'modules/combat/hit-feedback.js'
+      - 'modules/combat/weapon-presentation-v1.js'
+      - 'tests/combat-presentation-retry-idempotency-v1.test.mjs'
+      - 'tests/combat-hit-feedback.test.mjs'
+      - 'tests/weapon-presentation-v1.test.mjs'
+      - 'tests/playable-slice-combat-presentation-v1.test.mjs'
+      - '.github/workflows/combat-presentation-retry-idempotency-v1-check.yml'
+  pull_request:
+    paths:
+      - 'modules/combat/hit-feedback.js'
+      - 'modules/combat/weapon-presentation-v1.js'
+      - 'tests/combat-presentation-retry-idempotency-v1.test.mjs'
+      - 'tests/combat-hit-feedback.test.mjs'
+      - 'tests/weapon-presentation-v1.test.mjs'
+      - 'tests/playable-slice-combat-presentation-v1.test.mjs'
+      - '.github/workflows/combat-presentation-retry-idempotency-v1-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Combat presentation retry wrapper ownership regression
+        run: node tests/combat-presentation-retry-idempotency-v1.test.mjs
+      - name: Existing hit feedback regression
+        run: node tests/combat-hit-feedback.test.mjs
+      - name: Existing weapon presentation regression
+        run: node tests/weapon-presentation-v1.test.mjs
+      - name: Existing combined combat presentation regression
+        run: node tests/playable-slice-combat-presentation-v1.test.mjs
+      - name: Presentation syntax
+        run: |
+          node --check modules/combat/hit-feedback.js
+          node --check modules/combat/weapon-presentation-v1.js
