@@ -1,16 +1,42 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {decodePng,inspectRgbaRegion} from './png.mjs';
 
 export const ASSET_ID_RE=/^aw_v1_(terrain|decal|prop|fx)_[a-z0-9]+(?:_[a-z0-9]+)*$/;
 export const CATEGORIES=new Set(['terrain','decal','prop','fx']);
+export const REQUIRED_BASE_IDS=[
+  'aw_v1_terrain_cold_grass_a',
+  'aw_v1_terrain_cold_grass_b',
+  'aw_v1_terrain_cold_grass_detail',
+  'aw_v1_terrain_dirt_shoulder_a',
+  'aw_v1_terrain_dirt_shoulder_b',
+  'aw_v1_terrain_asphalt_a',
+  'aw_v1_terrain_asphalt_b',
+  'aw_v1_terrain_asphalt_cracked',
+  'aw_v1_terrain_concrete_floor_a',
+  'aw_v1_terrain_concrete_floor_b'
+];
 const PNG_SIGNATURE=Buffer.from([137,80,78,71,13,10,26,10]);
 const MAX_DIMENSION=8192;
+const FORBIDDEN_GAMEPLAY_FIELDS=new Set(['collision','collider','hitbox','hitboxes','solid','walkable','blocked']);
 
 function positiveInt(value){return Number.isInteger(value)&&value>0;}
 function safeRelativeFile(file){
   if(typeof file!=='string'||!file||file.includes('\\'))return false;
   const normalized=path.posix.normalize(file);
   return normalized===file&&!normalized.startsWith('../')&&!path.posix.isAbsolute(normalized)&&normalized.toLowerCase().endsWith('.png');
+}
+function findForbiddenGameplayFields(value,currentPath='manifest',out=[]){
+  if(Array.isArray(value)){
+    for(let i=0;i<value.length;i++)findForbiddenGameplayFields(value[i],`${currentPath}[${i}]`,out);
+    return out;
+  }
+  if(!value||typeof value!=='object')return out;
+  for(const[key,child]of Object.entries(value)){
+    if(FORBIDDEN_GAMEPLAY_FIELDS.has(key))out.push(`${currentPath}.${key}`);
+    findForbiddenGameplayFields(child,`${currentPath}.${key}`,out);
+  }
+  return out;
 }
 
 export function inspectPngBuffer(buffer){
@@ -60,13 +86,14 @@ function collectBindingIds(value,out=[]){
   return out;
 }
 
-export function validatePack(rootDir,{readFile=fs.readFileSync,exists=fs.existsSync}={}){
-  const errors=[],warnings=[],pngCache=new Map();
+export function validatePack(rootDir,{readFile=fs.readFileSync,exists=fs.existsSync,strictRequired=false}={}){
+  const errors=[],warnings=[],pngCache=new Map(),decodedCache=new Map();
   const manifestPath=path.join(rootDir,'manifest.json');
   if(!exists(manifestPath))return{ok:false,errors:['missing manifest.json'],warnings,assets:[],files:[]};
   let parsed;
   try{parsed=JSON.parse(readFile(manifestPath,'utf8'));}catch(error){return{ok:false,errors:[`invalid manifest.json: ${error.message}`],warnings,assets:[],files:[]};}
   if(parsed.version!==1)errors.push('manifest.version must be 1');
+  for(const fieldPath of findForbiddenGameplayFields(parsed))errors.push(`art manifest must not define gameplay field: ${fieldPath}`);
   const manifest=normalizeManifest(parsed),assets=manifest.assets||[],seen=new Set(),files=new Set();
   if(!assets.length)errors.push('manifest must declare at least one asset or sheet entry');
 
@@ -80,9 +107,9 @@ export function validatePack(rootDir,{readFile=fs.readFileSync,exists=fs.existsS
     files.add(file);
     const full=path.join(rootDir,...file.split('/'));
     if(!exists(full)){errors.push(`${id}: missing file ${file}`);continue;}
-    let png=pngCache.get(file);
+    let buffer,png=pngCache.get(file);
     if(!png){
-      try{png=inspectPngBuffer(readFile(full));pngCache.set(file,png);}catch(error){errors.push(`${id}: ${file}: ${error.message}`);continue;}
+      try{buffer=readFile(full);png=inspectPngBuffer(buffer);pngCache.set(file,png);}catch(error){errors.push(`${id}: ${file}: ${error.message}`);continue;}
     }
     const rect=asset.sourceRect;
     const rw=rect?Number(rect.w):png.width,rh=rect?Number(rect.h):png.height;
@@ -95,10 +122,24 @@ export function validatePack(rootDir,{readFile=fs.readFileSync,exists=fs.existsS
     if(category==='terrain'){
       if(png.width%64!==0||png.height%64!==0)errors.push(`${id}: terrain PNG dimensions must be 64x64 or 64px multiples; got ${png.width}x${png.height}`);
       if(rect&&(rw%64!==0||rh%64!==0))errors.push(`${id}: terrain sourceRect must use 64px multiples; got ${rw}x${rh}`);
-    }else if(!png.hasAlpha){
-      errors.push(`${id}: ${category} PNG must expose an alpha channel (RGBA/GA or tRNS)`);
+    }else{
+      if(!png.hasAlpha)errors.push(`${id}: ${category} PNG must expose an alpha channel (RGBA/GA or tRNS)`);
+      else{
+        try{
+          let decoded=decodedCache.get(file);
+          if(!decoded){
+            if(!buffer)buffer=readFile(full);
+            decoded=decodePng(buffer);decodedCache.set(file,decoded);
+          }
+          const alpha=rect?inspectRgbaRegion(decoded,{x:Number(rect.x),y:Number(rect.y),w:rw,h:rh}):inspectRgbaRegion(decoded,{x:0,y:0,w:decoded.width,h:decoded.height});
+          if(!alpha.hasTransparentPixels)errors.push(`${id}: ${category} PNG/sourceRect must contain at least one transparent pixel`);
+        }catch(error){errors.push(`${id}: ${file}: pixel transparency validation failed: ${error.message}`);}
+      }
     }
-    if(asset.anchor){
+    if(category==='prop'){
+      const ax=Number(asset.anchor?.x),ay=Number(asset.anchor?.y);
+      if(ax!==0.5||ay!==1)errors.push(`${id}: prop anchor must be bottom-center {x:0.5,y:1}`);
+    }else if(asset.anchor){
       const ax=Number(asset.anchor.x),ay=Number(asset.anchor.y);
       if(!Number.isFinite(ax)||!Number.isFinite(ay)||ax<0||ax>1||ay<0||ay>1)errors.push(`${id}: anchor must be normalized 0..1`);
     }
@@ -112,6 +153,7 @@ export function validatePack(rootDir,{readFile=fs.readFileSync,exists=fs.existsS
     if(!safeRelativeFile(sheet.file))errors.push(`invalid sheet file path: ${sheet.file||'<missing>'}`);
     if(!positiveInt(Number(sheet.cellWidth))||!positiveInt(Number(sheet.cellHeight)))errors.push(`${sheet.id||sheet.file||'<sheet>'}: cellWidth/cellHeight must be positive integers`);
   }
+  if(strictRequired)for(const id of REQUIRED_BASE_IDS)if(!seen.has(id))errors.push(`required production asset missing: ${id}`);
   return{ok:errors.length===0,errors,warnings,assets,files:[...files].sort(),manifest};
 }
 

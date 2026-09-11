@@ -25,9 +25,12 @@ assert.ok(artIndex>=0&&artIndex<worldIndex&&worldIndex<motionIndex,'asset adapte
 assert.ok(preview.includes('imageSmoothingEnabled=false'),'preview must use nearest-neighbor canvas rendering');
 assert.ok(preview.includes("for(let y=0;y<3;y++)for(let x=0;x<3;x++)"),'preview must render terrain as an actual 3x3 repeat for seam inspection');
 assert.ok(preview.includes("className='checker'"),'preview must expose transparency checkerboard');
+assert.ok(preview.includes("className='anchor-crosshair'"),'preview must visualize prop anchors with a crosshair');
+assert.ok(preview.includes("params.get('manifest')"),'preview must support an optional manifest URL query parameter');
+assert.ok(preview.includes("new URL(file,manifestRoot)"),'preview asset URLs must resolve relative to the selected manifest');
 
 const sandbox={window:null,console,camera:{x:0,y:0},canvas:{width:360,height:600},ctx:{save(){},restore(){},drawImage(){},imageSmoothingEnabled:true},fetch:async()=>({ok:false,status:404}),Image:class{}};sandbox.window=sandbox;vm.createContext(sandbox);vm.runInContext(art,sandbox,{filename:'awakening-art-assets-v1.js'});
 const api=sandbox.ABYSSAL_AWAKENING_ART_V1;assert.ok(api);await api.load();
 assert.equal(api.version,1);assert.equal(api.manifestUrl,'assets/awakening-v1/manifest.json');assert.equal(api.status(),'fallback','404 manifest must not fail game boot');assert.equal(api.drawTerrain('cold_grass',0,0,0),false,'formal draw must decline when pack is absent so programmer fallback can render');
 
-console.log(JSON.stringify({ok:true,mapping:'presentation-only',manifest404:'fallback',nearestNeighbor:true,sourceRect:true,preview:['seam','alpha','scale'],loadOrder:'art->world->motion'}));
+console.log(JSON.stringify({ok:true,mapping:'presentation-only',manifest404:'fallback',nearestNeighbor:true,sourceRect:true,preview:['seam','alpha','scale','prop-anchor','manifest-url'],loadOrder:'art->world->motion'}));

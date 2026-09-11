@@ -68,6 +68,13 @@ jobs:
         run: find modules tools -name '*.js' -o -name '*.mjs' | xargs -n1 node --check
       - name: Awakening asset validator
         run: node tests/awakening-assets-validator.test.mjs
+      - name: Production Awakening asset pack
+        run: |
+          if [ -f assets/awakening-v1/manifest.json ]; then
+            node tools/awakening-assets/validate-pack.mjs assets/awakening-v1 --strict-required
+          else
+            echo "No production Awakening manifest yet; fixture validator tests remain authoritative."
+          fi
       - name: Awakening art mapping and fallback
         run: node tests/awakening-art-mapping-v1.test.mjs
       - name: Camp art contract
