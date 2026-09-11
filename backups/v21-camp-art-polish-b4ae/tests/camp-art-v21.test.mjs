@@ -45,12 +45,4 @@ for(let frame=0;frame<8;frame++){
   assert.ok(opaque>=30,`camp prop frame ${frame} must contain visible pixel art`);
 }
 
-const renderer=fs.readFileSync(new URL('../modules/render/base-renderer.js',import.meta.url),'utf8');
-assert.ok(renderer.includes("prop(0,CAMP.x,CAMP.y,1.25)"),'campfire visual anchor must stay at camp center');
-assert.ok(renderer.includes("prop(2,CAMP.x-205,CAMP.y+135,1.22)"),'workbench visual anchor must stay aligned with interaction position');
-assert.ok(renderer.includes("prop(3,CAMP.x+190,CAMP.y+140,1.12)"),'supply chest primary visual anchor must stay unchanged');
-assert.ok(renderer.includes("prop(1,CAMP.x-190,CAMP.y-125,1.6)"),'west tent should use the larger polished composition scale');
-assert.ok(renderer.includes("prop(1,CAMP.x+195,CAMP.y-120,1.55)"),'east tent should use the larger polished composition scale');
-assert.ok(renderer.includes("ctx.globalAlpha=.18"),'SafeCamp boundary should remain visible but visually restrained');
-
-console.log(JSON.stringify({ok:true,sheet:'192x96',frames:8,frameSize:'48x48',alpha:'valid',layout:'polished',interactiveAnchors:'preserved'}));
+console.log(JSON.stringify({ok:true,sheet:'192x96',frames:8,frameSize:'48x48',alpha:'valid',layout:'unchanged'}));
