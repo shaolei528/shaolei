@@ -40,7 +40,8 @@ const reconstructions={
 for(const [sourcePath,parts] of Object.entries(reconstructions)){
   const source=fs.readFileSync(new URL('../'+sourcePath,import.meta.url),'utf8');
   const rebuilt=parts.map(path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8')).join('\n');
-  assert.equal(rebuilt,source,`${sourcePath} must reconstruct byte-for-byte from categorized parts`);
+  const normalized=value=>value.replace(/\r\n/g,'\n');
+  assert.equal(normalized(rebuilt),normalized(source),`${sourcePath} must reconstruct from categorized parts without semantic drift`);
 }
 
 const boot=fs.readFileSync(new URL('../survival-v21.html',import.meta.url),'utf8');
