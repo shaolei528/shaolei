@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const source=fs.readFileSync(new URL('../platform-inventory-v19.js',import.meta.url),'utf8');
+const interactionSource=fs.readFileSync(new URL('../interaction-v12.js',import.meta.url),'utf8');
 const boot=fs.readFileSync(new URL('../survival-v17.html',import.meta.url),'utf8');
 const regression=fs.readFileSync(new URL('../regression-v14.js',import.meta.url),'utf8');
 
@@ -25,13 +26,14 @@ assert.ok(api,'platform API must be exposed');
 assert.equal(api.version,19,'platform API version mismatch');
 
 function set(...codes){return new Set(codes);}
-function block(startToken,endToken){
-  const start=source.indexOf(startToken);
-  const end=source.indexOf(endToken,start);
+function blockFrom(text,startToken,endToken){
+  const start=text.indexOf(startToken);
+  const end=text.indexOf(endToken,start);
   assert.ok(start>=0,`missing block start: ${startToken}`);
   assert.ok(end>start,`missing block end: ${endToken}`);
-  return source.slice(start,end);
+  return text.slice(start,end);
 }
+function block(startToken,endToken){return blockFrom(source,startToken,endToken);}
 
 {
   const v=api.keyboardVector(set('KeyW'));
@@ -153,6 +155,63 @@ function keyE(target={tagName:'DIV'},repeat=false){
   keySandbox.API.panelOpen=false;
 }
 
+const interactionRuntimeSource=[
+  blockFrom(interactionSource,'function harvestResource(r){','function restAtFire(){'),
+  blockFrom(interactionSource,'function interact(){','function triggerContextInteraction(){'),
+  blockFrom(interactionSource,'function triggerContextInteraction(){','function replaceInteractionButton(){')
+].join('\n');
+
+function runIntegratedKeyE(target){
+  const state={guideOpen:0};
+  const integrated={
+    API:{panelOpen:false},
+    keys:new Set(),
+    isDesktop:()=>true,
+    isTypingTarget:targetNode=>api.isTypingTarget(targetNode),
+    applyKeyboardMovement(){},
+    setPanelOpen(){},
+    triggerDash(){},
+    triggerAttack(){},
+    interactionTarget:()=>target,
+    openGuideDialog(){state.guideOpen++;},
+    restAtFire(){},
+    safeStop(){},
+    hideOtherPanels(){},
+    craftPanel:{classList:{remove(){}}},
+    openChest(){},
+    inventory:{wood:0},
+    harvested:new Map(),
+    ITEM_ZH:{wood:'木材'},
+    zoneConnected:false,
+    zoneCh:null,
+    currentZone:'1:1',
+    saveLocal(){},
+    updateUI(){},
+    toast(){},
+    window:null
+  };
+  integrated.window=integrated;
+  integrated.ABYSSAL_SHELL_V1={blocksGameInput:()=>false};
+  vm.createContext(integrated);
+  vm.runInContext(`${interactionRuntimeSource}\nwindow.ABYSSAL_INTERACTION_V12={triggerContextInteraction};\n${keyboardSource}`,integrated,{filename:'pc-context-integration-test.js'});
+  const event={code:'KeyE',repeat:false,target:{tagName:'DIV'},prevented:false,preventDefault(){this.prevented=true;}};
+  integrated.onKeyDown(event);
+  return{integrated,state,event};
+}
+
+{
+  const resource={id:'camp:pc-e',type:'wood'};
+  const {integrated,event}=runIntegratedKeyE({type:'resource',resource});
+  assert.equal(integrated.inventory.wood,1,'PC KeyE must traverse the shared context action and harvest a resource');
+  assert.ok(integrated.harvested.get(resource.id)>Date.now(),'PC KeyE resource harvest must preserve the resource cooldown');
+  assert.equal(event.prevented,true,'integrated PC KeyE resource action must prevent browser default behavior');
+}
+{
+  const {state,event}=runIntegratedKeyE({type:'guide'});
+  assert.equal(state.guideOpen,1,'PC KeyE must traverse the shared context action and open Guide interaction');
+  assert.equal(event.prevented,true,'integrated PC KeyE Guide action must prevent browser default behavior');
+}
+
 const interactionIndex=boot.indexOf("'interaction-v12.js'");
 const platformIndex=boot.indexOf("'platform-inventory-v19.js'");
 const relayIndex=boot.indexOf("'network-relay-v16.js'");
@@ -187,6 +246,8 @@ console.log(JSON.stringify({
   ok:true,
   keyboard:'wasd+arrows',
   pcContextInteraction:'pass',
+  pcResourceHarvestEndToEnd:'pass',
+  pcGuideInteractionEndToEnd:'pass',
   shellInputBlock:'pass',
   typingIsolation:'pass',
   inventoryMapping:'pass',
