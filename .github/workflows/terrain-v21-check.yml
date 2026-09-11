@@ -5,6 +5,7 @@ on:
     paths:
       - 'ART_BIBLE.md'
       - 'AWAKENING_ASSET_CONTRACT.md'
+      - 'docs/contracts/MIRE_MART_EXPEDITION_LOOP_V1.md'
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
       - 'awakening-assets-preview.html'
@@ -18,6 +19,7 @@ on:
       - 'tests/terrain-v21.test.mjs'
       - 'tests/awakening-world-v1.test.mjs'
       - 'tests/awakening-world-logic-hardening-v1.test.mjs'
+      - 'tests/awakening-expedition-loop-v1.test.mjs'
       - 'tests/awakening-assets-validator.test.mjs'
       - 'tests/awakening-art-mapping-v1.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
@@ -33,6 +35,7 @@ on:
     paths:
       - 'ART_BIBLE.md'
       - 'AWAKENING_ASSET_CONTRACT.md'
+      - 'docs/contracts/MIRE_MART_EXPEDITION_LOOP_V1.md'
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
       - 'awakening-assets-preview.html'
@@ -46,6 +49,7 @@ on:
       - 'tests/terrain-v21.test.mjs'
       - 'tests/awakening-world-v1.test.mjs'
       - 'tests/awakening-world-logic-hardening-v1.test.mjs'
+      - 'tests/awakening-expedition-loop-v1.test.mjs'
       - 'tests/awakening-assets-validator.test.mjs'
       - 'tests/awakening-art-mapping-v1.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
@@ -95,6 +99,8 @@ jobs:
         run: node tests/awakening-world-v1.test.mjs
       - name: Awakening world logic hardening integration
         run: node tests/awakening-world-logic-hardening-v1.test.mjs
+      - name: MIRE MART expedition loop
+        run: node tests/awakening-expedition-loop-v1.test.mjs
       - name: V21 boot retry idempotency
         run: node tests/v21-loader-retry-idempotency-v1.test.mjs
       - name: V21 boot and static preview syntax
@@ -108,7 +114,7 @@ jobs:
           if not match:
               raise SystemExit('V21 inline boot script not found')
           Path('/tmp/v21-boot.js').write_text(match.group(1))
-          for required in ["'terrain-v21.js'", "'modules/render/awakening-art-assets-v1.js'", "'modules/world/awakening-world-v1.js'"]:
+          for required in ["'terrain-v21.js'", "'modules/render/awakening-art-assets-v1.js'", "'modules/world/awakening-world-v1.js'", "'modules/world/awakening-expedition-loop-v1.js'"]:
               if required not in boot:
                   raise SystemExit('V21 module missing: '+required)
           if "const VER='21c'" not in boot:
