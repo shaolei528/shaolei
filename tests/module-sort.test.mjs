@@ -25,18 +25,10 @@ for(const [modulePath,sourcePath] of Object.entries(unchangedPairs)){
 }
 
 const reconstructions={
-  'game-core.js':[
-    'modules/core/runtime-state.js','modules/ui/base-ui.js','modules/world/world-state.js',
-    'modules/network/session-zone.js','modules/network/inbound-events.js','modules/network/outbound-sync.js','modules/network/chat-sync.js'
-  ],
-  'game-play.js':[
-    'modules/safe-camp/base-interactions.js','modules/combat/player-combat.js','modules/survival/lifecycle.js',
-    'modules/input/joystick.js','modules/survival/status.js','modules/main-loop/simulation-update.js',
-    'modules/combat/mob-combat.js','modules/survival/day-night.js'
-  ],
+  'game-core.js':['modules/core/runtime-state.js','modules/ui/base-ui.js','modules/world/world-state.js','modules/network/session-zone.js','modules/network/inbound-events.js','modules/network/outbound-sync.js','modules/network/chat-sync.js'],
+  'game-play.js':['modules/safe-camp/base-interactions.js','modules/combat/player-combat.js','modules/survival/lifecycle.js','modules/input/joystick.js','modules/survival/status.js','modules/main-loop/simulation-update.js','modules/combat/mob-combat.js','modules/survival/day-night.js'],
   'game-render.js':['modules/render/base-renderer.js','modules/main-loop/legacy-scheduler.js']
 };
-
 for(const [sourcePath,parts] of Object.entries(reconstructions)){
   const source=fs.readFileSync(new URL('../'+sourcePath,import.meta.url),'utf8');
   const rebuilt=parts.map(path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8')).join('\n');
@@ -46,33 +38,17 @@ for(const [sourcePath,parts] of Object.entries(reconstructions)){
 
 const boot=fs.readFileSync(new URL('../survival-v21.html',import.meta.url),'utf8');
 const expected=[
-  ...reconstructions['game-core.js'],
-  ...reconstructions['game-play.js'],
-  ...reconstructions['game-render.js'],
-  'modules/safe-camp/game-v7-patch.js','modules/input/mobile-fixes.js','modules/network/network-v9.js',
-  'modules/survival/gameplay-v9.js','modules/safe-camp/content-v9.js','terrain-v21.js','modules/render/render-v9.js',
-  'modules/core/optimize-v9.js','modules/ui/ux-cn-v11.js','modules/input/interaction-v12.js',
-  'modules/input/platform-inventory-v19.js','modules/network/network-relay-v16.js','modules/network/network-quality-v20.js',
-  'modules/world/awakening-world-v1.js','modules/main-loop/smooth-motion-v18.js','modules/ui/regression-v14.js'
+  ...reconstructions['game-core.js'],...reconstructions['game-play.js'],...reconstructions['game-render.js'],
+  'modules/safe-camp/game-v7-patch.js','modules/input/mobile-fixes.js','modules/network/network-v9.js','modules/survival/gameplay-v9.js','modules/safe-camp/content-v9.js','terrain-v21.js','modules/render/render-v9.js','modules/core/optimize-v9.js','modules/ui/ux-cn-v11.js','modules/input/interaction-v12.js','modules/input/platform-inventory-v19.js','modules/network/network-relay-v16.js','modules/network/network-quality-v20.js','modules/render/awakening-art-assets-v1.js','modules/world/awakening-world-v1.js','modules/main-loop/smooth-motion-v18.js','modules/ui/regression-v14.js'
 ];
 let previous=-1;
-for(const path of expected){
-  const index=boot.indexOf(`'${path}'`);
-  assert.ok(index>previous,`${path} must exist and preserve the active V21 load order`);
-  previous=index;
-}
-
-for(const oldPath of [...Object.values(unchangedPairs),'game-core.js','game-play.js','game-render.js']){
-  assert.equal(boot.includes(`'${oldPath}'`),false,`V21 must not load legacy aggregate/root path ${oldPath}`);
-}
-for(const aggregatePath of ['modules/core/game-core.js','modules/combat/game-play.js','modules/render/game-render.js']){
-  assert.equal(boot.includes(`'${aggregatePath}'`),false,`V21 must load split modules instead of aggregate ${aggregatePath}`);
-}
-assert.ok(boot.includes("const VER='21b'"),'Awakening slice must use the V21b cache/version contract');
-const terrainIndex=boot.indexOf("'terrain-v21.js'");
-const awakeningIndex=boot.indexOf("'modules/world/awakening-world-v1.js'");
-const motionIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");
-assert.ok(terrainIndex>=0&&terrainIndex<awakeningIndex,'Awakening world must extend the existing terrain pipeline');
+for(const path of expected){const index=boot.indexOf(`'${path}'`);assert.ok(index>previous,`${path} must exist and preserve the active V21 load order`);previous=index;}
+for(const oldPath of [...Object.values(unchangedPairs),'game-core.js','game-play.js','game-render.js'])assert.equal(boot.includes(`'${oldPath}'`),false,`V21 must not load legacy aggregate/root path ${oldPath}`);
+for(const aggregatePath of ['modules/core/game-core.js','modules/combat/game-play.js','modules/render/game-render.js'])assert.equal(boot.includes(`'${aggregatePath}'`),false,`V21 must load split modules instead of aggregate ${aggregatePath}`);
+assert.ok(boot.includes("const VER='21c'"),'Awakening art pipeline must use the V21c cache/version contract');
+const terrainIndex=boot.indexOf("'terrain-v21.js'"),artIndex=boot.indexOf("'modules/render/awakening-art-assets-v1.js'"),awakeningIndex=boot.indexOf("'modules/world/awakening-world-v1.js'"),motionIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");
+assert.ok(terrainIndex>=0&&terrainIndex<artIndex,'Art adapter must load after the existing terrain foundation');
+assert.ok(artIndex<awakeningIndex,'Art adapter must be available before Awakening World installs presentation wrappers');
 assert.ok(awakeningIndex<motionIndex,'Awakening collision must install before Smooth Motion captures update()');
 
 const runtime=fs.readFileSync(new URL('../modules/core/runtime-state.js',import.meta.url),'utf8');
@@ -81,4 +57,4 @@ assert.ok(runtime.includes("OLD_STORAGE_KEY='abyssal_wake_save_v4'"),'v4 migrati
 const relay=fs.readFileSync(new URL('../modules/network/network-relay-v16.js',import.meta.url),'utf8');
 assert.ok(relay.includes("protocol:'abyssal-relay-v1'"),'relay protocol must remain unchanged');
 
-console.log(JSON.stringify({ok:true,splitSources:3,splitParts:17,unchangedCopies:Object.keys(unchangedPairs).length,reconstruction:'byte-identical',loadOrder:'preserved+awakening',saveFormat:'unchanged',relayProtocol:'unchanged'}));
+console.log(JSON.stringify({ok:true,splitSources:3,splitParts:17,unchangedCopies:Object.keys(unchangedPairs).length,reconstruction:'byte-identical',loadOrder:'preserved+art-pipeline+awakening',saveFormat:'unchanged',relayProtocol:'unchanged'}));

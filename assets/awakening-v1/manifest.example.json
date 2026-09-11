@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "pack": "Awakening World Art Pack 01",
+  "bindings": {
+    "terrain": {
+      "cold_grass": ["aw_v1_terrain_cold_grass_a", "aw_v1_terrain_cold_grass_b"],
+      "dirt_shoulder": ["aw_v1_terrain_dirt_shoulder_a", "aw_v1_terrain_dirt_shoulder_b"],
+      "asphalt": ["aw_v1_terrain_asphalt_a", "aw_v1_terrain_asphalt_b", "aw_v1_terrain_asphalt_cracked"],
+      "store_floor": ["aw_v1_terrain_concrete_floor_a", "aw_v1_terrain_concrete_floor_b"]
+    },
+    "decal": {
+      "puddle": ["aw_v1_decal_puddle_01"],
+      "crack": ["aw_v1_decal_asphalt_crack_01"],
+      "tire": ["aw_v1_decal_tire_mark_01"],
+      "glass": ["aw_v1_decal_broken_glass_01"],
+      "residue": ["aw_v1_decal_early_residue_01"]
+    },
+    "prop": {
+      "fence": ["aw_v1_prop_fence_01"],
+      "barrier": ["aw_v1_prop_road_barrier_01"],
+      "wall": ["aw_v1_prop_store_exterior_wall_01"],
+      "sign": ["aw_v1_prop_store_sign_mire_mart"],
+      "counter": ["aw_v1_prop_store_counter_01"],
+      "shelf": ["aw_v1_prop_store_shelf_01"],
+      "fridge": ["aw_v1_prop_store_fridge_01"],
+      "debris": ["aw_v1_prop_store_debris_01"]
+    },
+    "fx": {
+      "flicker": ["aw_v1_fx_store_failing_light_01"],
+      "anomaly": ["aw_v1_fx_store_early_residue_01"]
+    }
+  },
+  "sheets": [
+    {
+      "id": "terrain-sheet",
+      "file": "terrain/awakening-terrain-v1.png",
+      "cellWidth": 64,
+      "cellHeight": 64,
+      "entries": [
+        {"id":"aw_v1_terrain_cold_grass_a","category":"terrain","col":0,"row":0},
+        {"id":"aw_v1_terrain_cold_grass_b","category":"terrain","col":1,"row":0},
+        {"id":"aw_v1_terrain_dirt_shoulder_a","category":"terrain","col":2,"row":0},
+        {"id":"aw_v1_terrain_dirt_shoulder_b","category":"terrain","col":3,"row":0},
+        {"id":"aw_v1_terrain_asphalt_a","category":"terrain","col":0,"row":1},
+        {"id":"aw_v1_terrain_asphalt_b","category":"terrain","col":1,"row":1},
+        {"id":"aw_v1_terrain_asphalt_cracked","category":"terrain","col":2,"row":1},
+        {"id":"aw_v1_terrain_concrete_floor_a","category":"terrain","col":0,"row":2},
+        {"id":"aw_v1_terrain_concrete_floor_b","category":"terrain","col":1,"row":2}
+      ]
+    }
+  ],
+  "assets": [
+    {"id":"aw_v1_decal_puddle_01","category":"decal","file":"decals/aw_v1_decal_puddle_01.png","width":64,"height":32,"anchor":{"x":0.5,"y":0.5}},
+    {"id":"aw_v1_decal_asphalt_crack_01","category":"decal","file":"decals/aw_v1_decal_asphalt_crack_01.png","width":64,"height":48,"anchor":{"x":0.5,"y":0.5}},
+    {"id":"aw_v1_decal_tire_mark_01","category":"decal","file":"decals/aw_v1_decal_tire_mark_01.png","width":16,"height":96,"anchor":{"x":0.5,"y":0.5}},
+    {"id":"aw_v1_decal_broken_glass_01","category":"decal","file":"poi/store/aw_v1_decal_broken_glass_01.png","width":96,"height":48,"anchor":{"x":0.5,"y":0.5}},
+    {"id":"aw_v1_decal_early_residue_01","category":"decal","file":"fx/aw_v1_decal_early_residue_01.png","width":96,"height":72,"anchor":{"x":0.5,"y":0.5}},
+    {"id":"aw_v1_prop_fence_01","category":"prop","file":"props/aw_v1_prop_fence_01.png","width":32,"height":192,"anchor":{"x":0.5,"y":1}},
+    {"id":"aw_v1_prop_road_barrier_01","category":"prop","file":"props/aw_v1_prop_road_barrier_01.png","width":96,"height":48,"anchor":{"x":0.5,"y":1}},
+    {"id":"aw_v1_prop_store_exterior_wall_01","category":"prop","file":"poi/store/aw_v1_prop_store_exterior_wall_01.png","width":128,"height":64,"anchor":{"x":0.5,"y":1}},
+    {"id":"aw_v1_prop_store_sign_mire_mart","category":"prop","file":"poi/store/aw_v1_prop_store_sign_mire_mart.png","width":128,"height":48,"anchor":{"x":0.5,"y":1}},
+    {"id":"aw_v1_prop_store_counter_01","category":"prop","file":"poi/store/aw_v1_prop_store_counter_01.png","width":160,"height":64,"anchor":{"x":0.5,"y":1}},
+    {"id":"aw_v1_prop_store_shelf_01","category":"prop","file":"poi/store/aw_v1_prop_store_shelf_01.png","width":128,"height":64,"anchor":{"x":0.5,"y":1}},
+    {"id":"aw_v1_prop_store_fridge_01","category":"prop","file":"poi/store/aw_v1_prop_store_fridge_01.png","width":112,"height":64,"anchor":{"x":0.5,"y":1}},
+    {"id":"aw_v1_prop_store_debris_01","category":"prop","file":"poi/store/aw_v1_prop_store_debris_01.png","width":80,"height":64,"anchor":{"x":0.5,"y":1}},
+    {"id":"aw_v1_fx_store_failing_light_01","category":"fx","file":"fx/aw_v1_fx_store_failing_light_01.png","width":96,"height":16,"anchor":{"x":0.5,"y":0.5},"frames":1},
+    {"id":"aw_v1_fx_store_early_residue_01","category":"fx","file":"fx/aw_v1_fx_store_early_residue_01.png","width":96,"height":72,"anchor":{"x":0.5,"y":0.5},"frames":1}
+  ]
+}
