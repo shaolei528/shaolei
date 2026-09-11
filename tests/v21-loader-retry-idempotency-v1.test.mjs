@@ -60,7 +60,7 @@ api.setEntry(enterEl);api.setName(nameEl);
 const event={preventDefault(){this.prevented=(this.prevented||0)+1;},stopImmediatePropagation(){this.stopped=(this.stopped||0)+1;}};
 api.requestEntry(event);
 const first=BOOT.promise;
-assert.ok(first instanceof Promise,'first entry request must create BOOT.promise');
+assert.equal(typeof first?.then,'function','first entry request must create BOOT.promise');
 api.requestEntry(event);
 const concurrent=BOOT.promise;
 assert.strictEqual(concurrent,first,'concurrent entry requests must share the same BOOT.promise');
@@ -82,7 +82,8 @@ assert.equal(combatInputBinds,1,'failed boot must not duplicate combat input reg
 
 api.requestEntry(event);
 const retry=BOOT.promise;
-assert.ok(retry instanceof Promise&&retry!==first,'retry must create one new boot attempt');
+assert.equal(typeof retry?.then,'function','retry must create one new boot attempt');
+assert.notStrictEqual(retry,first,'retry must use a new promise after the failed attempt settled');
 const retryResult=await retry;
 await Promise.resolve();
 assert.equal(retryResult,true,'retry must complete boot');
