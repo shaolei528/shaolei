@@ -16,7 +16,7 @@ assert.equal(source.includes('let attack'),false,'weapon presentation must not c
 assert.equal(/steel/i.test(source),false,'Bone Knife renderer must not describe or palette the weapon as steel');
 assert.ok(source.includes("weaponName:'Bone Knife'"),'presentation identity must match the crafting/inventory Bone Knife');
 
-assert.ok(playerCombat.includes("attackBtn.addEventListener('pointerdown',attack)"),'mobile attack must continue through the existing attack action');
+assert.ok(playerCombat.includes("attackBtn.addEventListener('pointerdown',()=>attack())"),'mobile attack must dynamically resolve the current attack wrapper');
 assert.ok(playerCombat.includes('attackCd=inventory.knife?.32:.48'),'attack cooldown must remain unchanged');
 assert.ok(playerCombat.includes('range:inventory.knife?80:62'),'attack range must remain unchanged');
 assert.ok(playerCombat.includes('damage:inventory.knife?22:11'),'attack damage must remain unchanged');
@@ -184,7 +184,7 @@ console.log(JSON.stringify({
   attackPhases:'anticipation+slash+recovery',
   directions:4,
   remoteKnife:'existing-payload-derived',
-  mobileAttack:'existing-pointerdown-path',
+  mobileAttack:'dynamic-current-wrapper',
   unarmed:'distinct',
   timers:'unchanged',
   network:'unchanged',

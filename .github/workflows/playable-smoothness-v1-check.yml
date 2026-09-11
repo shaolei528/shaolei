@@ -19,6 +19,8 @@ on:
       - 'tests/motion-v18.test.mjs'
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
+      - 'tests/combat-hit-feedback.test.mjs'
+      - 'tests/weapon-presentation-v1.test.mjs'
       - 'tests/playable-slice-feel-audio-v1.test.mjs'
       - '.github/workflows/playable-smoothness-v1-check.yml'
   pull_request:
@@ -39,6 +41,8 @@ on:
       - 'tests/motion-v18.test.mjs'
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
+      - 'tests/combat-hit-feedback.test.mjs'
+      - 'tests/weapon-presentation-v1.test.mjs'
       - 'tests/playable-slice-feel-audio-v1.test.mjs'
       - '.github/workflows/playable-smoothness-v1-check.yml'
 
