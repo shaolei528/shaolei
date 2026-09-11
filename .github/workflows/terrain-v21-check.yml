@@ -14,6 +14,7 @@ on:
       - 'modules/**'
       - 'tests/terrain-v21.test.mjs'
       - 'tests/awakening-world-v1.test.mjs'
+      - 'tests/awakening-world-logic-hardening-v1.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
       - 'tests/combat-hit-feedback.test.mjs'
       - 'tests/weapon-presentation-v1.test.mjs'
@@ -35,6 +36,7 @@ on:
       - 'modules/**'
       - 'tests/terrain-v21.test.mjs'
       - 'tests/awakening-world-v1.test.mjs'
+      - 'tests/awakening-world-logic-hardening-v1.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
       - 'tests/combat-hit-feedback.test.mjs'
       - 'tests/weapon-presentation-v1.test.mjs'
@@ -68,6 +70,8 @@ jobs:
         run: node tests/terrain-v21.test.mjs
       - name: Awakening world vertical-slice regression
         run: node tests/awakening-world-v1.test.mjs
+      - name: Awakening world logic hardening integration
+        run: node tests/awakening-world-logic-hardening-v1.test.mjs
       - name: V21 boot and static preview syntax
         if: ${{ always() }}
         run: |
