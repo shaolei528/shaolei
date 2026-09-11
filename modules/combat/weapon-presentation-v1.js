@@ -1,6 +1,12 @@
 (()=>{
 'use strict';
 
+const existingRuntime=window.ABYSSAL_WEAPON_PRESENTATION_RUNTIME_V1;
+if(existingRuntime?.bound&&window.ABYSSAL_WEAPON_PRESENTATION_V1){
+  existingRuntime.reentryCount=(Number(existingRuntime.reentryCount)||0)+1;
+  return;
+}
+
 const ATTACK_DURATION=.15;
 const REMOTE_WEAPON=new Map();
 const clamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
@@ -142,5 +148,8 @@ window.ABYSSAL_WEAPON_PRESENTATION_V1={
   remoteWeapon,
   isSafeCamp,
   poseFor
+};
+window.ABYSSAL_WEAPON_PRESENTATION_RUNTIME_V1={
+  version:1,bound:true,reentryCount:Number(existingRuntime?.reentryCount)||0
 };
 })();
