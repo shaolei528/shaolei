@@ -12,6 +12,7 @@ on:
       - 'modules/**'
       - 'tests/terrain-v21.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
+      - 'tests/combat-hit-feedback.test.mjs'
       - 'tests/module-sort.test.mjs'
       - 'tests/core-smoke.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
@@ -26,6 +27,7 @@ on:
       - 'modules/**'
       - 'tests/terrain-v21.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
+      - 'tests/combat-hit-feedback.test.mjs'
       - 'tests/module-sort.test.mjs'
       - 'tests/core-smoke.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
@@ -44,6 +46,8 @@ jobs:
         run: find modules -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Camp art contract
         run: node tests/camp-art-v21.test.mjs
+      - name: Combat hit-feedback contract
+        run: node tests/combat-hit-feedback.test.mjs
       - name: Terrain syntax
         run: node --check terrain-v21.js
       - name: Terrain vertical-slice regression
