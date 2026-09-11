@@ -1,0 +1,46 @@
+name: smooth-motion-retry-idempotency-v1-check
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+    paths:
+      - 'smooth-motion-v18.js'
+      - 'modules/main-loop/smooth-motion-v18.js'
+      - 'tests/smooth-motion-retry-idempotency-v1.test.mjs'
+      - 'tests/motion-v18.test.mjs'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
+      - '.github/workflows/smooth-motion-retry-idempotency-v1-check.yml'
+  pull_request:
+    paths:
+      - 'smooth-motion-v18.js'
+      - 'modules/main-loop/smooth-motion-v18.js'
+      - 'tests/smooth-motion-retry-idempotency-v1.test.mjs'
+      - 'tests/motion-v18.test.mjs'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
+      - '.github/workflows/smooth-motion-retry-idempotency-v1-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Smooth motion retry wrapper ownership regression
+        run: node tests/smooth-motion-retry-idempotency-v1.test.mjs
+      - name: Existing V18 motion regression
+        run: node tests/motion-v18.test.mjs
+      - name: Existing smoothness regression
+        run: node tests/playable-slice-smoothness-v1.test.mjs
+      - name: Existing PC mobile input regression
+        run: node tests/platform-inventory-v19.test.mjs
+      - name: Root and categorized motion syntax
+        run: |
+          node --check smooth-motion-v18.js
+          node --check modules/main-loop/smooth-motion-v18.js
