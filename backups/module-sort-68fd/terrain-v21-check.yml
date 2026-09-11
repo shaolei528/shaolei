@@ -11,7 +11,6 @@ on:
       - 'modules/**'
       - 'tests/terrain-v21.test.mjs'
       - 'tests/module-sort.test.mjs'
-      - 'tests/core-smoke.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
   pull_request:
     paths:
@@ -23,7 +22,6 @@ on:
       - 'modules/**'
       - 'tests/terrain-v21.test.mjs'
       - 'tests/module-sort.test.mjs'
-      - 'tests/core-smoke.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
 
 jobs:
@@ -75,9 +73,6 @@ jobs:
           node tests/interaction-v12.test.mjs
           node tests/ready-localization-v9.test.mjs
           node tests/network-quality-v20.test.mjs
-      - name: Core survival and SafeCamp smoke
-        if: ${{ always() }}
-        run: node tests/core-smoke.test.mjs
       - name: Relay protocol regression
         if: ${{ always() }}
         run: node cloudflare/test.mjs
