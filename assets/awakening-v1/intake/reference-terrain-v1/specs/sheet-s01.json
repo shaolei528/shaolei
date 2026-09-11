@@ -1,0 +1,14 @@
+{
+  "schema": "awakening-reference-slice-spec-v1",
+  "sourceSheet": "s01",
+  "sourceFile": "6cbc2887-60b8-5260-885f-145adc9bae28.png",
+  "sourceDimensions": [1254, 1254],
+  "outputDir": "../raw/s01",
+  "processing": ["pixel-exact crop", "separator/border pixels excluded", "no resample"],
+  "slices": [
+    {"id":"ref_aw_s01_r0_c0","file":"ref_aw_s01_r0_c0.png","x":0,"y":0,"w":625,"h":626},
+    {"id":"ref_aw_s01_r0_c1","file":"ref_aw_s01_r0_c1.png","x":628,"y":0,"w":625,"h":626},
+    {"id":"ref_aw_s01_r1_c0","file":"ref_aw_s01_r1_c0.png","x":0,"y":628,"w":625,"h":625},
+    {"id":"ref_aw_s01_r1_c1","file":"ref_aw_s01_r1_c1.png","x":628,"y":628,"w":625,"h":625}
+  ]
+}
