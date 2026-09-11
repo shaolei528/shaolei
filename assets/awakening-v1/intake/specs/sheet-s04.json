@@ -1,0 +1,14 @@
+{
+  "source": "../source/e5bb077c-1eb9-5441-9811-a9aa793b332c.png",
+  "outputDir": "../raw",
+  "slices": [
+    {"id":"aw_v1_terrain_s04_r0_c0","file":"s04/aw_v1_terrain_s04_r0_c0.png","x":0,"y":0,"w":382,"h":382},
+    {"id":"aw_v1_terrain_s04_r0_c1","file":"s04/aw_v1_terrain_s04_r0_c1.png","x":386,"y":0,"w":380,"h":382},
+    {"id":"aw_v1_terrain_s04_r0_c2","file":"s04/aw_v1_terrain_s04_r0_c2.png","x":770,"y":0,"w":381,"h":382},
+    {"id":"aw_v1_terrain_s04_r0_c3","file":"s04/aw_v1_terrain_s04_r0_c3.png","x":1154,"y":0,"w":380,"h":382},
+    {"id":"aw_v1_terrain_s04_r1_c0","file":"s04/aw_v1_terrain_s04_r1_c0.png","x":0,"y":386,"w":382,"h":382},
+    {"id":"aw_v1_terrain_s04_r1_c1","file":"s04/aw_v1_terrain_s04_r1_c1.png","x":386,"y":386,"w":380,"h":382},
+    {"id":"aw_v1_terrain_s04_r1_c2","file":"s04/aw_v1_terrain_s04_r1_c2.png","x":770,"y":386,"w":381,"h":382},
+    {"id":"aw_v1_terrain_s04_r1_c3","file":"s04/aw_v1_terrain_s04_r1_c3.png","x":1154,"y":386,"w":380,"h":382}
+  ]
+}

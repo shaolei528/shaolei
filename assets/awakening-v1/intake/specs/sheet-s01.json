@@ -1,0 +1,10 @@
+{
+  "source": "../source/6cbc2887-60b8-5260-885f-145adc9bae28.png",
+  "outputDir": "../raw",
+  "slices": [
+    {"id":"aw_v1_terrain_s01_r0_c0","file":"s01/aw_v1_terrain_s01_r0_c0.png","x":0,"y":0,"w":625,"h":626},
+    {"id":"aw_v1_terrain_s01_r0_c1","file":"s01/aw_v1_terrain_s01_r0_c1.png","x":628,"y":0,"w":625,"h":626},
+    {"id":"aw_v1_terrain_s01_r1_c0","file":"s01/aw_v1_terrain_s01_r1_c0.png","x":0,"y":628,"w":625,"h":625},
+    {"id":"aw_v1_terrain_s01_r1_c1","file":"s01/aw_v1_terrain_s01_r1_c1.png","x":628,"y":628,"w":625,"h":625}
+  ]
+}
