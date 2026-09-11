@@ -1,0 +1,38 @@
+name: playable-audio-mixer-v1-check
+
+on:
+  push:
+    paths:
+      - 'modules/audio/playable-feel-audio-v1.js'
+      - 'modules/combat/playable-feel-v1.js'
+      - 'tests/playable-slice-audio-mixer-v1.test.mjs'
+      - 'tests/playable-slice-feel-audio-v1.test.mjs'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - '.github/workflows/playable-audio-mixer-v1-check.yml'
+  pull_request:
+    paths:
+      - 'modules/audio/playable-feel-audio-v1.js'
+      - 'modules/combat/playable-feel-v1.js'
+      - 'tests/playable-slice-audio-mixer-v1.test.mjs'
+      - 'tests/playable-slice-feel-audio-v1.test.mjs'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - '.github/workflows/playable-audio-mixer-v1-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Audio mixer foundation
+        run: node tests/playable-slice-audio-mixer-v1.test.mjs
+      - name: Existing playable feel and audio regression
+        run: node tests/playable-slice-feel-audio-v1.test.mjs
+      - name: Existing smoothness audio soak regression
+        run: node tests/playable-slice-smoothness-v1.test.mjs
+      - name: Audio syntax
+        run: |
+          node --check modules/audio/playable-feel-audio-v1.js
+          node --check tests/playable-slice-audio-mixer-v1.test.mjs
