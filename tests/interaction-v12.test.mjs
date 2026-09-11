@@ -89,12 +89,9 @@ function exerciseTarget(target){
     zoneConnected:false,
     zoneCh:null,
     currentZone:'1:1',
-    saved:0,
-    updated:0,
-    toasted:0,
-    saveLocal(){this.saved++;},
-    updateUI(){this.updated++;},
-    toast(){this.toasted++;}
+    saveLocal(){},
+    updateUI(){},
+    toast(){}
   };
   vm.createContext(sandbox);
   vm.runInContext(`${harvest}\nharvestResource(resource);`,sandbox,{filename:'resource-harvest-test.js'});
