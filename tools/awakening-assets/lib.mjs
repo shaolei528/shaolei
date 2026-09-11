@@ -5,144 +5,54 @@ import {decodePng,inspectRgbaRegion} from './png.mjs';
 export const ASSET_ID_RE=/^aw_v1_(terrain|decal|prop|fx)_[a-z0-9]+(?:_[a-z0-9]+)*$/;
 export const CATEGORIES=new Set(['terrain','decal','prop','fx']);
 export const APPROVED_SEMANTIC_BINDINGS=Object.freeze({
-  terrain:Object.freeze({
-    cold_grass:Object.freeze(['aw_v1_terrain_cold_grass_a','aw_v1_terrain_cold_grass_b']),
-    dirt_shoulder:Object.freeze(['aw_v1_terrain_dirt_shoulder_a','aw_v1_terrain_dirt_shoulder_b']),
-    asphalt:Object.freeze(['aw_v1_terrain_asphalt_a','aw_v1_terrain_asphalt_b','aw_v1_terrain_asphalt_cracked']),
-    store_floor:Object.freeze(['aw_v1_terrain_concrete_floor_a','aw_v1_terrain_concrete_floor_b'])
-  }),
-  decal:Object.freeze({
-    puddle:Object.freeze(['aw_v1_decal_puddle_01']),
-    crack:Object.freeze(['aw_v1_decal_asphalt_crack_01']),
-    tire:Object.freeze(['aw_v1_decal_tire_mark_01']),
-    glass:Object.freeze(['aw_v1_decal_broken_glass_01']),
-    residue:Object.freeze(['aw_v1_decal_early_residue_01'])
-  }),
-  prop:Object.freeze({
-    fence:Object.freeze(['aw_v1_prop_fence_01']),
-    barrier:Object.freeze(['aw_v1_prop_road_barrier_01']),
-    wall:Object.freeze(['aw_v1_prop_store_exterior_wall_01']),
-    sign:Object.freeze(['aw_v1_prop_store_sign_mire_mart']),
-    counter:Object.freeze(['aw_v1_prop_store_counter_01']),
-    shelf:Object.freeze(['aw_v1_prop_store_shelf_01']),
-    fridge:Object.freeze(['aw_v1_prop_store_fridge_01']),
-    debris:Object.freeze(['aw_v1_prop_store_debris_01'])
-  }),
-  fx:Object.freeze({
-    flicker:Object.freeze(['aw_v1_fx_store_failing_light_01']),
-    anomaly:Object.freeze(['aw_v1_fx_store_early_residue_01'])
-  })
+  terrain:{cold_grass:['aw_v1_terrain_cold_grass_a','aw_v1_terrain_cold_grass_b'],dirt_shoulder:['aw_v1_terrain_dirt_shoulder_a','aw_v1_terrain_dirt_shoulder_b'],asphalt:['aw_v1_terrain_asphalt_a','aw_v1_terrain_asphalt_b','aw_v1_terrain_asphalt_cracked'],store_floor:['aw_v1_terrain_concrete_floor_a','aw_v1_terrain_concrete_floor_b']},
+  decal:{puddle:['aw_v1_decal_puddle_01'],crack:['aw_v1_decal_asphalt_crack_01'],tire:['aw_v1_decal_tire_mark_01'],glass:['aw_v1_decal_broken_glass_01'],residue:['aw_v1_decal_early_residue_01']},
+  prop:{fence:['aw_v1_prop_fence_01'],barrier:['aw_v1_prop_road_barrier_01'],wall:['aw_v1_prop_store_exterior_wall_01'],sign:['aw_v1_prop_store_sign_mire_mart'],counter:['aw_v1_prop_store_counter_01'],shelf:['aw_v1_prop_store_shelf_01'],fridge:['aw_v1_prop_store_fridge_01'],debris:['aw_v1_prop_store_debris_01']},
+  fx:{flicker:['aw_v1_fx_store_failing_light_01'],anomaly:['aw_v1_fx_store_early_residue_01']}
 });
+for(const group of Object.values(APPROVED_SEMANTIC_BINDINGS))for(const a of Object.values(group))Object.freeze(a);for(const group of Object.values(APPROVED_SEMANTIC_BINDINGS))Object.freeze(group);
 export const REQUIRED_PRODUCTION_IDS=Object.freeze([
-  'aw_v1_terrain_cold_grass_a',
-  'aw_v1_terrain_cold_grass_b',
-  'aw_v1_terrain_cold_grass_detail',
-  'aw_v1_terrain_dirt_shoulder_a',
-  'aw_v1_terrain_dirt_shoulder_b',
-  'aw_v1_terrain_asphalt_a',
-  'aw_v1_terrain_asphalt_b',
-  'aw_v1_terrain_asphalt_cracked',
-  'aw_v1_terrain_concrete_floor_a',
-  'aw_v1_terrain_concrete_floor_b',
-  'aw_v1_decal_puddle_01',
-  'aw_v1_decal_asphalt_crack_01',
-  'aw_v1_decal_tire_mark_01',
-  'aw_v1_decal_broken_glass_01',
-  'aw_v1_decal_early_residue_01',
-  'aw_v1_prop_fence_01',
-  'aw_v1_prop_road_barrier_01',
-  'aw_v1_prop_store_exterior_wall_01',
-  'aw_v1_prop_store_sign_mire_mart',
-  'aw_v1_prop_store_counter_01',
-  'aw_v1_prop_store_shelf_01',
-  'aw_v1_prop_store_fridge_01',
-  'aw_v1_prop_store_debris_01',
-  'aw_v1_fx_store_failing_light_01',
-  'aw_v1_fx_store_early_residue_01'
+  'aw_v1_terrain_cold_grass_a','aw_v1_terrain_cold_grass_b','aw_v1_terrain_cold_grass_detail','aw_v1_terrain_dirt_shoulder_a','aw_v1_terrain_dirt_shoulder_b','aw_v1_terrain_asphalt_a','aw_v1_terrain_asphalt_b','aw_v1_terrain_asphalt_cracked','aw_v1_terrain_concrete_floor_a','aw_v1_terrain_concrete_floor_b',
+  'aw_v1_decal_puddle_01','aw_v1_decal_asphalt_crack_01','aw_v1_decal_tire_mark_01','aw_v1_decal_broken_glass_01','aw_v1_decal_early_residue_01',
+  'aw_v1_prop_fence_01','aw_v1_prop_road_barrier_01','aw_v1_prop_store_exterior_wall_01','aw_v1_prop_store_sign_mire_mart','aw_v1_prop_store_counter_01','aw_v1_prop_store_shelf_01','aw_v1_prop_store_fridge_01','aw_v1_prop_store_debris_01',
+  'aw_v1_fx_store_failing_light_01','aw_v1_fx_store_early_residue_01'
 ]);
-const PNG_SIGNATURE=Buffer.from([137,80,78,71,13,10,26,10]);
-const MAX_DIMENSION=8192;
-const ROOT_FIELDS=new Set(['version','pack','bindings','sheets','assets']);
-const ASSET_FIELDS=new Set(['id','category','file','sourceRect','width','height','anchor','frames','frameDurationMs']);
-const SHEET_FIELDS=new Set(['id','file','cellWidth','cellHeight','entries']);
-const SHEET_ENTRY_FIELDS=new Set(['id','category','file','col','row','cols','rows','x','y','w','h','width','height','anchor','frames','frameDurationMs']);
-const RECT_FIELDS=new Set(['x','y','w','h']);
-const ANCHOR_FIELDS=new Set(['x','y']);
-
-function positiveInt(value){return Number.isInteger(value)&&value>0;}
-function plainObject(value){return Boolean(value)&&typeof value==='object'&&!Array.isArray(value);}
-function safeRelativeFile(file){
-  if(typeof file!=='string'||!file||file.includes('\\'))return false;
-  const normalized=path.posix.normalize(file);
-  return normalized===file&&!normalized.startsWith('../')&&!path.posix.isAbsolute(normalized)&&normalized.toLowerCase().endsWith('.png');
-}
-function rejectUnknownFields(value,allowed,currentPath,errors){
-  if(!plainObject(value))return;
-  for(const key of Object.keys(value))if(!allowed.has(key))errors.push(`presentation-only manifest field not allowed: ${currentPath}.${key}`);
-}
-function validatePresentationSchema(parsed,errors){
-  if(!plainObject(parsed)){
-    errors.push('manifest root must be an object');
-    return;
+const SIG=Buffer.from([137,80,78,71,13,10,26,10]),MAX=8192;
+const F={root:new Set(['version','pack','bindings','sheets','assets']),asset:new Set(['id','category','file','sourceRect','width','height','anchor','frames','frameDurationMs']),sheet:new Set(['id','file','cellWidth','cellHeight','entries']),entry:new Set(['id','category','file','col','row','cols','rows','x','y','w','h','width','height','anchor','frames','frameDurationMs']),rect:new Set(['x','y','w','h']),anchor:new Set(['x','y'])};
+const obj=v=>!!v&&typeof v==='object'&&!Array.isArray(v),pos=v=>Number.isInteger(v)&&v>0;
+function safe(file){if(typeof file!=='string'||!file||file.includes('\\'))return false;const n=path.posix.normalize(file);return n===file&&!n.startsWith('../')&&!path.posix.isAbsolute(n)&&n.toLowerCase().endsWith('.png');}
+function allow(o,set,p,e){if(obj(o))for(const k of Object.keys(o))if(!set.has(k))e.push(`presentation-only manifest field not allowed: ${p}.${k}`);}
+function schema(m,e){
+  if(!obj(m)){e.push('manifest root must be an object');return;}allow(m,F.root,'manifest',e);
+  if(m.pack!=null&&typeof m.pack!=='string')e.push('manifest.pack must be a string');
+  if(m.assets!=null&&!Array.isArray(m.assets))e.push('manifest.assets must be an array');
+  if(m.sheets!=null&&!Array.isArray(m.sheets))e.push('manifest.sheets must be an array');
+  if(m.bindings!=null&&!obj(m.bindings))e.push('manifest.bindings must be an object');
+  for(const [cat,map] of Object.entries(m.bindings||{})){
+    const approved=APPROVED_SEMANTIC_BINDINGS[cat];if(!approved){e.push(`unsupported binding category: ${cat}`);continue;}if(!obj(map)){e.push(`manifest.bindings.${cat} must be an object`);continue;}
+    for(const [sem,ids] of Object.entries(map)){if(!(sem in approved))e.push(`unsupported binding semantic: ${cat}.${sem}`);if(!Array.isArray(ids)||!ids.length||ids.some(id=>typeof id!=='string'))e.push(`manifest.bindings.${cat}.${sem} must be a non-empty array of asset ids`);}
   }
-  rejectUnknownFields(parsed,ROOT_FIELDS,'manifest',errors);
-  if(parsed.pack!=null&&typeof parsed.pack!=='string')errors.push('manifest.pack must be a string');
-  if(parsed.assets!=null&&!Array.isArray(parsed.assets))errors.push('manifest.assets must be an array');
-  if(parsed.sheets!=null&&!Array.isArray(parsed.sheets))errors.push('manifest.sheets must be an array');
-  if(parsed.bindings!=null&&!plainObject(parsed.bindings))errors.push('manifest.bindings must be an object');
-
-  for(const[category,semanticMap]of Object.entries(parsed.bindings||{})){
-    if(!Object.prototype.hasOwnProperty.call(APPROVED_SEMANTIC_BINDINGS,category)){
-      errors.push(`unsupported binding category: ${category}`);
-      continue;
-    }
-    if(!plainObject(semanticMap)){
-      errors.push(`manifest.bindings.${category} must be an object`);
-      continue;
-    }
-    const approved=APPROVED_SEMANTIC_BINDINGS[category];
-    for(const[semantic,ids]of Object.entries(semanticMap)){
-      if(!Object.prototype.hasOwnProperty.call(approved,semantic))errors.push(`unsupported binding semantic: ${category}.${semantic}`);
-      if(!Array.isArray(ids)||ids.length===0||ids.some(id=>typeof id!=='string'))errors.push(`manifest.bindings.${category}.${semantic} must be a non-empty array of asset ids`);
-    }
-  }
-
-  for(const[index,asset]of (Array.isArray(parsed.assets)?parsed.assets:[]).entries()){
-    const base=`manifest.assets[${index}]`;
-    if(!plainObject(asset)){errors.push(`${base} must be an object`);continue;}
-    rejectUnknownFields(asset,ASSET_FIELDS,base,errors);
-    if(asset.sourceRect!=null){
-      if(!plainObject(asset.sourceRect))errors.push(`${base}.sourceRect must be an object`);
-      else rejectUnknownFields(asset.sourceRect,RECT_FIELDS,`${base}.sourceRect`,errors);
-    }
-    if(asset.anchor!=null){
-      if(!plainObject(asset.anchor))errors.push(`${base}.anchor must be an object`);
-      else rejectUnknownFields(asset.anchor,ANCHOR_FIELDS,`${base}.anchor`,errors);
-    }
-  }
-
-  for(const[index,sheet]of (Array.isArray(parsed.sheets)?parsed.sheets:[]).entries()){
-    const base=`manifest.sheets[${index}]`;
-    if(!plainObject(sheet)){errors.push(`${base} must be an object`);continue;}
-    rejectUnknownFields(sheet,SHEET_FIELDS,base,errors);
-    if(sheet.entries!=null&&!Array.isArray(sheet.entries))errors.push(`${base}.entries must be an array`);
-    for(const[entryIndex,entry]of (Array.isArray(sheet.entries)?sheet.entries:[]).entries()){
-      const entryPath=`${base}.entries[${entryIndex}]`;
-      if(!plainObject(entry)){errors.push(`${entryPath} must be an object`);continue;}
-      rejectUnknownFields(entry,SHEET_ENTRY_FIELDS,entryPath,errors);
-      if(entry.anchor!=null){
-        if(!plainObject(entry.anchor))errors.push(`${entryPath}.anchor must be an object`);
-        else rejectUnknownFields(entry.anchor,ANCHOR_FIELDS,`${entryPath}.anchor`,errors);
-      }
-    }
-  }
+  for(const [i,a] of (Array.isArray(m.assets)?m.assets:[]).entries()){const p=`manifest.assets[${i}]`;if(!obj(a)){e.push(`${p} must be an object`);continue;}allow(a,F.asset,p,e);if(a.sourceRect!=null){if(!obj(a.sourceRect))e.push(`${p}.sourceRect must be an object`);else allow(a.sourceRect,F.rect,`${p}.sourceRect`,e);}if(a.anchor!=null){if(!obj(a.anchor))e.push(`${p}.anchor must be an object`);else allow(a.anchor,F.anchor,`${p}.anchor`,e);}}
+  for(const [i,s] of (Array.isArray(m.sheets)?m.sheets:[]).entries()){const p=`manifest.sheets[${i}]`;if(!obj(s)){e.push(`${p} must be an object`);continue;}allow(s,F.sheet,p,e);if(s.entries!=null&&!Array.isArray(s.entries))e.push(`${p}.entries must be an array`);for(const [j,a] of (Array.isArray(s.entries)?s.entries:[]).entries()){const q=`${p}.entries[${j}]`;if(!obj(a)){e.push(`${q} must be an object`);continue;}allow(a,F.entry,q,e);if(a.anchor!=null){if(!obj(a.anchor))e.push(`${q}.anchor must be an object`);else allow(a.anchor,F.anchor,`${q}.anchor`,e);}}}
 }
 
-export function inspectPngBuffer(buffer){
-  if(!Buffer.isBuffer(buffer)||buffer.length<33||!buffer.subarray(0,8).equals(PNG_SIGNATURE))throw new Error('invalid PNG signature');
-  let offset=8,ihdr=null,hasTrns=false,idat=0,ended=false;
-  while(offset+12<=buffer.length){
-    const length=buffer.readUInt32BE(offset),type=buffer.toString('ascii',offset+4,offset+8),dataStart=offset+8,dataEnd=dataStart+length;
-    if(dataEnd+4>buffer.length)throw new Error(`truncated PNG chunk ${type}`);
-    if(type==='IHDR'){
-      if(length!==13||i²È="25É½İÌ¤ı•¹ÑÉä¹É½İÌèÄì(€€€€€½¹ÍĞÍ½ÕÉ•I•Ğõ¡…ÍI•Ğ(€€€€€€€€ıíàé9Õµ‰•È¡•¹ÑÉä¹à¤±äé9Õµ‰•È¡•¹ÑÉä¹ä¤±Üé9Õµ‰•È¡•¹ÑÉä¹Ü¤± é9Õµ‰•È¡•¹ÑÉä¹ ¥ô(€€€€€€€€éíàé9Õµ‰•È¡•¹ÑÉä¹½±ñğÀ¤©•±±]¥‘Ñ ±äé9Õµ‰•È¡•¹ÑÉä¹É½İñğÀ¤©•±±!•¥¡Ğ±Üé½±Ì©•±±]¥‘Ñ ± éÉ½İÌ©•±±!•¥¡Ñôì(€€€€€…ÍÍ•ÑÌ¹ÁÕÍ ¡ì¸¸¹•¹ÑÉä±™¥±”é•¹ÑÉä¹™¥±•ññÍ¡••Ğ¹™¥±”±Í½ÕÉ•I•Ğ±İ¥‘Ñ é•¹ÑÉä¹İ¥‘Ñ¡ññÍ½ÕÉ•I•Ğ¹Ü±¡•¥¡Ğé•¹ÑÉä¹¡•¥¡ÑññÍ½ÕÉ•I•Ğ¹ ±Í¡••ĞéÍ¡••Ğ¹¥‘ññÍ¡••Ğ¹™¥±•ô¤ì(€€€ô(€ô(€É•ÑÕÉ¹ì¸¸¹¥¹ÁÕĞ±…ÍÍ•ÑÍôì)ô()™Õ¹Ñ¥½¸½±±•Ñ	¥¹‘¥¹¹ÑÉ¥•Ì¡‰¥¹‘¥¹Ì¥ì(€½¹ÍĞ½ÕĞõmtì(€™½È¡½¹ÍÑm…Ñ•½Éä±Í•µ…¹Ñ¥5…Áu½˜=‰©•Ğ¹•¹ÑÉ¥•Ì¡‰¥¹‘¥¹Íññíô¤¥ì(€€€¥˜ …Á±…¥¹=‰©•Ğ¡Í•µ…¹Ñ¥5…À¤¥½¹Ñ¥¹Õ”ì(€€€™½È¡½¹ÍÑmÍ•µ…¹Ñ¥Œ±¥‘Íu½˜=‰©•Ğ¹•¹ÑÉ¥•Ì¡Í•µ…¹Ñ¥5…À¤¥¥˜¡ÉÉ…ä¹¥ÍÉÉ…ä¡¥‘Ì¤¥™½È¡½¹ÍĞ¥½˜¥‘Ì¥½ÕĞ¹ÁÕÍ ¡í…Ñ•½Éä±Í•µ…¹Ñ¥Œ±¥‘ô¤ì(€ô(€É•ÑÕÉ¸½ÕĞì)ô)™Õ¹Ñ¥½¸Ù…±¥‘…Ñ•MÑÉ¥ÑI•ÅÕ¥É•¡µ…¹¥™•ÍĞ±Í••¸±•ÉÉ½ÉÌ¥ì(€™½È¡½¹ÍĞ¥½˜IEU%I}AI=UQ%=9}%L¥¥˜ …Í••¸¹¡…Ì¡¥¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡É•ÅÕ¥É•ÁÉ½‘ÕÑ¥½¸…ÍÍ•Ğµ¥ÍÍ¥¹œè€‘í¥‘õ€¤ì(€½¹ÍĞ‰¥¹‘¥¹Ìõµ…¹¥™•ÍĞ¹‰¥¹‘¥¹Íññíôì(€™½È¡½¹ÍÑm…Ñ•½Éä±Í•µ…¹Ñ¥Íu½˜=‰©•Ğ¹•¹ÑÉ¥•Ì¡AAI=Y}M59Q%}	%9%9L¤¥ì(€€€™½È¡½¹ÍÑmÍ•µ…¹Ñ¥Œ±É•ÅÕ¥É•‘%‘Íu½˜=‰©•Ğ¹•¹ÑÉ¥•Ì¡Í•µ…¹Ñ¥Ì¤¥ì(€€€€€½¹ÍĞ…ÑÕ…°õ‰¥¹‘¥¹Ìü¹m…Ñ•½Éåtü¹mÍ•µ…¹Ñ¥tì(€€€€€¥˜ …ÉÉ…ä¹¥ÍÉÉ…ä¡…ÑÕ…°¥ññ…ÑÕ…°¹±•¹Ñ ôôôÀ¥ì(€€€€€€€•ÉÉ½ÉÌ¹ÁÕÍ ¡É•ÅÕ¥É•ÁÉ½‘ÕÑ¥½¸‰¥¹‘¥¹œµ¥ÍÍ¥¹œè€‘í…Ñ•½Éåô¸‘íÍ•µ…¹Ñ¥õ€¤ì(€€€€€€€½¹Ñ¥¹Õ”ì(€€€€€ô(€€€€€™½È¡½¹ÍĞ¥½˜É•ÅÕ¥É•‘%‘Ì¥¥˜ ……ÑÕ…°¹¥¹±Õ‘•Ì¡¥¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡É•ÅÕ¥É•ÁÉ½‘ÕÑ¥½¸‰¥¹‘¥¹œ€‘í…Ñ•½Éåô¸‘íÍ•µ…¹Ñ¥ôµÕÍĞ¥¹±Õ‘”€‘í¥‘õ€¤ì(€€€ô(€ô)ô()•áÁ½ÉĞ™Õ¹Ñ¥½¸Ù…±¥‘…Ñ•A…¬¡É½½Ñ¥È±íÉ•…‘¥±”õ™Ì¹É•…‘¥±•Må¹Œ±•á¥ÍÑÌõ™Ì¹•á¥ÍÑÍMå¹Œ±ÍÑÉ¥ÑI•ÅÕ¥É•õ™…±Í•ôõíô¥ì(€½¹ÍĞ•ÉÉ½ÉÌõmt±İ…É¹¥¹Ìõmt±Á¹…¡”õ¹•Ü5…À ¤±‘•½‘•‘…¡”õ¹•Ü5…À ¤ì(€½¹ÍĞµ…¹¥™•ÍÑA…Ñ õÁ…Ñ ¹©½¥¸¡É½½Ñ¥È°µ…¹¥™•ÍĞ¹©Í½¸œ¤ì(€¥˜ …•á¥ÍÑÌ¡µ…¹¥™•ÍÑA…Ñ ¤¥É•ÑÕÉ¹í½¬é™…±Í”±•ÉÉ½ÉÌélµ¥ÍÍ¥¹œµ…¹¥™•ÍĞ¹©Í½¸t±İ…É¹¥¹Ì±…ÍÍ•ÑÌémt±™¥±•Ìémuôì(€±•ĞÁ…ÉÍ•ì(€ÑÉåíÁ…ÉÍ•õ)M=8¹Á…ÉÍ”¡É•…‘¥±”¡µ…¹¥™•ÍÑA…Ñ °ÕÑ˜àœ¤¤íõ…Ñ ¡•ÉÉ½È¥íÉ•ÑÕÉ¹í½¬é™…±Í”±•ÉÉ½ÉÌém¥¹Ù…±¥µ…¹¥™•ÍĞ¹©Í½¸è€‘í•ÉÉ½È¹µ•ÍÍ…•õt±İ…É¹¥¹Ì±…ÍÍ•ÑÌémt±™¥±•Ìémuôíô(€Ù…±¥‘…Ñ•AÉ•Í•¹Ñ…Ñ¥½¹M¡•µ„¡Á…ÉÍ•±•ÉÉ½ÉÌ¤ì(€¥˜¡Á…ÉÍ•¹Ù•ÉÍ¥½¸„ôôÄ¥•ÉÉ½ÉÌ¹ÁÕÍ  µ…¹¥™•ÍĞ¹Ù•ÉÍ¥½¸µÕÍĞ‰”€Äœ¤ì(€½¹ÍĞµ…¹¥™•ÍĞõ¹½Éµ…±¥é•5…¹¥™•ÍĞ¡Á…ÉÍ•¤±…ÍÍ•ÑÌõµ…¹¥™•ÍĞ¹…ÍÍ•ÑÍññmt±Í••¸õ¹•ÜM•Ğ ¤±…ÍÍ•Ñ	å%õ¹•Ü5…À ¤±™¥±•Ìõ¹•ÜM•Ğ ¤ì(€¥˜ ……ÍÍ•ÑÌ¹±•¹Ñ ¥•ÉÉ½ÉÌ¹ÁÕÍ  µ…¹¥™•ÍĞµÕÍĞ‘•±…É”…Ğ±•…ÍĞ½¹”…ÍÍ•Ğ½ÈÍ¡••Ğ•¹ÑÉäœ¤ì((€™½È¡½¹ÍĞ…ÍÍ•Ğ½˜…ÍÍ•ÑÌ¥ì(€€€½¹ÍĞ¥õ…ÍÍ•Ğü¹¥±…Ñ•½Éäõ…ÍÍ•Ğü¹…Ñ•½Éä±™¥±”õ…ÍÍ•Ğü¹™¥±”ì(€€€¥˜ …MMQ}%}I¹Ñ•ÍĞ¡MÑÉ¥¹œ¡¥‘ñğœœ¤¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡¥¹Ù…±¥…ÍÍ•Ğ¥è€‘í¥‘ñğœñµ¥ÍÍ¥¹œøõ€¤ì(€€€¥˜¡Í••¸¹¡…Ì¡¥¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡‘ÕÁ±¥…Ñ”¥è€‘í¥‘õ€¤í•±Í”¥˜¡¥¥íÍ••¸¹…‘¡¥¤í…ÍÍ•Ñ	å%¹Í•Ğ¡¥±…ÍÍ•Ğ¤íô(€€€¥˜ …Q=I%L¹¡…Ì¡…Ñ•½Éä¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ñğœñµ¥ÍÍ¥¹œøôè¥¹Ù…±¥…Ñ•½Éä€‘í…Ñ•½Éåõ€¤ì(€€€•±Í”¥˜¡¥˜˜…MÑÉ¥¹œ¡¥¤¹ÍÑ…ÉÑÍ]¥Ñ ¡…İ}ØÅ|‘í…Ñ•½Éåõ}€¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôè¥½…Ñ•½Éäµ¥Íµ…Ñ € ‘í…Ñ•½Éåô¥€¤ì(€€€¥˜ …Í…™•I•±…Ñ¥Ù•¥±”¡™¥±”¤¥í•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ñğœñµ¥ÍÍ¥¹œøôè¥¹Ù…±¥A9™¥±”Á…Ñ €‘í™¥±•ñğœñµ¥ÍÍ¥¹œøõ€¤í½¹Ñ¥¹Õ”íô(€€€™¥±•Ì¹…‘¡™¥±”¤ì(€€€½¹ÍĞ™Õ±°õÁ…Ñ ¹©½¥¸¡É½½Ñ¥È°¸¸¹™¥±”¹ÍÁ±¥Ğ œ¼œ¤¤ì(€€€¥˜ …•á¥ÍÑÌ¡™Õ±°¤¥í•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôèµ¥ÍÍ¥¹œ™¥±”€‘í™¥±•õ€¤í½¹Ñ¥¹Õ”íô(€€€±•Ğ‰Õ™™•È±Á¹œõÁ¹…¡”¹•Ğ¡™¥±”¤ì(€€€¥˜ …Á¹œ¥ì(€€€€€ÑÉåí‰Õ™™•ÈõÉ•…‘¥±”¡™Õ±°¤íÁ¹œõ¥¹ÍÁ•ÑA¹	Õ™™•È¡‰Õ™™•È¤íÁ¹…¡”¹Í•Ğ¡™¥±”±Á¹œ¤íõ…Ñ ¡•ÉÉ½È¥í•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôè€‘í™¥±•ôè€‘í•ÉÉ½È¹µ•ÍÍ…•õ€¤í½¹Ñ¥¹Õ”íô(€€€ô(€€€½¹ÍĞÉ•Ğõ…ÍÍ•Ğ¹Í½ÕÉ•I•Ğì(€€€½¹ÍĞÉÜõÉ•Ğı9Õµ‰•È¡É•Ğ¹Ü¤éÁ¹œ¹İ¥‘Ñ ±É õÉ•Ğı9Õµ‰•È¡É•Ğ¹ ¤éÁ¹œ¹¡•¥¡Ğì(€€€¥˜¡É•Ğ¥ì(€€€€€½¹ÍĞÉàõ9Õµ‰•È¡É•Ğ¹à¤±Éäõ9Õµ‰•È¡É•Ğ¹ä¤ì(€€€€€¥˜ …mÉà±Éä±ÉÜ±É¡t¹•Ù•Éä¡9Õµ‰•È¹¥Í%¹Ñ••È¥ññÉàğÁññÉäğÁññÉÜğôÁññÉ ğôÁññÉà­ÉÜùÁ¹œ¹İ¥‘Ñ¡ññÉä­É ùÁ¹œ¹¡•¥¡Ğ¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôèÍ½ÕÉ•I•Ğ½ÕÑÍ¥‘”€‘í™¥±•ô€ ‘íÁ¹œ¹İ¥‘Ñ¡õà‘íÁ¹œ¹¡•¥¡Ñô¥€¤ì(€€€ô(€€€¥˜¡Á½Í¥Ñ¥Ù•%¹Ğ¡…ÍÍ•Ğ¹İ¥‘Ñ ¤˜™9Õµ‰•È¡…ÍÍ•Ğ¹İ¥‘Ñ ¤„ôõÉÜ¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôè‘•±…É•İ¥‘Ñ €‘í…ÍÍ•Ğ¹İ¥‘Ñ¡ô€„ôÍ½ÕÉ”İ¥‘Ñ €‘íÉİõ€¤ì(€€€¥˜¡Á½Í¥Ñ¥Ù•%¹Ğ¡…ÍÍ•Ğ¹¡•¥¡Ğ¤˜™9Õµ‰•È¡…ÍÍ•Ğ¹¡•¥¡Ğ¤„ôõÉ ¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôè‘•±…É•¡•¥¡Ğ€‘í…ÍÍ•Ğ¹¡•¥¡Ñô€„ôÍ½ÕÉ”¡•¥¡Ğ€‘íÉ¡õ€¤ì(€€€¥˜¡…Ñ•½ÉäôôôÑ•ÉÉ…¥¸œ¥ì(€€€€€¥˜¡Á¹œ¹İ¥‘Ñ ”ØĞ„ôôÁññÁ¹œ¹¡•¥¡Ğ”ØĞ„ôôÀ¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôèÑ•ÉÉ…¥¸A9‘¥µ•¹Í¥½¹ÌµÕÍĞ‰”€ØÑàØĞ½È€ØÑÁàµÕ±Ñ¥Á±•Ìì½Ğ€‘íÁ¹œ¹İ¥‘Ñ¡õà‘íÁ¹œ¹¡•¥¡Ñõ€¤ì(€€€€€¥˜¡É•Ğ˜˜¡ÉÜ”ØĞ„ôôÁññÉ ”ØĞ„ôôÀ¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôèÑ•ÉÉ…¥¸Í½ÕÉ•I•ĞµÕÍĞÕÍ”€ØÑÁàµÕ±Ñ¥Á±•Ìì½Ğ€‘íÉİõà‘íÉ¡õ€¤ì(€€€õ•±Í•ì(€€€€€¥˜ …Á¹œ¹¡…Í±Á¡„¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôè€‘í…Ñ•½ÉåôA9µÕÍĞ•áÁ½Í”…¸…±Á¡„¡…¹¹•°€¡I	½½ÈÑI9L¥€¤ì(€€€€€•±Í•ì(€€€€€€€ÑÉåì(€€€€€€€€€±•Ğ‘•½‘•õ‘•½‘•‘…¡”¹•Ğ¡™¥±”¤ì(€€€€€€€€€¥˜ …‘•½‘•¥ì(€€€€€€€€€€€¥˜ …‰Õ™™•È¥‰Õ™™•ÈõÉ•…‘¥±”¡™Õ±°¤ì(€€€€€€€€€€€‘•½‘•õ‘•½‘•A¹œ¡‰Õ™™•È¤í‘•½‘•‘…¡”¹Í•Ğ¡™¥±”±‘•½‘•¤ì(€€€€€€€€€ô(€€€€€€€€€½¹ÍĞ…±Á¡„õÉ•Ğı¥¹ÍÁ•ÑI‰…I•¥½¸¡‘•½‘•±íàé9Õµ‰•È¡É•Ğ¹à¤±äé9Õµ‰•È¡É•Ğ¹ä¤±ÜéÉÜ± éÉ¡ô¤é¥¹ÍÁ•ÑI‰…I•¥½¸¡‘•½‘•±íàèÀ±äèÀ±Üé‘•½‘•¹İ¥‘Ñ ± é‘•½‘•¹¡•¥¡Ñô¤ì(€€€€€€€€€¥˜ ……±Á¡„¹¡…ÍQÉ…¹ÍÁ…É•¹ÑA¥á•±Ì¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôè€‘í…Ñ•½ÉåôA9½Í½ÕÉ•I•ĞµÕÍĞ½¹Ñ…¥¸…Ğ±•…ÍĞ½¹”ÑÉ…¹ÍÁ…É•¹ĞÁ¥á•±€¤ì(€€€€€€€õ…Ñ ¡•ÉÉ½È¥í•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôè€‘í™¥±•ôèÁ¥á•°ÑÉ…¹ÍÁ…É•¹äÙ…±¥‘…Ñ¥½¸™…¥±•è€‘í•ÉÉ½È¹µ•ÍÍ…•õ€¤íô(€€€€€ô(€€€ô(€€€¥˜¡…Ñ•½ÉäôôôÁÉ½Àœ¥ì(€€€€€½¹ÍĞ…àõ9Õµ‰•È¡…ÍÍ•Ğ¹…¹¡½Èü¹à¤±…äõ9Õµ‰•È¡…ÍÍ•Ğ¹…¹¡½Èü¹ä¤ì(€€€€€¥˜¡…à„ôôÀ¸Õññ…ä„ôôÄ¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôèÁÉ½À…¹¡½ÈµÕÍĞ‰”‰½ÑÑ½´µ•¹Ñ•ÈíàèÀ¸Ô±äèÅõ€¤ì(€€€õ•±Í”¥˜¡…ÍÍ•Ğ¹…¹¡½È¥ì(€€€€€½¹ÍĞ…àõ9Õµ‰•È¡…ÍÍ•Ğ¹…¹¡½È¹à¤±…äõ9Õµ‰•È¡…ÍÍ•Ğ¹…¹¡½È¹ä¤ì(€€€€€¥˜ …9Õµ‰•È¹¥Í¥¹¥Ñ”¡…à¥ñğ…9Õµ‰•È¹¥Í¥¹¥Ñ”¡…ä¥ññ…àğÁññ…àøÅññ…äğÁññ…äøÄ¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôè…¹¡½ÈµÕÍĞ‰”¹½Éµ…±¥é•€À¸¸Å€¤ì(€€€ô(€€€¥˜¡…ÍÍ•Ğ¹™É…µ•Ì„õ¹Õ±°˜˜ …Á½Í¥Ñ¥Ù•%¹Ğ¡9Õµ‰•È¡…ÍÍ•Ğ¹™É…µ•Ì¤¥ññ9Õµ‰•È¡…ÍÍ•Ğ¹™É…µ•Ì¤øØĞ¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôè™É…µ•ÌµÕÍĞ‰”…¸¥¹Ñ••È™É½´€ÄÑ¼€ØÑ€¤ì(€€€¥˜¡…ÍÍ•Ğ¹™É…µ•ÕÉ…Ñ¥½¹5Ì„õ¹Õ±°˜˜ …Á½Í¥Ñ¥Ù•%¹Ğ¡9Õµ‰•È¡…ÍÍ•Ğ¹™É…µ•ÕÉ…Ñ¥½¹5Ì¤¥ññ9Õµ‰•È¡…ÍÍ•Ğ¹™É…µ•ÕÉ…Ñ¥½¹5Ì¤øØÀÀÀÀ¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘í¥‘ôè™É…µ•ÕÉ…Ñ¥½¹5ÌµÕÍĞ‰”…¸¥¹Ñ••È™É½´€ÄÑ¼€ØÀÀÀÁ€¤ì(€ô((€½¹ÍĞ‰¥¹‘¥¹¹ÑÉ¥•Ìõ½±±•Ñ	¥¹‘¥¹¹ÑÉ¥•Ì¡µ…¹¥™•ÍĞ¹‰¥¹‘¥¹Íññíô¤ì(€™½È¡½¹ÍÑí…Ñ•½Éä±Í•µ…¹Ñ¥Œ±¥‘õ½˜‰¥¹‘¥¹¹ÑÉ¥•Ì¥ì(€€€¥˜ …Í••¸¹¡…Ì¡¥¤¥í•ÉÉ½ÉÌ¹ÁÕÍ ¡‰¥¹‘¥¹œÉ•™•É•¹•Ìµ¥ÍÍ¥¹œ…ÍÍ•Ğ¥è€‘í¥‘õ€¤í½¹Ñ¥¹Õ”íô(€€€½¹ÍĞ…ÍÍ•Ğõ…ÍÍ•Ñ	å%¹•Ğ¡¥¤ì(€€€¥˜¡…ÍÍ•Ğü¹…Ñ•½Éä„ôõ…Ñ•½Éä¥•ÉÉ½ÉÌ¹ÁÕÍ ¡‰¥¹‘¥¹œ€‘í…Ñ•½Éåô¸‘íÍ•µ…¹Ñ¥ôÉ•™•É•¹•Ì€‘í¥‘ôİ¥Ñ …Ñ•½Éä€‘í…ÍÍ•Ğü¹…Ñ•½Éåñğœñµ¥ÍÍ¥¹œøõ€¤ì(€ô(€½¹ÍĞ‰½Õ¹‘%‘Ìõ‰¥¹‘¥¹¹ÑÉ¥•Ì¹µ…À¡•¹ÑÉäôù•¹ÑÉä¹¥¤ì(€™½È¡½¹ÍĞ¥½˜Í••¸¥¥˜ …‰½Õ¹‘%‘Ì¹¥¹±Õ‘•Ì¡¥¤¥İ…É¹¥¹Ì¹ÁÕÍ ¡Õ¹‰½Õ¹…ÍÍ•Ğè€‘í¥‘õ€¤ì(€™½È¡½¹ÍĞÍ¡••Ğ½˜ÉÉ…ä¹¥ÍÉÉ…ä¡Á…ÉÍ•¹Í¡••ÑÌ¤ıÁ…ÉÍ•¹Í¡••ÑÌémt¥ì(€€€¥˜ …Í…™•I•±…Ñ¥Ù•¥±”¡Í¡••Ğ¹™¥±”¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡¥¹Ù…±¥Í¡••Ğ™¥±”Á…Ñ è€‘íÍ¡••Ğ¹™¥±•ñğœñµ¥ÍÍ¥¹œøõ€¤ì(€€€¥˜ …Á½Í¥Ñ¥Ù•%¹Ğ¡9Õµ‰•È¡Í¡••Ğ¹•±±]¥‘Ñ ¤¥ñğ…Á½Í¥Ñ¥Ù•%¹Ğ¡9Õµ‰•È¡Í¡••Ğ¹•±±!•¥¡Ğ¤¤¥•ÉÉ½ÉÌ¹ÁÕÍ ¡€‘íÍ¡••Ğ¹¥‘ññÍ¡••Ğ¹™¥±•ñğœñÍ¡••Ğøôè•±±]¥‘Ñ ½•±±!•¥¡ĞµÕÍĞ‰”Á½Í¥Ñ¥Ù”¥¹Ñ••ÉÍ€¤ì(€ô(€¥˜¡ÍÑÉ¥ÑI•ÅÕ¥É•¥Ù…±¥‘…Ñ•MÑÉ¥ÑI•ÅÕ¥É•¡µ…¹¥™•ÍĞ±Í••¸±•ÉÉ½ÉÌ¤ì(€É•ÑÕÉ¹í½¬é•ÉÉ½ÉÌ¹±•¹Ñ ôôôÀ±•ÉÉ½ÉÌ±İ…É¹¥¹Ì±…ÍÍ•ÑÌ±™¥±•Ìél¸¸¹™¥±•Ít¹Í½ÉĞ ¤±µ…¹¥™•ÍÑôì)ô()•áÁ½ÉĞ™Õ¹Ñ¥½¸ÉÕ¹Ñ¥µ•5…¹¥™•ÍĞ¡µ…¹¥™•ÍĞ¥ì(€½¹ÍĞ¹½Éµ…±¥é•õ¹½Éµ…±¥é•5…¹¥™•ÍĞ¡µ…¹¥™•ÍĞ¤ì(€½¹ÍĞ…ÍÍ•ÑÌõ¹½Éµ…±¥é•¹…ÍÍ•ÑÌ¹µ…À¡…ÍÍ•Ğôùì(€€€½¹ÍĞ½ÕĞõí¥é…ÍÍ•Ğ¹¥±…Ñ•½Éäé…ÍÍ•Ğ¹…Ñ•½Éä±™¥±”é…ÍÍ•Ğ¹™¥±”±İ¥‘Ñ é…ÍÍ•Ğ¹İ¥‘Ñ ±¡•¥¡Ğé…ÍÍ•Ğ¹¡•¥¡Ñôì(€€€¥˜¡…ÍÍ•Ğ¹Í½ÕÉ•I•Ğ¥½ÕĞ¹Í½ÕÉ•I•Ğõ…ÍÍ•Ğ¹Í½ÕÉ•I•Ğì(€€€¥˜¡…ÍÍ•Ğ¹…¹¡½È¥½ÕĞ¹…¹¡½Èõ…ÍÍ•Ğ¹…¹¡½Èì(€€€¥˜¡…ÍÍ•Ğ¹™É…µ•Ì¥½ÕĞ¹™É…µ•Ìõ…ÍÍ•Ğ¹™É…µ•Ìì(€€€¥˜¡…ÍÍ•Ğ¹™É…µ•ÕÉ…Ñ¥½¹5Ì¥½ÕĞ¹™É…µ•ÕÉ…Ñ¥½¹5Ìõ…ÍÍ•Ğ¹™É…µ•ÕÉ…Ñ¥½¹5Ìì(€€€É•ÑÕÉ¸½ÕĞì(€ô¤ì(€É•ÑÕÉ¹íÙ•ÉÍ¥½¸èÄ±Á…¬é¹½Éµ…±¥é•¹Á…­ñğİ…­•¹¥¹œ]½É±ÉĞA…¬œ±‰¥¹‘¥¹Ìé¹½Éµ…±¥é•¹‰¥¹‘¥¹Íññíô±…ÍÍ•ÑÍôì)ô
+export function inspectPngBuffer(b){
+  if(!Buffer.isBuffer(b)||b.length<33||!b.subarray(0,8).equals(SIG))throw new Error('invalid PNG signature');let o=8,h=null,t=false,n=0,end=false;
+  while(o+12<=b.length){const l=b.readUInt32BE(o),type=b.toString('ascii',o+4,o+8),s=o+8,z=s+l;if(z+4>b.length)throw new Error(`truncated PNG chunk ${type}`);if(type==='IHDR'){if(l!==13||h)throw new Error('invalid PNG IHDR');h={width:b.readUInt32BE(s),height:b.readUInt32BE(s+4),bitDepth:b[s+8],colorType:b[s+9],compression:b[s+10],filter:b[s+11],interlace:b[s+12]};}else if(type==='tRNS')t=true;else if(type==='IDAT')n++;else if(type==='IEND'){end=true;break;}o=z+4;}
+  if(!h)throw new Error('PNG missing IHDR');if(!n)throw new Error('PNG missing IDAT');if(!end)throw new Error('PNG missing IEND');if(!pos(h.width)||!pos(h.height)||h.width>MAX||h.height>MAX)throw new Error(`illegal PNG dimensions ${h.width}x${h.height}`);if(h.compression!==0||h.filter!==0||![0,1].includes(h.interlace))throw new Error('unsupported PNG header flags');return{...h,hasAlpha:[4,6].includes(h.colorType)||t,hasTrns:t,idatChunks:n};
+}
+export function normalizeManifest(m){const x=m&&typeof m==='object'?m:{},assets=Array.isArray(x.assets)?x.assets.map(a=>({...a})):[];for(const s of Array.isArray(x.sheets)?x.sheets:[]){const cw=Number(s.cellWidth),ch=Number(s.cellHeight);for(const a of Array.isArray(s.entries)?s.entries:[]){const r=[a.x,a.y,a.w,a.h].every(Number.isFinite)?{x:+a.x,y:+a.y,w:+a.w,h:+a.h}:{x:+(a.col||0)*cw,y:+(a.row||0)*ch,w:(pos(a.cols)?a.cols:1)*cw,h:(pos(a.rows)?a.rows:1)*ch};assets.push({...a,file:a.file||s.file,sourceRect:r,width:a.width||r.w,height:a.height||r.h,sheet:s.id||s.file});}}return{...x,assets};}
+function binds(b){const out=[];for(const [c,m] of Object.entries(b||{}))if(obj(m))for(const [s,ids] of Object.entries(m))if(Array.isArray(ids))for(const id of ids)out.push({category:c,semantic:s,id});return out;}
+function strict(m,seen,e){for(const id of REQUIRED_PRODUCTION_IDS)if(!seen.has(id))e.push(`required production asset missing: ${id}`);for(const [c,map] of Object.entries(APPROVED_SEMANTIC_BINDINGS))for(const [s,ids] of Object.entries(map)){const a=m.bindings?.[c]?.[s];if(!Array.isArray(a)||!a.length){e.push(`required production binding missing: ${c}.${s}`);continue;}for(const id of ids)if(!a.includes(id))e.push(`required production binding ${c}.${s} must include ${id}`);}}
+
+export function validatePack(root,{readFile=fs.readFileSync,exists=fs.existsSync,strictRequired=false}={}){
+  const errors=[],warnings=[],pc=new Map(),dc=new Map(),mp=path.join(root,'manifest.json');if(!exists(mp))return{ok:false,errors:['missing manifest.json'],warnings,assets:[],files:[]};let parsed;try{parsed=JSON.parse(readFile(mp,'utf8'));}catch(x){return{ok:false,errors:[`invalid manifest.json: ${x.message}`],warnings,assets:[],files:[]};}
+  schema(parsed,errors);if(parsed.version!==1)errors.push('manifest.version must be 1');const m=normalizeManifest(parsed),assets=m.assets||[],seen=new Set(),by=new Map(),files=new Set();if(!assets.length)errors.push('manifest must declare at least one asset or sheet entry');
+  for(const a of assets){const id=a?.id,c=a?.category,file=a?.file;if(!ASSET_ID_RE.test(String(id||'')))errors.push(`invalid asset id: ${id||'<missing>'}`);if(seen.has(id))errors.push(`duplicate id: ${id}`);else if(id){seen.add(id);by.set(id,a);}if(!CATEGORIES.has(c))errors.push(`${id||'<missing>'}: invalid category ${c}`);else if(id&&!String(id).startsWith(`aw_v1_${c}_`))errors.push(`${id}: id/category mismatch (${c})`);if(!safe(file)){errors.push(`${id||'<missing>'}: invalid PNG file path ${file||'<missing>'}`);continue;}files.add(file);const full=path.join(root,...file.split('/'));if(!exists(full)){errors.push(`${id}: missing file ${file}`);continue;}let buf,p=pc.get(file);if(!p)try{buf=readFile(full);p=inspectPngBuffer(buf);pc.set(file,p);}catch(x){errors.push(`${id}: ${file}: ${x.message}`);continue;}const r=a.sourceRect,rw=r?+r.w:p.width,rh=r?+r.h:p.height;if(r){const x=+r.x,y=+r.y;if(![x,y,rw,rh].every(Number.isInteger)||x<0||y<0||rw<=0||rh<=0||x+rw>p.width||y+rh>p.height)errors.push(`${id}: sourceRect outside ${file} (${p.width}x${p.height})`);}if(pos(a.width)&&+a.width!==rw)errors.push(`${id}: declared width ${a.width} != source width ${rw}`);if(pos(a.height)&&+a.height!==rh)errors.push(`${id}: declared height ${a.height} != source height ${rh}`);
+    if(c==='terrain'){if(p.width%64||p.height%64)errors.push(`${id}: terrain PNG dimensions must be 64x64 or 64px multiples; got ${p.width}x${p.height}`);if(r&&(rw%64||rh%64))errors.push(`${id}: terrain sourceRect must use 64px multiples; got ${rw}x${rh}`);}else{if(!p.hasAlpha)errors.push(`${id}: ${c} PNG must expose an alpha channel (RGBA/GA or tRNS)`);else try{let d=dc.get(file);if(!d){if(!buf)buf=readFile(full);d=decodePng(buf);dc.set(file,d);}const q=r?{x:+r.x,y:+r.y,w:rw,h:rh}:{x:0,y:0,w:d.width,h:d.height};if(!inspectRgbaRegion(d,q).hasTransparentPixels)errors.push(`${id}: ${c} PNG/sourceRect must contain at least one transparent pixel`);}catch(x){errors.push(`${id}: ${file}: pixel transparency validation failed: ${x.message}`);}}
+    if(c==='prop'){if(+a.anchor?.x!==.5||+a.anchor?.y!==1)errors.push(`${id}: prop anchor must be bottom-center {x:0.5,y:1}`);}else if(a.anchor){const x=+a.anchor.x,y=+a.anchor.y;if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>1||y<0||y>1)errors.push(`${id}: anchor must be normalized 0..1`);}if(a.frames!=null&&(!pos(+a.frames)||+a.frames>64))errors.push(`${id}: frames must be an integer from 1 to 64`);if(a.frameDurationMs!=null&&(!pos(+a.frameDurationMs)||+a.frameDurationMs>60000))errors.push(`${id}: frameDurationMs must be an integer from 1 to 60000`);
+  }
+  const be=binds(m.bindings);for(const {category,semantic,id} of be){if(!seen.has(id)){errors.push(`binding references missing asset id: ${id}`);continue;}if(by.get(id)?.category!==category)errors.push(`binding ${category}.${semantic} references ${id} with category ${by.get(id)?.category||'<missing>'}`);}const bound=be.map(x=>x.id);for(const id of seen)if(!bound.includes(id))warnings.push(`unbound asset: ${id}`);
+  for(const s of Array.isArray(parsed.sheets)?parsed.sheets:[]){if(!safe(s.file))errors.push(`invalid sheet file path: ${s.file||'<missing>'}`);if(!pos(+s.cellWidth)||!pos(+s.cellHeight))errors.push(`${s.id||s.file||'<sheet>'}: cellWidth/cellHeight must be positive integers`);}if(strictRequired)strict(m,seen,errors);return{ok:!errors.length,errors,warnings,assets,files:[...files].sort(),manifest:m};
+}
+export function runtimeManifest(m){const n=normalizeManifest(m),assets=n.assets.map(a=>{const o={id:a.id,category:a.category,file:a.file,width:a.width,height:a.height};for(const k of ['sourceRect','anchor','frames','frameDurationMs'])if(a[k])o[k]=a[k];return o;});return{version:1,pack:n.pack||'Awakening World Art Pack',bindings:n.bindings||{},assets};}
