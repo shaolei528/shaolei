@@ -1,0 +1,18 @@
+{
+  "schema": "awakening-reference-slice-spec-v1",
+  "sourceSheet": "s05",
+  "sourceFile": "25c89510-9741-563c-88b3-4f667f527abc.png",
+  "sourceDimensions": [1536, 768],
+  "outputDir": "../raw/s05",
+  "processing": ["pixel-exact crop", "separator/border pixels excluded", "no resample"],
+  "slices": [
+    {"id":"ref_aw_s05_r0_c0","file":"ref_aw_s05_r0_c0.png","x":2,"y":2,"w":379,"h":379},
+    {"id":"ref_aw_s05_r0_c1","file":"ref_aw_s05_r0_c1.png","x":386,"y":2,"w":379,"h":379},
+    {"id":"ref_aw_s05_r0_c2","file":"ref_aw_s05_r0_c2.png","x":770,"y":2,"w":379,"h":379},
+    {"id":"ref_aw_s05_r0_c3","file":"ref_aw_s05_r0_c3.png","x":1155,"y":2,"w":378,"h":379},
+    {"id":"ref_aw_s05_r1_c0","file":"ref_aw_s05_r1_c0.png","x":2,"y":386,"w":379,"h":379},
+    {"id":"ref_aw_s05_r1_c1","file":"ref_aw_s05_r1_c1.png","x":386,"y":386,"w":379,"h":379},
+    {"id":"ref_aw_s05_r1_c2","file":"ref_aw_s05_r1_c2.png","x":770,"y":386,"w":379,"h":379},
+    {"id":"ref_aw_s05_r1_c3","file":"ref_aw_s05_r1_c3.png","x":1155,"y":386,"w":378,"h":379}
+  ]
+}
