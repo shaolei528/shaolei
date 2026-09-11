@@ -1,0 +1,18 @@
+{
+  "schema": "awakening-reference-slice-spec-v1",
+  "sourceSheet": "s04",
+  "sourceFile": "e5bb077c-1eb9-5441-9811-a9aa793b332c.png",
+  "sourceDimensions": [1536, 768],
+  "outputDir": "../raw/s04",
+  "processing": ["pixel-exact crop", "separator/border pixels excluded", "no resample"],
+  "slices": [
+    {"id":"ref_aw_s04_r0_c0","file":"ref_aw_s04_r0_c0.png","x":0,"y":0,"w":382,"h":382},
+    {"id":"ref_aw_s04_r0_c1","file":"ref_aw_s04_r0_c1.png","x":386,"y":0,"w":380,"h":382},
+    {"id":"ref_aw_s04_r0_c2","file":"ref_aw_s04_r0_c2.png","x":770,"y":0,"w":381,"h":382},
+    {"id":"ref_aw_s04_r0_c3","file":"ref_aw_s04_r0_c3.png","x":1154,"y":0,"w":380,"h":382},
+    {"id":"ref_aw_s04_r1_c0","file":"ref_aw_s04_r1_c0.png","x":0,"y":386,"w":382,"h":382},
+    {"id":"ref_aw_s04_r1_c1","file":"ref_aw_s04_r1_c1.png","x":386,"y":386,"w":380,"h":382},
+    {"id":"ref_aw_s04_r1_c2","file":"ref_aw_s04_r1_c2.png","x":770,"y":386,"w":381,"h":382},
+    {"id":"ref_aw_s04_r1_c3","file":"ref_aw_s04_r1_c3.png","x":1154,"y":386,"w":380,"h":382}
+  ]
+}
