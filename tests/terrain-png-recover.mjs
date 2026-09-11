@@ -18,12 +18,6 @@ function crc32(buffer){
   for(const byte of buffer)c=crcTable[(c^byte)&0xff]^(c>>>8);
   return (c^0xffffffff)>>>0;
 }
-function makeChunk(type,data){
-  const name=Buffer.from(type,'ascii');
-  const length=Buffer.alloc(4);length.writeUInt32BE(data.length);
-  const crc=Buffer.alloc(4);crc.writeUInt32BE(crc32(Buffer.concat([name,data])));
-  return Buffer.concat([length,name,data,crc]);
-}
 
 console.log('PNG_BYTES='+png.length);
 console.log('PNG_TAIL_HEX='+png.subarray(Math.max(0,png.length-48)).toString('hex'));
@@ -37,7 +31,6 @@ while(off+8<=png.length){
   if(end>png.length){
     truncated={off,length,type,end,missing:end-png.length};
     console.log('TRUNCATED_CHUNK='+JSON.stringify(truncated));
-    console.log('TRUNCATED_REMAINDER_HEX='+png.subarray(off).toString('hex'));
     break;
   }
   const data=png.subarray(off+8,off+8+length);
@@ -57,9 +50,8 @@ assert.equal(width,320);assert.equal(height,256);assert.equal(bitDepth,8);assert
 
 const idat=Buffer.concat(chunks.filter(c=>c.type==='IDAT').map(c=>c.data));
 assert.ok(idat.length>6,'complete IDAT chunk must be available');
-let normalRaw=null;
 try{
-  normalRaw=zlib.inflateSync(idat);
+  zlib.inflateSync(idat);
   console.log('NORMAL_INFLATE_OK=true');
 }catch(error){
   console.log('NORMAL_INFLATE_OK=false');
@@ -74,24 +66,8 @@ try{
   console.log('RAW_INFLATE_OK=false');
   console.log('RAW_INFLATE_ERROR='+String(error?.code||error?.message||error));
 }
-assert.ok(raw,'raw deflate body must be recoverable before repairing the asset');
-const expected=height*(1+width*3);
-assert.equal(raw.length,expected,'raw scanline bytes must exactly cover 320x256 RGB8');
+assert.ok(raw,'raw deflate body must be recoverable for provenance comparison');
 console.log('RAW_BYTES='+raw.length);
-console.log('PIXEL_STREAM_SHA256='+crypto.createHash('sha256').update(raw).digest('hex'));
-
-const repairedIdat=zlib.deflateSync(raw,{level:9});
-assert.deepEqual(zlib.inflateSync(repairedIdat),raw,'repaired IDAT stream must round-trip exactly');
-const ihdr=chunks.find(c=>c.type==='IHDR');
-assert.ok(ihdr,'IHDR required');
-const repaired=Buffer.concat([
-  signature,
-  makeChunk('IHDR',ihdr.data),
-  makeChunk('IDAT',repairedIdat),
-  makeChunk('IEND',Buffer.alloc(0))
-]);
-console.log('ORIGINAL_SHA256='+crypto.createHash('sha256').update(png).digest('hex'));
-console.log('REPAIRED_SHA256='+crypto.createHash('sha256').update(repaired).digest('hex'));
-console.log('REPAIRED_BYTES='+repaired.length);
-console.log('TRAILING_STRUCTURE_CORRUPT='+Boolean(truncated));
-console.log('REPAIRED_BASE64='+repaired.toString('base64'));
+console.log('RAW_PARTIAL_SHA256='+crypto.createHash('sha256').update(raw).digest('hex'));
+console.log('EXPECTED_RAW_BYTES='+(height*(1+width*3)));
+assert.equal(raw.length,height*(1+width*3),'corrupt repository PNG is incomplete; diagnostic should stay red until asset replacement');
