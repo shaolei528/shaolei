@@ -5,6 +5,8 @@ const ATTACK_DURATION=.15;
 const REMOTE_WEAPON=new Map();
 const clamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
 const mix=(a,b,t)=>a+(b-a)*t;
+const BONE={dark:'#6f624a',mid:'#b8a77d',base:'#d8c89d',light:'#f0e0b6'};
+const WRAP={dark:'#2f2923',mid:'#4b372c',light:'#7a5d42'};
 
 function classifyAttackWeapon(payload){
   const range=Number(payload?.range)||0;
@@ -27,22 +29,33 @@ function swingAngle(dir,flash){
 }
 function remoteWeapon(id){return REMOTE_WEAPON.get(String(id||''))||'unknown';}
 function hasKnife(p,self){return self?!!inventory.knife:remoteWeapon(p?.id)==='knife';}
+function isSafeCamp(p){
+  try{return typeof inCamp==='function'&&!!inCamp(p);}catch{return false;}
+}
+function loweredAngle(dir){
+  const x=Math.cos(Number(dir)||0),y=Math.sin(Number(dir)||0);
+  const lean=Math.abs(x)>.45?Math.sign(x)*.42:(y>=0?.16:-.16);
+  return Math.atan2(1,lean);
+}
 function poseFor(p,self){
   const dir=Number(p?.dir)||0;
   const flash=Math.max(0,Number(self?attackFlash:p?.attack)||0);
-  const attacking=flash>0;
+  const safe=isSafeCamp(p);
+  const attacking=flash>0&&!safe;
   const fx=Math.cos(dir),fy=Math.sin(dir),sideX=-fy,sideY=fx;
-  const side=attacking?0:4;
-  const forward=attacking?6:3;
+  const side=attacking?0:(safe?3:4);
+  const forward=attacking?6:(safe?1:3);
   return{
+    safe,
     attacking,
+    combatReady:!safe,
     dir,
-    angle:attacking?swingAngle(dir,flash):dir+.38,
+    angle:attacking?swingAngle(dir,flash):(safe?loweredAngle(dir):dir+.38),
     x:Math.round(sx(p.x)+fx*forward+sideX*side),
-    y:Math.round(sy(p.y)-4+fy*(forward-1)+sideY*side)
+    y:Math.round(sy(p.y)+(safe?-1:-4)+fy*(forward-1)+sideY*side)
   };
 }
-function drawPixelKnife(pose,alpha=1){
+function drawPixelBoneKnife(pose,alpha=1){
   const angle=pose.angle,vx=Math.cos(angle),vy=Math.sin(angle),px=-vy,py=vx;
   const plot=(forward,side,size,color)=>{
     const x=Math.round(pose.x+vx*forward+px*side);
@@ -55,23 +68,28 @@ function drawPixelKnife(pose,alpha=1){
   ctx.imageSmoothingEnabled=false;
   ctx.globalAlpha=Math.max(.25,Math.min(1,alpha));
 
-  // Dark wrapped survival-knife handle.
-  for(const d of [-7,-5,-3])plot(d,0,4,'#242520');
-  plot(-6,0,2,'#65513a');
-  plot(-4,0,2,'#4d4334');
-  plot(-2,0,2,'#6c5940');
-  plot(-1,-3,3,'#81735c');
-  plot(-1,3,3,'#81735c');
+  // Bound cord grip: dark, compact, improvised rather than a manufactured handle.
+  for(const d of [-8,-6,-4])plot(d,0,4,WRAP.dark);
+  plot(-7,0,2,WRAP.light);
+  plot(-5,0,2,WRAP.mid);
+  plot(-3,0,2,WRAP.light);
+  plot(-1,-3,3,WRAP.mid);
+  plot(-1,3,3,WRAP.mid);
 
-  // Short worn steel blade, built from snapped pixel blocks (no canvas rotation).
-  for(const d of [1,3,5,7,9,11,13]){
-    plot(d,0,4,'#303735');
-    plot(d,0,2,d>=11?'#b7b8a7':'#aab2aa');
-  }
-  plot(15,0,2,'#d2cfb5');
-  plot(8,1,2,'#76543a');
-  plot(4,-1,1,'#d8d7c0');
-  plot(0,0,3,'#5f5a4c');
+  // Carved Bone Knife blade: warm ivory, irregular taper, marrow groove and chipped edge.
+  plot(0,0,4,BONE.dark);
+  plot(2,0,5,BONE.dark);plot(2,0,3,BONE.mid);
+  plot(4,-1,4,BONE.mid);plot(4,-1,2,BONE.base);
+  plot(6,0,4,BONE.mid);plot(6,0,2,BONE.base);
+  plot(8,0,4,BONE.mid);plot(8,0,2,BONE.base);
+  plot(10,1,3,BONE.mid);plot(10,1,2,BONE.base);
+  plot(12,0,3,BONE.base);plot(12,0,1,BONE.light);
+  plot(14,0,2,BONE.base);
+  plot(15,0,1,BONE.light);
+  plot(5,-2,1,BONE.light);
+  plot(7,1,1,BONE.dark);
+  plot(9,-1,1,BONE.light);
+  plot(11,2,1,BONE.dark);
   ctx.restore();
 }
 
@@ -85,25 +103,38 @@ onAttack=function(payload){
 
 const baseDrawPlayer=drawPlayer;
 drawPlayer=function(p,self){
+  const safe=isSafeCamp(p);
   const knife=hasKnife(p,self);
   const pose=knife?poseFor(p,self):null;
-  const away=knife&&!pose.attacking&&directionRow(Number(p?.dir)||0)===3;
-  if(away)drawPixelKnife(pose,.88);
-  baseDrawPlayer(p,self);
+  const away=knife&&!pose.attacking&&(pose.safe||directionRow(Number(p?.dir)||0)===3);
+  if(away)drawPixelBoneKnife(pose,pose.safe?.76:.88);
+
+  let restoreFlash=null,renderPlayer=p;
+  if(safe){
+    if(self){restoreFlash=attackFlash;attackFlash=0;}
+    else if(Number(p?.attack)>0)renderPlayer={...p,attack:0};
+  }
+  try{baseDrawPlayer(renderPlayer,self);}finally{
+    if(self&&restoreFlash!==null)attackFlash=restoreFlash;
+  }
+
   if(knife&&!away){
     const flash=Math.max(0,Number(self?attackFlash:p?.attack)||0);
-    const alpha=pose.attacking ? .88+Math.min(.12,flash/.15*.12) : .9;
-    drawPixelKnife(pose,alpha);
+    const alpha=pose.attacking?.88+Math.min(.12,flash/.15*.12):.9;
+    drawPixelBoneKnife(pose,alpha);
   }
 };
 
 window.ABYSSAL_WEAPON_PRESENTATION_V1={
   version:1,
+  weaponName:'Bone Knife',
   attackDuration:ATTACK_DURATION,
   classifyAttackWeapon,
   attackProgress,
   swingOffset,
   swingAngle,
-  remoteWeapon
+  remoteWeapon,
+  isSafeCamp,
+  poseFor
 };
 })();
