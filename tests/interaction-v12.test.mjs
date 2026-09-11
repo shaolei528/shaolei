@@ -86,6 +86,7 @@ function exerciseTarget(target){
     resource:{id:'camp:test',type:'wood'},
     harvested:new Map(),
     inventory:{wood:0},
+    ITEM_ZH:{wood:'木材'},
     zoneConnected:false,
     zoneCh:null,
     currentZone:'1:1',
