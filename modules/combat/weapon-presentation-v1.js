@@ -5,6 +5,8 @@ const ATTACK_DURATION=.15;
 const REMOTE_WEAPON=new Map();
 const clamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
 const mix=(a,b,t)=>a+(b-a)*t;
+const easeOutCubic=value=>{const x=1-clamp01(value);return 1-x*x*x;};
+const easeInOutQuad=value=>{const x=clamp01(value);return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;};
 const BONE={dark:'#6f624a',mid:'#b8a77d',base:'#d8c89d',light:'#f0e0b6'};
 const WRAP={dark:'#2f2923',mid:'#4b372c',light:'#7a5d42'};
 
@@ -20,9 +22,13 @@ function attackProgress(flash,duration=ATTACK_DURATION){
 }
 function swingOffset(progress){
   const t=clamp01(progress);
-  if(t<.20)return mix(-.35,-1.05,t/.20);          // anticipation
-  if(t<.72)return mix(-1.05,1.02,(t-.20)/.52);    // slash
-  return mix(1.02,.30,(t-.72)/.28);               // recovery
+  if(t<.24)return mix(-.28,-1.18,easeInOutQuad(t/.24));
+  if(t<.64)return mix(-1.18,1.15,easeOutCubic((t-.24)/.40));
+  return mix(1.15,.30,easeOutCubic((t-.64)/.36));
+}
+function swingEmphasis(progress){
+  const t=clamp01(progress),distance=Math.abs(t-.5);
+  return clamp01(1-distance/.34);
 }
 function swingAngle(dir,flash){
   return (Number(dir)||0)+swingOffset(attackProgress(flash));
@@ -42,14 +48,18 @@ function poseFor(p,self){
   const flash=Math.max(0,Number(self?attackFlash:p?.attack)||0);
   const safe=isSafeCamp(p);
   const attacking=flash>0&&!safe;
+  const progress=attacking?attackProgress(flash):1;
+  const emphasis=attacking?swingEmphasis(progress):0;
   const fx=Math.cos(dir),fy=Math.sin(dir),sideX=-fy,sideY=fx;
   const side=attacking?0:(safe?3:4);
-  const forward=attacking?6:(safe?1:3);
+  const forward=attacking?5+Math.round(3*emphasis):(safe?1:3);
   return{
     safe,
     attacking,
     combatReady:!safe,
     dir,
+    progress,
+    emphasis,
     angle:attacking?swingAngle(dir,flash):(safe?loweredAngle(dir):dir+.38),
     x:Math.round(sx(p.x)+fx*forward+sideX*side),
     y:Math.round(sy(p.y)+(safe?-1:-4)+fy*(forward-1)+sideY*side)
@@ -68,15 +78,10 @@ function drawPixelBoneKnife(pose,alpha=1){
   ctx.imageSmoothingEnabled=false;
   ctx.globalAlpha=Math.max(.25,Math.min(1,alpha));
 
-  // Bound cord grip: dark, compact, improvised rather than a manufactured handle.
   for(const d of [-8,-6,-4])plot(d,0,4,WRAP.dark);
-  plot(-7,0,2,WRAP.light);
-  plot(-5,0,2,WRAP.mid);
-  plot(-3,0,2,WRAP.light);
-  plot(-1,-3,3,WRAP.mid);
-  plot(-1,3,3,WRAP.mid);
+  plot(-7,0,2,WRAP.light);plot(-5,0,2,WRAP.mid);plot(-3,0,2,WRAP.light);
+  plot(-1,-3,3,WRAP.mid);plot(-1,3,3,WRAP.mid);
 
-  // Carved Bone Knife blade: warm ivory, irregular taper, marrow groove and chipped edge.
   plot(0,0,4,BONE.dark);
   plot(2,0,5,BONE.dark);plot(2,0,3,BONE.mid);
   plot(4,-1,4,BONE.mid);plot(4,-1,2,BONE.base);
@@ -84,12 +89,12 @@ function drawPixelBoneKnife(pose,alpha=1){
   plot(8,0,4,BONE.mid);plot(8,0,2,BONE.base);
   plot(10,1,3,BONE.mid);plot(10,1,2,BONE.base);
   plot(12,0,3,BONE.base);plot(12,0,1,BONE.light);
-  plot(14,0,2,BONE.base);
-  plot(15,0,1,BONE.light);
-  plot(5,-2,1,BONE.light);
-  plot(7,1,1,BONE.dark);
-  plot(9,-1,1,BONE.light);
-  plot(11,2,1,BONE.dark);
+  plot(14,0,2,BONE.base);plot(15,0,1,BONE.light);
+  plot(5,-2,1,BONE.light);plot(7,1,1,BONE.dark);plot(9,-1,1,BONE.light);plot(11,2,1,BONE.dark);
+  if(pose.attacking&&pose.emphasis>.3){
+    const glint=Math.max(1,Math.round(2*pose.emphasis));
+    plot(13,-1,glint,BONE.light);
+  }
   ctx.restore();
 }
 
@@ -119,19 +124,20 @@ drawPlayer=function(p,self){
   }
 
   if(knife&&!away){
-    const flash=Math.max(0,Number(self?attackFlash:p?.attack)||0);
-    const alpha=pose.attacking?.88+Math.min(.12,flash/.15*.12):.9;
+    const alpha=pose.attacking?.84+.16*pose.emphasis:.9;
     drawPixelBoneKnife(pose,alpha);
   }
 };
 
 window.ABYSSAL_WEAPON_PRESENTATION_V1={
   version:1,
+  presentationRevision:2,
   weaponName:'Bone Knife',
   attackDuration:ATTACK_DURATION,
   classifyAttackWeapon,
   attackProgress,
   swingOffset,
+  swingEmphasis,
   swingAngle,
   remoteWeapon,
   isSafeCamp,
