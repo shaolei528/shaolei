@@ -4,13 +4,16 @@ on:
   push:
     paths:
       - 'ART_BIBLE.md'
+      - 'AWAKENING_ASSET_CONTRACT.md'
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
       - 'survival-v21.html'
       - 'assets/art-v21/**'
+      - 'assets/awakening-v1/**'
       - 'assets/camp_props.png'
       - 'modules/**'
       - 'tests/terrain-v21.test.mjs'
+      - 'tests/awakening-world-v1.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
       - 'tests/combat-hit-feedback.test.mjs'
       - 'tests/weapon-presentation-v1.test.mjs'
@@ -22,13 +25,16 @@ on:
   pull_request:
     paths:
       - 'ART_BIBLE.md'
+      - 'AWAKENING_ASSET_CONTRACT.md'
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
       - 'survival-v21.html'
       - 'assets/art-v21/**'
+      - 'assets/awakening-v1/**'
       - 'assets/camp_props.png'
       - 'modules/**'
       - 'tests/terrain-v21.test.mjs'
+      - 'tests/awakening-world-v1.test.mjs'
       - 'tests/camp-art-v21.test.mjs'
       - 'tests/combat-hit-feedback.test.mjs'
       - 'tests/weapon-presentation-v1.test.mjs'
@@ -60,6 +66,8 @@ jobs:
         run: node --check terrain-v21.js
       - name: Terrain vertical-slice regression
         run: node tests/terrain-v21.test.mjs
+      - name: Awakening world vertical-slice regression
+        run: node tests/awakening-world-v1.test.mjs
       - name: V21 boot and static preview syntax
         if: ${{ always() }}
         run: |
@@ -73,8 +81,10 @@ jobs:
           Path('/tmp/v21-boot.js').write_text(match.group(1))
           if "'terrain-v21.js'" not in boot:
               raise SystemExit('V21 terrain module missing')
-          if "const VER='21a'" not in boot:
-              raise SystemExit('V21a cache key missing')
+          if "'modules/world/awakening-world-v1.js'" not in boot:
+              raise SystemExit('Awakening World V1 module missing')
+          if "const VER='21b'" not in boot:
+              raise SystemExit('V21b cache key missing')
           preview=Path('terrain-v21-preview.html').read_text()
           scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',preview)
           if not scripts:
