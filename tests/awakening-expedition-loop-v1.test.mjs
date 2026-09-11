@@ -52,7 +52,7 @@ function obs(overrides={}){return{started:true,dead:false,inCamp:true,atMart:fal
   assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2})).phase,'SECURE_REQUIRED_SALVAGE');
   assert.equal(m.step(obs({inCamp:false,atMart:false,shard:2})).phase,'RETURN_HOME');
   assert.equal(m.step(obs({inCamp:true,atMart:false,shard:2})).phase,'COMPLETE');
-  assert.deepEqual(m.snapshot().history,['PREPARE','LEAVE_HOME','REACH_MIRE_MART','SEARCH_FIGHT','SECURE_REQUIRED_SALVAGE','RETURN_HOME','COMPLETE']);
+  assert.deepEqual([...m.snapshot().history],['PREPARE','LEAVE_HOME','REACH_MIRE_MART','SEARCH_FIGHT','SECURE_REQUIRED_SALVAGE','RETURN_HOME','COMPLETE']);
 }
 
 // Repeated entry must not duplicate or regress objective state.
