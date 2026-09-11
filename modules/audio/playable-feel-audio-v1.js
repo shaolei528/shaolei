@@ -7,14 +7,17 @@ window.ABYSSAL_AUDIO_V1=STATE;
 
 let ctx=null,master=null,fireGain=null,windGain=null,fireNoise=null,windNoise=null;
 let lastUiAt=0,lastImpactAt=0,lastHurtAt=0;
+const MASTER_GAIN=.72;
 const clamp=(value,min=0,max=1)=>Math.max(min,Math.min(max,Number(value)||0));
 const nowMs=()=>typeof performance!=='undefined'?performance.now():Date.now();
+const isHidden=()=>!!document.hidden;
 
 function safeStarted(){try{return !!started;}catch{return false;}}
 function safeMe(){try{return me||null;}catch{return null;}}
 function safeCamp(){try{return CAMP||null;}catch{return null;}}
 function safeMobs(){try{return Array.isArray(mobs)?mobs:[];}catch{return [];}}
 function safeInCamp(){try{return typeof inCamp==='function'&&!!inCamp();}catch{return false;}}
+function syncContextState(){STATE.contextState=ctx?.state||'unavailable';return STATE.contextState;}
 
 function makeNoiseBuffer(seconds=2){
   if(!ctx)return null;
@@ -37,23 +40,44 @@ function connectNoiseLoop({type='lowpass',frequency=600,q=.4,gain=.01}={}){
 }
 function buildGraph(){
   if(!ctx||master)return;
-  master=ctx.createGain();master.gain.value=.72;master.connect(ctx.destination);
+  master=ctx.createGain();master.gain.value=MASTER_GAIN;master.connect(ctx.destination);
   const fire=connectNoiseLoop({type:'bandpass',frequency:980,q:.72,gain:0});
   const wind=connectNoiseLoop({type:'lowpass',frequency:520,q:.2,gain:0});
   fireGain=fire?.level||null;windGain=wind?.level||null;fireNoise=fire;windNoise=wind;
 }
-function ensureContext(){
-  if(!AudioCtor)return null;
-  if(!ctx){
-    try{ctx=new AudioCtor({latencyHint:'interactive'});buildGraph();}
-    catch(error){console.warn('[Abyssal audio] Web Audio unavailable',error);return null;}
-  }
-  STATE.contextState=ctx.state||'unknown';
-  if(ctx.state==='suspended')ctx.resume?.().catch(()=>{});
-  STATE.unlocked=true;
+function createContext(){
+  if(!AudioCtor||ctx||isHidden())return ctx;
+  try{ctx=new AudioCtor({latencyHint:'interactive'});buildGraph();syncContextState();}
+  catch(error){console.warn('[Abyssal audio] Web Audio unavailable',error);return null;}
   return ctx;
 }
-function unlock(){ensureContext();}
+function resumeContext(){
+  if(!ctx||isHidden())return Promise.resolve(false);
+  syncContextState();
+  if(ctx.state==='running')return Promise.resolve(true);
+  if(ctx.state!=='suspended'||typeof ctx.resume!=='function')return Promise.resolve(false);
+  try{
+    const resumed=ctx.resume();syncContextState();
+    return Promise.resolve(resumed).then(()=>{syncContextState();return ctx.state==='running';}).catch(()=>{syncContextState();return false;});
+  }catch{syncContextState();return Promise.resolve(false);}
+}
+function unlock(event){
+  if(!event?.isTrusted||isHidden())return Promise.resolve(false);
+  if(!createContext())return Promise.resolve(false);
+  STATE.unlocked=true;
+  if(master)master.gain.value=MASTER_GAIN;
+  return resumeContext();
+}
+function ensureContext(){
+  if(!AudioCtor||!ctx||!STATE.unlocked||isHidden())return null;
+  syncContextState();
+  return ctx.state==='running'?ctx:null;
+}
+function silenceBackground(){
+  if(fireGain)fireGain.gain.value=0;
+  if(windGain)windGain.gain.value=0;
+  if(master)master.gain.value=0;
+}
 function setTarget(gain,value,seconds=.08){
   if(!ctx||!gain)return;
   const v=Math.max(0,Number(value)||0),t=ctx.currentTime;
@@ -82,7 +106,7 @@ function noiseBurst({duration=.05,gain=.04,frequency=1400,type='bandpass',pan=0}
 }
 function playUiClick(){
   const now=nowMs();if(now-lastUiAt<45)return false;lastUiAt=now;
-  tone({frequency:560,endFrequency:430,duration:.035,gain:.018,type:'square'});return true;
+  return tone({frequency:560,endFrequency:430,duration:.035,gain:.018,type:'square'});
 }
 function playSwing(detail={}){
   const knife=detail?.knife!==false;
@@ -124,8 +148,7 @@ function nearestCrawler(){
   return best&&bestDistance<=320?{mob:best,distance:bestDistance}:null;
 }
 function updateAmbience(){
-  if(!ctx||!master)return;
-  STATE.contextState=ctx.state||'unknown';
+  if(isHidden()||!ensureContext()||!master)return;
   if(!safeStarted()){setTarget(fireGain,0,.12);setTarget(windGain,0,.12);return;}
   const player=safeMe(),camp=safeCamp();
   let fire=0,wind=safeInCamp() ? .004 : .027;
@@ -149,25 +172,32 @@ function updateAmbience(){
   }
 }
 
-function onPointerDown(event){
-  unlock();
+function eligibleUiButton(event){
   const button=event?.target?.closest?.('button,[role="button"]');
-  if(!button||button.disabled||button.matches?.('.attack,.dash,.use'))return;
-  playUiClick();
+  return button&&!button.disabled&&!button.matches?.('.attack,.dash,.use')?button:null;
+}
+function onPointerDown(event){
+  const button=eligibleUiButton(event);
+  unlock(event).then(ready=>{if(ready&&button&&!isHidden())playUiClick();});
 }
 document.addEventListener('pointerdown',onPointerDown,true);
 document.addEventListener('click',event=>{
-  if(event.detail!==0)return;
-  const button=event?.target?.closest?.('button,[role="button"]');
-  if(button&&!button.disabled&&!button.matches?.('.attack,.dash,.use'))playUiClick();
+  if(event.detail!==0||!STATE.unlocked)return;
+  if(eligibleUiButton(event))playUiClick();
 },true);
-document.addEventListener('keydown',unlock,true);
+document.addEventListener('keydown',event=>{unlock(event);},true);
 window.addEventListener('abyssal:player-swing',event=>playSwing(event.detail));
 window.addEventListener('abyssal:combat-hit',event=>playImpact(event.detail));
 window.addEventListener('abyssal:player-hurt',playHurt);
 document.addEventListener('visibilitychange',()=>{
   if(!ctx)return;
-  if(document.hidden)ctx.suspend?.().catch(()=>{});else if(STATE.unlocked)ctx.resume?.().catch(()=>{});
+  if(isHidden()){
+    silenceBackground();syncContextState();
+    try{const suspended=ctx.suspend?.();Promise.resolve(suspended).then(syncContextState).catch(syncContextState);}catch{syncContextState();}
+    return;
+  }
+  if(master)master.gain.value=MASTER_GAIN;
+  if(STATE.unlocked)resumeContext();
 });
 setInterval(updateAmbience,250);
 
