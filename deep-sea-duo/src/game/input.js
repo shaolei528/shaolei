@@ -87,6 +87,25 @@ export function createInput(canvas) {
     input.dash = false;
   }
 
+  function requestDash() {
+    input.dash = true;
+  }
+
+  function consumeDash() {
+    const active = input.dash;
+    input.dash = false;
+    return active;
+  }
+
+  function frame() {
+    return {
+      movement: { ...input.movement },
+      aim: { ...input.aim },
+      firing: input.firing,
+      dash: consumeDash(),
+    };
+  }
+
   canvas.addEventListener('pointerdown', event => {
     const point = position(event);
     try { canvas.setPointerCapture(event.pointerId); } catch {}
@@ -120,7 +139,7 @@ export function createInput(canvas) {
     }
     if (event.key === ' ') {
       event.preventDefault();
-      input.dash = true;
+      requestDash();
     }
   });
   window.addEventListener('keyup', event => {
@@ -135,22 +154,5 @@ export function createInput(canvas) {
     if (document.visibilityState !== 'visible') reset();
   });
 
-  return {
-    input,
-    reset,
-    requestDash() { input.dash = true; },
-    consumeDash() {
-      const active = input.dash;
-      input.dash = false;
-      return active;
-    },
-    frame() {
-      return {
-        movement: { ...input.movement },
-        aim: { ...input.aim },
-        firing: input.firing,
-        dash: this.consumeDash(),
-      };
-    },
-  };
+  return { input, reset, requestDash, consumeDash, frame };
 }
