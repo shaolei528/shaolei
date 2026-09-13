@@ -45,6 +45,21 @@ test('host snapshot sequence is session-local and monotonic', () => {
   assert.deepEqual(nextTicks, [1]);
 });
 
+test('host restart keeps snapshot ordering within the same connection', () => {
+  const session = createGameSession({ random: () => 0.5 });
+  const ticks = [];
+  const transport = { sendSnapshot: (_game, tick) => { ticks.push(tick); return true; } };
+  session.begin('host');
+  session.connect();
+  session.tick(0.05, idleInput(), transport);
+  assert.deepEqual(ticks, [1]);
+
+  assert.equal(session.restart(), true);
+  session.tick(0.05, idleInput(), transport);
+  assert.deepEqual(ticks, [1, 2]);
+  assert.equal(session.game.time, 0.05);
+});
+
 test('guest new session accepts a lower tick from a different host', () => {
   const session = createGameSession({ random: () => 0.5 });
   session.begin('guest');
