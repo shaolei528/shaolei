@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deep-sea-duo-tests-v2
+  group: deep-sea-duo-tests-v3
   cancel-in-progress: true
 
 jobs:
@@ -39,6 +39,12 @@ jobs:
 
       - name: Verify live six-digit signaling
         run: node scripts/smoke-signal.mjs
+
+      - name: Install realtime smoke dependency
+        run: npm install --no-save --package-lock=false @supabase/supabase-js@2.116.0
+
+      - name: Verify live realtime relay fallback
+        run: node scripts/smoke-realtime.mjs
 
       - name: Package static game for deployment
         uses: actions/upload-artifact@v4
