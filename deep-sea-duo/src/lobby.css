@@ -1,0 +1,90 @@
+.quick-room-view {
+  display: grid;
+  gap: 10px;
+  justify-items: stretch;
+  padding: 12px;
+  border: 1px solid rgba(126, 239, 255, .22);
+  border-radius: 18px;
+  background: rgba(6, 14, 48, .68);
+}
+.quick-room-view small,
+.quick-room-view span,
+.quick-room-view label { color: #c9dcff; line-height: 1.45; }
+
+.room-code-display {
+  display: block;
+  padding: 4px 10px 6px;
+  color: #caffff;
+  font-size: clamp(40px, 8vw, 68px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .18em;
+  text-indent: .18em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 24px rgba(86, 237, 255, .42);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.room-code-input {
+  width: 100%;
+  min-height: 68px;
+  padding: 10px 16px;
+  border: 1px solid rgba(134, 235, 255, .55);
+  border-radius: 16px;
+  outline: none;
+  color: #efffff;
+  background: rgba(3, 9, 34, .9);
+  text-align: center;
+  font: 900 clamp(30px, 6vw, 48px)/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+  letter-spacing: .22em;
+  text-indent: .22em;
+  font-variant-numeric: tabular-nums;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.room-code-input:focus {
+  border-color: #8af7ff;
+  box-shadow: 0 0 0 3px rgba(92, 237, 255, .11), 0 0 30px rgba(65, 219, 255, .12);
+}
+.room-code-input::placeholder { color: rgba(196, 213, 255, .24); }
+
+.manual-fallback {
+  margin-top: 2px;
+  border-top: 1px solid rgba(143, 186, 255, .14);
+  padding-top: 8px;
+  color: #9eb5df;
+  font-size: 11px;
+}
+.manual-fallback summary {
+  cursor: pointer;
+  padding: 6px;
+  list-style-position: inside;
+  opacity: .72;
+}
+.manual-fallback[open] summary { opacity: 1; }
+.manual-fallback-body {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+}
+.manual-fallback textarea {
+  min-height: 82px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 10px;
+}
+
+.in-lobby .dash-button,
+.in-lobby .touch-hint { opacity: 0; pointer-events: none; }
+.in-lobby .hud { opacity: .18; }
+.utility-bar { z-index: 14; }
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .quick-room-view { gap: 5px; padding: 7px 10px; }
+  .room-code-display { font-size: 34px; }
+  .room-code-input { min-height: 44px; font-size: 27px; padding: 5px 12px; }
+  .manual-fallback { padding-top: 3px; }
+  .manual-fallback summary { padding: 3px; }
+  .manual-fallback-body { gap: 5px; padding-top: 4px; }
+  .manual-fallback textarea { min-height: 54px; }
+}
