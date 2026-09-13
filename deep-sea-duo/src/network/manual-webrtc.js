@@ -1,6 +1,14 @@
 import { decodeMessage } from './messages.js';
 
-const ICE_TIMEOUT_MS = 10000;
+const ICE_TIMEOUT_MS = 12000;
+
+const rtcError = (error, code = 'webrtc-init-failed', stage = 'W1') => {
+  if (error?.code) return error;
+  const wrapped = error instanceof Error ? error : new Error(String(error ?? code));
+  wrapped.code = code;
+  wrapped.stage = stage;
+  return wrapped;
+};
 
 const waitForIce = peer => new Promise((resolve, reject) => {
   if (peer.iceGatheringState === 'complete') return resolve();
@@ -8,6 +16,7 @@ const waitForIce = peer => new Promise((resolve, reject) => {
     cleanup();
     const error = new Error('LAN connection information timed out');
     error.code = 'ice-timeout';
+    error.stage = 'W2';
     reject(error);
   }, ICE_TIMEOUT_MS);
   const complete = () => {
@@ -53,15 +62,47 @@ const safeClose = peer => {
   try { peer.close(); } catch {}
 };
 
+const createPeer = () => {
+  if (typeof globalThis.RTCPeerConnection !== 'function') {
+    const error = new Error('RTCPeerConnection is unavailable in this browser');
+    error.code = 'webrtc-unavailable';
+    error.stage = 'W1';
+    throw error;
+  }
+  try {
+    return new RTCPeerConnection({ iceServers: [] });
+  } catch (error) {
+    throw rtcError(error);
+  }
+};
+
+const createHostChannel = peer => {
+  try {
+    // Preferred game channel: no head-of-line blocking for movement snapshots.
+    return peer.createDataChannel('deep-sea-duo', { ordered: false, maxRetransmits: 0 });
+  } catch {
+    // Compatibility fallback for browsers/webviews that reject partial reliability.
+    return peer.createDataChannel('deep-sea-duo');
+  }
+};
+
 export async function createLanHost(handlers = {}) {
   const lifecycle = { closing: false };
-  const peer = new RTCPeerConnection({ iceServers: [] });
+  const peer = createPeer();
   attachPeerState(peer, handlers, lifecycle);
-  const channel = peer.createDataChannel('deep-sea-duo', { ordered: false, maxRetransmits: 0 });
-  attachChannel(channel, handlers, lifecycle);
-  const offer = await peer.createOffer();
-  await peer.setLocalDescription(offer);
-  await waitForIce(peer);
+  let channel;
+  try {
+    channel = createHostChannel(peer);
+    attachChannel(channel, handlers, lifecycle);
+    const offer = await peer.createOffer();
+    await peer.setLocalDescription(offer);
+    await waitForIce(peer);
+  } catch (error) {
+    lifecycle.closing = true;
+    safeClose(peer);
+    throw rtcError(error, error?.code ?? 'webrtc-init-failed', error?.stage ?? 'W1');
+  }
+
   return {
     peer,
     offerCode: JSON.stringify(peer.localDescription),
@@ -82,7 +123,11 @@ export async function createLanHost(handlers = {}) {
         error.code = 'expected-answer';
         throw error;
       }
-      await peer.setRemoteDescription(answer);
+      try {
+        await peer.setRemoteDescription(answer);
+      } catch (error) {
+        throw rtcError(error, 'webrtc-remote-description-failed', 'W3');
+      }
     },
     close() {
       lifecycle.closing = true;
@@ -95,13 +140,14 @@ export async function createLanHost(handlers = {}) {
 
 export async function joinLanHost(offerCode, handlers = {}) {
   const lifecycle = { closing: false };
-  const peer = new RTCPeerConnection({ iceServers: [] });
+  const peer = createPeer();
   attachPeerState(peer, handlers, lifecycle);
   let channel = null;
   peer.ondatachannel = event => {
     channel = event.channel;
     attachChannel(channel, handlers, lifecycle);
   };
+
   let offer;
   try { offer = JSON.parse(offerCode); } catch {
     lifecycle.closing = true;
@@ -117,10 +163,18 @@ export async function joinLanHost(offerCode, handlers = {}) {
     error.code = 'expected-offer';
     throw error;
   }
-  await peer.setRemoteDescription(offer);
-  const answer = await peer.createAnswer();
-  await peer.setLocalDescription(answer);
-  await waitForIce(peer);
+
+  try {
+    await peer.setRemoteDescription(offer);
+    const answer = await peer.createAnswer();
+    await peer.setLocalDescription(answer);
+    await waitForIce(peer);
+  } catch (error) {
+    lifecycle.closing = true;
+    safeClose(peer);
+    throw rtcError(error, error?.code ?? 'webrtc-init-failed', error?.stage ?? 'W1');
+  }
+
   return {
     peer,
     answerCode: JSON.stringify(peer.localDescription),
