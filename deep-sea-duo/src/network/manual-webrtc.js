@@ -1,6 +1,6 @@
 import { decodeMessage } from './messages.js';
 
-const ICE_TIMEOUT_MS = 12000;
+const ICE_GATHER_GRACE_MS = 1800;
 const ICE_SERVERS = [{ urls: ['stun:stun.cloudflare.com:3478'] }];
 
 const rtcError = (error, code = 'webrtc-init-failed', stage = 'W1') => {
@@ -11,32 +11,49 @@ const rtcError = (error, code = 'webrtc-init-failed', stage = 'W1') => {
   return wrapped;
 };
 
-const waitForIce = peer => new Promise((resolve, reject) => {
-  if (peer.iceGatheringState === 'complete') return resolve();
-  const timeout = setTimeout(() => {
-    cleanup();
-    const error = new Error('LAN connection information timed out');
-    error.code = 'ice-timeout';
-    error.stage = 'W2';
-    reject(error);
-  }, ICE_TIMEOUT_MS);
-  const complete = () => {
-    if (peer.iceGatheringState !== 'complete') return;
-    cleanup();
+const hasCandidate = peer => /(?:^|\r?\n)a=candidate:/m.test(peer.localDescription?.sdp ?? '');
+
+// Mobile Safari can leave ICE gathering in "gathering" for a long time when a
+// STUN server is slow or blocked. For a LAN game we only need a usable local
+// candidate, not a perfect end-of-candidates signal. Never fail room creation
+// just because gathering did not reach "complete" in time.
+const waitForUsableIce = peer => new Promise(resolve => {
+  if (peer.iceGatheringState === 'complete' || hasCandidate(peer)) return resolve();
+
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timeout);
+    peer.removeEventListener('icecandidate', onCandidate);
+    peer.removeEventListener('icegatheringstatechange', onState);
     resolve();
   };
-  const cleanup = () => {
-    clearTimeout(timeout);
-    peer.removeEventListener('icegatheringstatechange', complete);
+  const onCandidate = event => {
+    if (event.candidate || hasCandidate(peer)) finish();
   };
-  peer.addEventListener('icegatheringstatechange', complete);
+  const onState = () => {
+    if (peer.iceGatheringState === 'complete' || hasCandidate(peer)) finish();
+  };
+  const timeout = setTimeout(finish, ICE_GATHER_GRACE_MS);
+  peer.addEventListener('icecandidate', onCandidate);
+  peer.addEventListener('icegatheringstatechange', onState);
 });
 
 const attachPeerState = (peer, handlers, lifecycle) => {
   const report = () => {
     if (lifecycle.closing) return;
     const state = peer.connectionState;
-    if (['connecting', 'disconnected', 'failed', 'closed'].includes(state)) handlers.onStatus?.(state);
+
+    if (state === 'connecting' && lifecycle.remoteApplied) handlers.onStatus?.('connecting');
+    if (state === 'failed') handlers.onStatus?.('failed');
+
+    // Do not label a channel that never opened as "disconnected". Safari can
+    // close a pre-connection transport while renegotiating/gathering; the room
+    // layer will either finish WebRTC or fall back to the relay.
+    if (lifecycle.connected && ['disconnected', 'closed'].includes(state)) {
+      handlers.onStatus?.(state);
+    }
   };
   peer.addEventListener('connectionstatechange', report);
 };
@@ -44,13 +61,15 @@ const attachPeerState = (peer, handlers, lifecycle) => {
 const attachChannel = (channel, handlers, lifecycle) => {
   channel.binaryType = 'arraybuffer';
   channel.onopen = () => {
-    if (!lifecycle.closing) handlers.onStatus?.('connected');
+    if (lifecycle.closing) return;
+    lifecycle.connected = true;
+    handlers.onStatus?.('connected');
   };
   channel.onclose = () => {
-    if (!lifecycle.closing) handlers.onStatus?.('closed');
+    if (!lifecycle.closing && lifecycle.connected) handlers.onStatus?.('closed');
   };
   channel.onerror = () => {
-    if (!lifecycle.closing) handlers.onStatus?.('error');
+    if (!lifecycle.closing && lifecycle.connected) handlers.onStatus?.('error');
   };
   channel.onmessage = event => {
     if (lifecycle.closing) return;
@@ -71,8 +90,7 @@ const createPeer = () => {
     throw error;
   }
   try {
-    // STUN only discovers candidates. It is not a relay and does not carry game traffic.
-    return new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    return new RTCPeerConnection({ iceServers: ICE_SERVERS, iceTransportPolicy: 'all' });
   } catch (error) {
     throw rtcError(error);
   }
@@ -80,16 +98,22 @@ const createPeer = () => {
 
 const createHostChannel = peer => {
   try {
-    // Preferred game channel: no head-of-line blocking for movement snapshots.
-    return peer.createDataChannel('deep-sea-duo', { ordered: false, maxRetransmits: 0 });
-  } catch {
-    // Compatibility fallback for browsers/webviews that reject partial reliability.
-    return peer.createDataChannel('deep-sea-duo');
+    // Reliable ordered mode is intentionally used for maximum iOS/WebKit
+    // compatibility. At the current 15/30 Hz game rates the LAN overhead is tiny.
+    return peer.createDataChannel('deep-sea-duo', { ordered: true });
+  } catch (firstError) {
+    try {
+      return peer.createDataChannel('deep-sea-duo');
+    } catch {
+      throw firstError;
+    }
   }
 };
 
+const sessionDescription = value => ({ type: value.type, sdp: value.sdp });
+
 export async function createLanHost(handlers = {}) {
-  const lifecycle = { closing: false };
+  const lifecycle = { closing: false, connected: false, remoteApplied: false };
   const peer = createPeer();
   attachPeerState(peer, handlers, lifecycle);
   let channel;
@@ -98,7 +122,7 @@ export async function createLanHost(handlers = {}) {
     attachChannel(channel, handlers, lifecycle);
     const offer = await peer.createOffer();
     await peer.setLocalDescription(offer);
-    await waitForIce(peer);
+    await waitForUsableIce(peer);
   } catch (error) {
     lifecycle.closing = true;
     safeClose(peer);
@@ -126,10 +150,14 @@ export async function createLanHost(handlers = {}) {
         throw error;
       }
       try {
-        await peer.setRemoteDescription(answer);
+        await peer.setRemoteDescription(sessionDescription(answer));
+        lifecycle.remoteApplied = true;
       } catch (error) {
         throw rtcError(error, 'webrtc-remote-description-failed', 'W3');
       }
+    },
+    isConnected() {
+      return lifecycle.connected && channel.readyState === 'open';
     },
     close() {
       lifecycle.closing = true;
@@ -141,7 +169,7 @@ export async function createLanHost(handlers = {}) {
 }
 
 export async function joinLanHost(offerCode, handlers = {}) {
-  const lifecycle = { closing: false };
+  const lifecycle = { closing: false, connected: false, remoteApplied: false };
   const peer = createPeer();
   attachPeerState(peer, handlers, lifecycle);
   let channel = null;
@@ -167,10 +195,11 @@ export async function joinLanHost(offerCode, handlers = {}) {
   }
 
   try {
-    await peer.setRemoteDescription(offer);
+    await peer.setRemoteDescription(sessionDescription(offer));
+    lifecycle.remoteApplied = true;
     const answer = await peer.createAnswer();
     await peer.setLocalDescription(answer);
-    await waitForIce(peer);
+    await waitForUsableIce(peer);
   } catch (error) {
     lifecycle.closing = true;
     safeClose(peer);
@@ -184,6 +213,9 @@ export async function joinLanHost(offerCode, handlers = {}) {
       if (lifecycle.closing || channel?.readyState !== 'open' || channel.bufferedAmount > 65536) return false;
       channel.send(message);
       return true;
+    },
+    isConnected() {
+      return lifecycle.connected && channel?.readyState === 'open';
     },
     close() {
       lifecycle.closing = true;
