@@ -56,6 +56,9 @@ function localizeStatus(status) {
     closed: 'closed',
     error: 'connectionError',
     'creating-room': 'creatingRoom',
+    'signal-check': 'creatingRoom',
+    'webrtc-preparing': 'connecting',
+    'signal-saving': 'creatingRoom',
     'host-waiting': 'hostWaiting',
     'joining-room': 'joiningRoom',
     'signal-error': 'signalUnavailable',
@@ -86,7 +89,13 @@ function localizeError(error) {
     'room_not_found_or_joined': 'roomUnavailable',
     'room-expired': 'roomExpired',
   };
-  return t(known[error?.code] ?? 'connectionError');
+  const base = t(known[error?.code] ?? 'connectionError');
+  const diagnostic = [error?.stage, error?.code, error?.name]
+    .filter(Boolean)
+    .map(value => String(value).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 36))
+    .filter((value, index, list) => value && list.indexOf(value) === index)
+    .join(':');
+  return diagnostic ? `${base} [${diagnostic}]` : base;
 }
 
 async function requestWakeLock() {
@@ -185,6 +194,7 @@ createRoomButton.addEventListener('click', async () => {
     hostRoomCode.textContent = code;
     roomStatus.textContent = t('hostWaiting');
   } catch (error) {
+    console.error('Deep Sea Duo create room failed', error);
     roomStatus.textContent = localizeError(error);
     retryRoomButton.classList.remove('is-hidden');
   }
@@ -217,6 +227,7 @@ async function joinQuickRoom() {
   try {
     await room.joinQuickRoom(code);
   } catch (error) {
+    console.error('Deep Sea Duo join room failed', error);
     roomStatus.textContent = localizeError(error);
     quickJoinButton.disabled = false;
     retryRoomButton.classList.remove('is-hidden');
