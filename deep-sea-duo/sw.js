@@ -1,8 +1,9 @@
-const CACHE_NAME = 'deep-sea-duo-static-20260913-v1';
+const CACHE_NAME = 'deep-sea-duo-static-20260913-v2';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
   './src/styles.css',
+  './src/lobby.css',
   './src/main.js',
   './src/pwa.js',
   './src/i18n.js',
@@ -19,6 +20,7 @@ const CORE_ASSETS = [
   './src/game/math.js',
   './src/game/powerups.js',
   './src/network/room.js',
+  './src/network/signaling.js',
   './src/network/manual-webrtc.js',
   './src/network/messages.js',
 ];
