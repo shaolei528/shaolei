@@ -27,6 +27,14 @@ function randomToken() {
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
+export function createRoomIdentity() {
+  return { roomCode: randomDigits(6), hostToken: randomToken() };
+}
+
+export function createRelayToken() {
+  return randomToken();
+}
+
 function timedController(timeoutMs, externalSignal) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -109,15 +117,16 @@ export async function probeSignal(options = {}) {
 export async function createSignalRoom(offer, options = {}) {
   if (!options.skipProbe) await probeSignal(options);
   const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
+  let identity = options.identity ?? createRoomIdentity();
 
   for (let attempt = 0; attempt < 6; attempt += 1) {
-    const roomCode = randomDigits(6);
-    const hostToken = randomToken();
-    await writeSignal('create', { roomCode, hostToken, offer }, { ...options, stage: 'S2' });
+    if (attempt > 0) identity = createRoomIdentity();
+    options.onRoomCode?.(identity.roomCode);
+    await writeSignal('create', { ...identity, offer }, { ...options, stage: 'S2' });
     await sleep(70);
     try {
-      const stored = await getSignalOffer(roomCode, { ...options, stage: 'S2' });
-      if (stored === offer) return { roomCode, hostToken, expiresIn: 600 };
+      const stored = await getSignalOffer(identity.roomCode, { ...options, stage: 'S2' });
+      if (stored === offer) return { ...identity, expiresIn: 600 };
     } catch (error) {
       if (!['room_not_found', 'signal-http-404'].includes(error?.code)) throw error;
     }
