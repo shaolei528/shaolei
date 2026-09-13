@@ -1,4 +1,4 @@
-const CACHE_NAME = 'deep-sea-duo-static-20260914-v8';
+const CACHE_NAME = 'deep-sea-duo-static-20260914-v9';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
@@ -11,6 +11,7 @@ const CORE_ASSETS = [
   './src/app/game-session.js',
   './src/audio/audio.js',
   './src/ui/hud.js',
+  './src/ui/lobby.js',
   './src/game/input.js',
   './src/game/simulation.js',
   './src/game/constants.js',
