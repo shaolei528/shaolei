@@ -1,4 +1,4 @@
-const CACHE_NAME = 'deep-sea-duo-static-20260914-v9';
+const CACHE_NAME = 'deep-sea-duo-static-audit-a1-v1';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
@@ -44,6 +44,19 @@ self.addEventListener('activate', event => {
   );
 });
 
+async function fetchAndRefresh(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const copy = response.clone();
+      void caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+    }
+    return response;
+  } catch {
+    return caches.match(request);
+  }
+}
+
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET') return;
@@ -53,23 +66,22 @@ self.addEventListener('fetch', event => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then(response => response)
-        .catch(() => caches.match('./index.html')),
+      fetch(request).catch(() => caches.match('./index.html')),
     );
     return;
   }
 
+  const isRuntimeCode = ['script', 'style', 'manifest'].includes(request.destination)
+    || url.pathname.endsWith('.js')
+    || url.pathname.endsWith('.css')
+    || url.pathname.endsWith('.webmanifest');
+
+  if (isRuntimeCode) {
+    event.respondWith(fetchAndRefresh(request));
+    return;
+  }
+
   event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) return cached;
-      return fetch(request).then(response => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-        }
-        return response;
-      });
-    }),
+    caches.match(request).then(cached => cached ?? fetchAndRefresh(request)),
   );
 });
