@@ -1,0 +1,12 @@
+{
+  "name": "深海搭档 / Deep Sea Duo",
+  "short_name": "Deep Sea Duo",
+  "description": "Two-player LAN / hotspot deep-sea co-op survival game",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#030617",
+  "theme_color": "#070b2b",
+  "lang": "zh-CN"
+}
