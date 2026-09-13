@@ -27,12 +27,15 @@ export async function requestSignal(action, payload = {}, options = {}) {
   else externalSignal?.addEventListener?.('abort', abortFromExternal, { once: true });
 
   try {
+    // text/plain keeps this a CORS-safelisted "simple request" on Safari/iOS,
+    // avoiding a fragile OPTIONS preflight through mobile/CDN networks.
     const response = await fetchImpl(SIGNAL_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       body: JSON.stringify({ action, ...payload }),
       signal: controller.signal,
       cache: 'no-store',
+      mode: 'cors',
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw signalError(data.error || `signal-http-${response.status}`);
