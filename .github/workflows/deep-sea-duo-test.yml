@@ -37,6 +37,9 @@ jobs:
       - name: Run JavaScript syntax checks
         run: npm run check
 
+      - name: Verify live six-digit signaling
+        run: node scripts/smoke-signal.mjs
+
       - name: Package static game for deployment
         uses: actions/upload-artifact@v4
         with:
