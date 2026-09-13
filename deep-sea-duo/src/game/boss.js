@@ -1,5 +1,5 @@
 import { WORLD } from './constants.js';
-import { normalize } from './math.js';
+import { clamp, normalize } from './math.js';
 
 export const BOSS = {
   firstSpawnAt: 180, hp: 72, radius: 74, cruiseSpeed: 88,
@@ -21,5 +21,13 @@ export function stepSharkBoss(boss, target, dt) {
 }
 
 export function bossRewardPositions(boss, count = 12) {
-  return Array.from({ length: count }, (_, index) => { const angle = index / count * Math.PI * 2; return { x: boss.x + Math.cos(angle) * (45 + (index % 3) * 28), y: boss.y + Math.sin(angle) * (45 + (index % 3) * 28) }; });
+  const margin = 28;
+  return Array.from({ length: count }, (_, index) => {
+    const angle = index / count * Math.PI * 2;
+    const distance = 45 + (index % 3) * 28;
+    return {
+      x: clamp(boss.x + Math.cos(angle) * distance, margin, WORLD.width - margin),
+      y: clamp(boss.y + Math.sin(angle) * distance, margin, WORLD.height - margin),
+    };
+  });
 }
