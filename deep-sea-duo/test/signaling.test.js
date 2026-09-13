@@ -4,12 +4,13 @@ import {
   createSignalRoom,
   getSignalOffer,
   normalizeRoomCode,
+  probeSignal,
   waitForSignalAnswer,
 } from '../src/network/signaling.js';
 
 const jsonResponse = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
-  headers: { 'content-type': 'application/json' },
+  headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' },
 });
 
 test('normalizes a room code to six digits', () => {
@@ -17,29 +18,47 @@ test('normalizes a room code to six digits', () => {
   assert.equal(normalizeRoomCode('42'), '42');
 });
 
-test('creates a signaling room with a Safari-safe simple POST', async () => {
-  let requestBody = null;
-  let requestInit = null;
-  const result = await createSignalRoom('{"type":"offer","sdp":"demo"}', {
-    fetchImpl: async (_url, init) => {
-      requestInit = init;
-      requestBody = JSON.parse(init.body);
-      return jsonResponse({ roomCode: '482731', hostToken: 'a'.repeat(48), expiresIn: 600 });
+test('health probe accepts signaling v3', async () => {
+  const ok = await probeSignal({
+    fetchImpl: async url => {
+      assert.match(String(url), /action=health/);
+      return jsonResponse({ ok: true, version: 3 });
     },
   });
-  assert.equal(requestBody.action, 'create');
-  assert.equal(result.roomCode, '482731');
-  assert.equal(result.hostToken.length, 48);
-  assert.equal(requestInit.method, 'POST');
-  assert.equal(requestInit.mode, 'cors');
-  assert.match(requestInit.headers['Content-Type'], /^text\/plain/i);
-  assert.equal(Object.keys(requestInit.headers).length, 1);
+  assert.equal(ok, true);
+});
+
+test('creates a signaling room with a client-generated six-digit code and verifies it', async () => {
+  let stored = null;
+  let writeContentType = null;
+  const offer = '{"type":"offer","sdp":"demo-offer"}';
+  const result = await createSignalRoom(offer, {
+    skipProbe: true,
+    sleep: async () => {},
+    fetchImpl: async (url, init = {}) => {
+      if (init.method === 'POST') {
+        writeContentType = init.headers['Content-Type'];
+        stored = JSON.parse(init.body);
+        return jsonResponse({ ok: true });
+      }
+      const requestUrl = new URL(url);
+      assert.equal(requestUrl.searchParams.get('action'), 'offer');
+      assert.equal(requestUrl.searchParams.get('roomCode'), stored.roomCode);
+      return jsonResponse({ offer: stored.offer });
+    },
+  });
+  assert.match(result.roomCode, /^\d{6}$/);
+  assert.match(result.hostToken, /^[a-f0-9]{48}$/);
+  assert.equal(stored.roomCode, result.roomCode);
+  assert.equal(stored.hostToken, result.hostToken);
+  assert.equal(stored.offer, offer);
+  assert.equal(writeContentType, 'text/plain;charset=UTF-8');
 });
 
 test('surfaces room-not-found from the signaling service', async () => {
   await assert.rejects(
     () => getSignalOffer('123456', { fetchImpl: async () => jsonResponse({ error: 'room_not_found' }, 404) }),
-    error => error.code === 'room_not_found',
+    error => error.code === 'room_not_found' && error.stage === 'S3',
   );
 });
 
@@ -50,7 +69,9 @@ test('host polling resolves when the guest answer appears', async () => {
     intervalMs: 0,
     timeoutMs: 1000,
     sleep: async () => {},
-    fetchImpl: async () => {
+    fetchImpl: async url => {
+      const requestUrl = new URL(url);
+      assert.equal(requestUrl.searchParams.get('action'), 'poll');
       calls += 1;
       return jsonResponse({ answer: calls < 3 ? null : answer });
     },
