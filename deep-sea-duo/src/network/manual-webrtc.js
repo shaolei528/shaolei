@@ -1,6 +1,7 @@
 import { decodeMessage } from './messages.js';
 
 const ICE_TIMEOUT_MS = 12000;
+const ICE_SERVERS = [{ urls: ['stun:stun.cloudflare.com:3478'] }];
 
 const rtcError = (error, code = 'webrtc-init-failed', stage = 'W1') => {
   if (error?.code) return error;
@@ -70,7 +71,8 @@ const createPeer = () => {
     throw error;
   }
   try {
-    return new RTCPeerConnection({ iceServers: [] });
+    // STUN only discovers candidates. It is not a relay and does not carry game traffic.
+    return new RTCPeerConnection({ iceServers: ICE_SERVERS });
   } catch (error) {
     throw rtcError(error);
   }
