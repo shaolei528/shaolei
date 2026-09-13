@@ -36,3 +36,11 @@ jobs:
 
       - name: Run JavaScript syntax checks
         run: npm run check
+
+      - name: Package static game for deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: deep-sea-duo-static
+          path: deep-sea-duo
+          if-no-files-found: error
+          retention-days: 7
