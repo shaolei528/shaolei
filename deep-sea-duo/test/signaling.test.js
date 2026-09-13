@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  createRelayToken,
+  createRoomIdentity,
   createSignalRoom,
   getSignalOffer,
   normalizeRoomCode,
@@ -18,6 +20,15 @@ test('normalizes a room code to six digits', () => {
   assert.equal(normalizeRoomCode('42'), '42');
 });
 
+test('creates local room and relay identities before WebRTC finishes', () => {
+  const identity = createRoomIdentity();
+  const relayToken = createRelayToken();
+  assert.match(identity.roomCode, /^\d{6}$/);
+  assert.match(identity.hostToken, /^[a-f0-9]{48}$/);
+  assert.match(relayToken, /^[a-f0-9]{48}$/);
+  assert.notEqual(identity.hostToken, relayToken);
+});
+
 test('health probe accepts signaling v3', async () => {
   const ok = await probeSignal({
     fetchImpl: async url => {
@@ -28,12 +39,16 @@ test('health probe accepts signaling v3', async () => {
   assert.equal(ok, true);
 });
 
-test('creates a signaling room with a client-generated six-digit code and verifies it', async () => {
+test('creates a signaling room with a supplied identity and exposes its code immediately', async () => {
   let stored = null;
   let writeContentType = null;
+  const announcedCodes = [];
   const offer = '{"type":"offer","sdp":"demo-offer"}';
+  const identity = { roomCode: '482731', hostToken: 'a'.repeat(48) };
   const result = await createSignalRoom(offer, {
     skipProbe: true,
+    identity,
+    onRoomCode: code => announcedCodes.push(code),
     sleep: async () => {},
     fetchImpl: async (url, init = {}) => {
       if (init.method === 'POST') {
@@ -47,8 +62,9 @@ test('creates a signaling room with a client-generated six-digit code and verifi
       return jsonResponse({ offer: stored.offer });
     },
   });
-  assert.match(result.roomCode, /^\d{6}$/);
-  assert.match(result.hostToken, /^[a-f0-9]{48}$/);
+  assert.equal(result.roomCode, '482731');
+  assert.equal(result.hostToken, identity.hostToken);
+  assert.deepEqual(announcedCodes, ['482731']);
   assert.equal(stored.roomCode, result.roomCode);
   assert.equal(stored.hostToken, result.hostToken);
   assert.equal(stored.offer, offer);
