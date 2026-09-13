@@ -1,0 +1,38 @@
+name: Deep Sea Duo Tests
+
+on:
+  push:
+    branches:
+      - feat/deep-sea-duo-v1
+    paths:
+      - deep-sea-duo/**
+      - .github/workflows/deep-sea-duo-test.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deep-sea-duo-tests
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: deep-sea-duo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Run unit and regression tests
+        run: npm test
+
+      - name: Run JavaScript syntax checks
+        run: npm run check
