@@ -10,7 +10,27 @@ import {
   waitForSignalAnswer,
 } from './signaling.js';
 
-export function createRoomController(onStatus = () => {}, onInput = () => {}, onSnapshot = () => {}, onUpgrade = () => {}) {
+const DIRECT_CONNECT_TIMEOUT_MS = 12_000;
+
+export function createRoomController(
+  onStatus = () => {},
+  onInput = () => {},
+  onSnapshot = () => {},
+  onUpgrade = () => {},
+  options = {},
+) {
+  const createLanHostImpl = options.createLanHost ?? createLanHost;
+  const joinLanHostImpl = options.joinLanHost ?? joinLanHost;
+  const probeSignalImpl = options.probeSignal ?? probeSignal;
+  const createSignalRoomImpl = options.createSignalRoom ?? createSignalRoom;
+  const getSignalOfferImpl = options.getSignalOffer ?? getSignalOffer;
+  const submitSignalAnswerImpl = options.submitSignalAnswer ?? submitSignalAnswer;
+  const waitForSignalAnswerImpl = options.waitForSignalAnswer ?? waitForSignalAnswer;
+  const closeSignalRoomImpl = options.closeSignalRoom ?? closeSignalRoom;
+  const setTimeoutImpl = options.setTimeout ?? globalThis.setTimeout;
+  const clearTimeoutImpl = options.clearTimeout ?? globalThis.clearTimeout;
+  const directConnectTimeoutMs = options.directConnectTimeoutMs ?? DIRECT_CONNECT_TIMEOUT_MS;
+
   let host = null;
   let guest = null;
   let sequence = 0;
@@ -18,6 +38,7 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
   let signalSession = null;
   let generation = 0;
   let connected = false;
+  let directConnectTimer = null;
 
   const deliverMessage = message => {
     if (message.type === 'input') onInput(message.payload);
@@ -27,18 +48,34 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
 
   const activeTransport = () => guest ?? host;
 
+  const clearDirectConnectTimer = () => {
+    if (directConnectTimer !== null) clearTimeoutImpl?.(directConnectTimer);
+    directConnectTimer = null;
+  };
+
+  const armDirectConnectTimer = runId => {
+    clearDirectConnectTimer();
+    if (!Number.isFinite(directConnectTimeoutMs) || directConnectTimeoutMs <= 0) return;
+    directConnectTimer = setTimeoutImpl?.(() => {
+      directConnectTimer = null;
+      if (runId !== generation || connected) return;
+      onStatus('failed');
+    }, directConnectTimeoutMs) ?? null;
+  };
+
   const stopSignalSession = () => {
     signalAbort?.abort();
     signalAbort = null;
     const current = signalSession;
     signalSession = null;
     if (current?.roomCode && current?.hostToken) {
-      closeSignalRoom(current.roomCode, current.hostToken).catch(() => {});
+      closeSignalRoomImpl(current.roomCode, current.hostToken).catch(() => {});
     }
   };
 
   const closeCurrent = () => {
     generation += 1;
+    clearDirectConnectTimer();
     stopSignalSession();
     guest?.close?.();
     host?.close?.();
@@ -53,6 +90,7 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
       if (runId !== generation) return;
       if (status === 'connected') {
         connected = true;
+        clearDirectConnectTimer();
         onStatus('connected-direct');
         return;
       }
@@ -60,8 +98,15 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
         if (!connected) onStatus('connecting');
         return;
       }
-      if (['disconnected', 'failed', 'closed', 'error'].includes(status)) {
+      if (status === 'failed' || status === 'error') {
+        clearDirectConnectTimer();
+        connected = false;
+        onStatus(status);
+        return;
+      }
+      if (['disconnected', 'closed'].includes(status)) {
         if (!connected) return;
+        clearDirectConnectTimer();
         connected = false;
         onStatus(status);
       }
@@ -73,6 +118,7 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
 
   const reportSignalFailure = (error, runId) => {
     if (runId !== generation || error?.code === 'signal-aborted') return;
+    clearDirectConnectTimer();
     onStatus(error?.code || 'signal-error');
   };
 
@@ -82,17 +128,16 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
       const runId = generation;
       const identity = createRoomIdentity();
 
-      // Show the code immediately, then prepare signaling and WebRTC.
       onRoomCode(identity.roomCode);
       onStatus('signal-check');
-      await probeSignal();
+      await probeSignalImpl();
 
       onStatus('webrtc-preparing');
-      host = await createLanHost(makeHandlers(runId));
+      host = await createLanHostImpl(makeHandlers(runId));
       if (runId !== generation) return identity.roomCode;
 
       onStatus('signal-saving');
-      const session = await createSignalRoom(host.offerCode, {
+      const session = await createSignalRoomImpl(host.offerCode, {
         skipProbe: true,
         identity,
         onRoomCode,
@@ -103,16 +148,18 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
       signalAbort = new AbortController();
       onStatus('host-waiting');
 
-      waitForSignalAnswer(session.roomCode, session.hostToken, { signal: signalAbort.signal })
+      waitForSignalAnswerImpl(session.roomCode, session.hostToken, { signal: signalAbort.signal })
         .then(async answer => {
           if (runId !== generation || !host || signalAbort?.signal.aborted) return;
           try {
             await host.acceptAnswer(answer);
+            if (runId !== generation) return;
             onStatus('waitingDirect');
+            armDirectConnectTimer(runId);
             const finished = signalSession;
             signalSession = null;
             signalAbort = null;
-            if (finished) closeSignalRoom(finished.roomCode, finished.hostToken).catch(() => {});
+            if (finished) closeSignalRoomImpl(finished.roomCode, finished.hostToken).catch(() => {});
           } catch (error) {
             reportSignalFailure(error, runId);
           }
@@ -126,25 +173,28 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
       closeCurrent();
       const runId = generation;
       onStatus('signal-check');
-      await probeSignal();
+      await probeSignalImpl();
       onStatus('joining-room');
-      const offer = await getSignalOffer(roomCode);
+      const offer = await getSignalOfferImpl(roomCode);
       if (runId !== generation) return false;
 
       onStatus('webrtc-preparing');
-      guest = await joinLanHost(offer, makeHandlers(runId));
+      guest = await joinLanHostImpl(offer, makeHandlers(runId));
       if (runId !== generation) return false;
 
       onStatus('signal-saving');
-      await submitSignalAnswer(roomCode, guest.answerCode);
-      if (runId === generation && !connected) onStatus('waitingDirect');
+      await submitSignalAnswerImpl(roomCode, guest.answerCode);
+      if (runId === generation && !connected) {
+        onStatus('waitingDirect');
+        armDirectConnectTimer(runId);
+      }
       return true;
     },
 
     async createRoom() {
       closeCurrent();
       const runId = generation;
-      host = await createLanHost(makeHandlers(runId));
+      host = await createLanHostImpl(makeHandlers(runId));
       onStatus('把房主连接码发给朋友');
       return host.offerCode;
     },
@@ -152,7 +202,7 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
     async joinRoom(offerCode) {
       closeCurrent();
       const runId = generation;
-      guest = await joinLanHost(offerCode, makeHandlers(runId));
+      guest = await joinLanHostImpl(offerCode, makeHandlers(runId));
       onStatus('把加入者应答码发回房主');
       return guest.answerCode;
     },
@@ -180,10 +230,10 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
       if (!transport) return false;
       const packet = upgradePacket(upgradeId);
       const sent = transport.send(packet);
-      setTimeout(() => {
+      setTimeoutImpl?.(() => {
         if (transport === activeTransport()) transport.send(packet);
       }, 55);
-      setTimeout(() => {
+      setTimeoutImpl?.(() => {
         if (transport === activeTransport()) transport.send(packet);
       }, 140);
       return sent;
