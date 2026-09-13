@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deep-sea-duo-tests-v3
+  group: deep-sea-duo-tests-netlify
   cancel-in-progress: true
 
 jobs:
@@ -31,25 +31,25 @@ jobs:
         with:
           node-version: 24
 
+      - name: Install Netlify room-service dependencies
+        run: npm install --package-lock=false
+
       - name: Run unit and regression tests
         run: npm test
 
-      - name: Run JavaScript syntax checks
+      - name: Run JavaScript and function syntax checks
         run: npm run check
 
-      - name: Verify live six-digit signaling
-        run: node scripts/smoke-signal.mjs
+      - name: Verify active pairing path no longer targets Supabase
+        run: |
+          ! grep -n "supabase.co" src/network/signaling.js src/network/room.js src/main.js
+          grep -n "SIGNAL_URL = '/room'" src/network/signaling.js
+          grep -n 'path: "/room"' netlify/functions/room.mts
 
-      - name: Install realtime smoke dependency
-        run: npm install --no-save --package-lock=false @supabase/supabase-js@2.116.0
-
-      - name: Verify live realtime relay fallback
-        run: node scripts/smoke-realtime.mjs
-
-      - name: Package static game for deployment
+      - name: Package Netlify site
         uses: actions/upload-artifact@v4
         with:
-          name: deep-sea-duo-static
+          name: deep-sea-duo-netlify
           path: |
             deep-sea-duo
             !deep-sea-duo/node_modules
