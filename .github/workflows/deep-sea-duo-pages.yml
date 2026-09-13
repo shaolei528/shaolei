@@ -13,8 +13,9 @@ concurrency:
   cancel-in-progress: true
 
 # GitHub App connections cannot perform the repository-admin step required
-# for first-time Pages enablement. Netlify is the active public deployment.
-# Keep this workflow manual-only as a future fallback if Pages is enabled later.
+# for first-time Pages enablement. Keep this workflow manual-only as a future
+# fallback. The audited static build is currently tested through pinned HTTPS
+# commit URLs; the Netlify project remains the intended same-origin deployment.
 jobs:
   deploy:
     environment:
