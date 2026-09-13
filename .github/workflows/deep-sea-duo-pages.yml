@@ -1,12 +1,6 @@
 name: Deploy Deep Sea Duo to GitHub Pages
 
 on:
-  push:
-    branches:
-      - feat/deep-sea-duo-v1
-    paths:
-      - deep-sea-duo/**
-      - .github/workflows/deep-sea-duo-pages.yml
   workflow_dispatch:
 
 permissions:
@@ -18,6 +12,9 @@ concurrency:
   group: deep-sea-duo-pages
   cancel-in-progress: true
 
+# GitHub App connections cannot perform the repository-admin step required
+# for first-time Pages enablement. Netlify is the active public deployment.
+# Keep this workflow manual-only as a future fallback if Pages is enabled later.
 jobs:
   deploy:
     environment:
@@ -30,8 +27,6 @@ jobs:
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload game files
         uses: actions/upload-pages-artifact@v4
