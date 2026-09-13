@@ -10,8 +10,9 @@
 - 真正的游戏状态仍然通过 WebRTC 点对点传输，不经过公共游戏服务器。
 - Supabase Edge Function 只负责一次性的 WebRTC **信令交换**：房主得到 6 位房间码，加入者输入房间码后自动交换 Offer / Answer。
 - 信令记录约 10 分钟自动过期，连接完成后也会主动删除。
-- WebRTC 当前使用 `iceServers: []`，目标网络仍是同一 Wi‑Fi 或手机热点，不保证跨公网 NAT 穿透。
-- 若信令服务不可用，页面内保留折叠的“高级备用：无网时手动连接”。
+- WebRTC 使用 Cloudflare 免费 STUN `stun:stun.cloudflare.com:3478` 辅助候选发现；STUN 不转发游戏数据，也不是 TURN 中继。
+- 当前 V1 的主要目标仍是同一 Wi‑Fi / 手机热点双人直连，不保证任意公网 NAT 环境都能连接。
+- 若自动信令服务不可用，页面内保留折叠的“高级备用：无网时手动连接”。
 
 ## 最简单的两台手机联机
 
@@ -27,8 +28,8 @@
 
 - `src/game/`: 无 DOM 的游戏规则、实体和数学逻辑。
 - `src/game/renderer.js`: 像素化 Canvas 渲染、粒子、光效与自适应画质。
-- `src/network/manual-webrtc.js`: WebRTC DataChannel 与本地 ICE。
-- `src/network/signaling.js`: 6 位房间码信令客户端。
+- `src/network/manual-webrtc.js`: WebRTC DataChannel、ICE 候选收集、STUN 候选发现与浏览器兼容降级。
+- `src/network/signaling.js`: 6 位房间码信令客户端、健康检查、写入回查与分阶段错误诊断。
 - `src/network/room.js`: 自动信令 + 手动备用模式的房间控制器。
 - `src/audio/`: 程序化 WebAudio 音乐与音效。
 - `src/i18n.js`: 中文默认、英文切换与本地化文本。
@@ -58,5 +59,5 @@ GitHub Actions 的 `Deep Sea Duo Tests` 会执行：
 
 - 单元 / 回归测试
 - JavaScript syntax check
-- 对真实 Supabase 信令服务的完整 create → offer → answer → poll → close 烟测
+- 对真实 Supabase 信令服务的 health → create → offer → answer → status → poll → close 烟测
 - 静态发布包打包
