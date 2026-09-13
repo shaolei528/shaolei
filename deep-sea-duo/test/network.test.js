@@ -1,0 +1,6 @@
+import test from 'node:test'; import assert from 'node:assert/strict';
+import { createSnapshot, decodeMessage, inputPacket, isSnapshot, snapshotPacket, upgradePacket } from '../src/network/messages.js';
+test('encodes input packets with a sequence number', () => { const message = decodeMessage(inputPacket({movement:{x:1,y:0}, aim:{x:0,y:1}, firing:true, dash:false}, 9)); assert.equal(message.type, 'input'); assert.equal(message.payload.sequence, 9); });
+test('rejects malformed peer data', () => assert.equal(decodeMessage('{bad'), null));
+test('encodes a complete authoritative host snapshot', () => { const state = { time:4, state:'playing', player:{id:'p1',tail:[]}, remotePlayer:{id:'p2',tail:[]}, enemies:[{id:'e1'}], bubbles:[], food:[], boss:null, powerup:null, bossMessageTimer:0, powerupMessage:'', powerupMessageTimer:0 }; const packet = decodeMessage(snapshotPacket(state, 21)); assert.equal(isSnapshot(packet), true); assert.equal(packet.payload.players.length, 2); assert.equal(packet.payload.enemies[0].id, 'e1'); assert.deepEqual(packet.payload, createSnapshot(state, 21)); });
+test('encodes guest upgrade selection', () => { const packet = decodeMessage(upgradePacket('rapid')); assert.equal(packet.type, 'upgrade'); assert.equal(packet.payload.upgradeId, 'rapid'); });
