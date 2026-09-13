@@ -17,10 +17,12 @@ test('normalizes a room code to six digits', () => {
   assert.equal(normalizeRoomCode('42'), '42');
 });
 
-test('creates a signaling room and returns a six-digit code', async () => {
+test('creates a signaling room with a Safari-safe simple POST', async () => {
   let requestBody = null;
+  let requestInit = null;
   const result = await createSignalRoom('{"type":"offer","sdp":"demo"}', {
     fetchImpl: async (_url, init) => {
+      requestInit = init;
       requestBody = JSON.parse(init.body);
       return jsonResponse({ roomCode: '482731', hostToken: 'a'.repeat(48), expiresIn: 600 });
     },
@@ -28,6 +30,10 @@ test('creates a signaling room and returns a six-digit code', async () => {
   assert.equal(requestBody.action, 'create');
   assert.equal(result.roomCode, '482731');
   assert.equal(result.hostToken.length, 48);
+  assert.equal(requestInit.method, 'POST');
+  assert.equal(requestInit.mode, 'cors');
+  assert.match(requestInit.headers['Content-Type'], /^text\/plain/i);
+  assert.equal(Object.keys(requestInit.headers).length, 1);
 });
 
 test('surfaces room-not-found from the signaling service', async () => {
