@@ -131,8 +131,9 @@ function bytesToBase64Url(bytes) {
 }
 
 function base64UrlToText(value) {
-  const padded = String(value).replaceAll('-', '+').replaceAll('_', '/') + '==='.slice((String(value).length + 3) % 4);
-  const binary = atob(padded);
+  const normalized = String(value).replaceAll('-', '+').replaceAll('_', '/');
+  const padding = (4 - (normalized.length % 4)) % 4;
+  const binary = atob(normalized + '='.repeat(padding));
   const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
   return new TextDecoder().decode(bytes);
 }
