@@ -4,6 +4,8 @@
 
 当前审计版 build 标识：`AUDIT-A1`。
 
+> 部署事实：Netlify 是计划中的正式同源部署目标，但当前尚未验证为已发布生产站点。GitHub Pages workflow 仅保留为 manual-only 备用。当前真机审计应使用固定 commit 的 HTTPS 静态试玩地址，并以 build 标识确认版本。
+
 ## 联机架构
 
 - 房主手机运行唯一的权威游戏模拟。
