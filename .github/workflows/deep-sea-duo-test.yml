@@ -50,6 +50,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: deep-sea-duo-static
-          path: deep-sea-duo
+          path: |
+            deep-sea-duo
+            !deep-sea-duo/node_modules
           if-no-files-found: error
           retention-days: 7
