@@ -8,6 +8,7 @@ import { normalizeRoomCode } from './network/signaling.js';
 import { applyDocumentTranslations, onLanguageChange, t, toggleLanguage } from './i18n.js';
 import { createAdaptiveAudio } from './audio/audio.js';
 
+const BUILD_ID = 'NET-R7';
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d', { alpha: false });
 const hud = document.querySelector('#hud');
@@ -15,6 +16,7 @@ const panel = document.querySelector('#upgrade-panel');
 const dashButton = document.querySelector('#dash-button');
 const roomPanel = document.querySelector('#room-panel');
 const roomStatus = document.querySelector('#room-status');
+const buildBadge = document.querySelector('#build-badge');
 const languageButton = document.querySelector('#language-button');
 const audioButton = document.querySelector('#audio-button');
 const createRoomButton = document.querySelector('#create-room');
@@ -46,10 +48,14 @@ let connectionActive = false;
 let wakeLock = null;
 let manualGeneratedCode = '';
 
+if (buildBadge) buildBadge.textContent = BUILD_ID;
+
 function localizeStatus(status) {
   const known = {
     idle: 'roomLan',
     connected: 'connected',
+    'connected-direct': 'connected',
+    'connected-relay': 'connectedRelay',
     connecting: 'connecting',
     disconnected: 'disconnected',
     failed: 'failed',
@@ -57,10 +63,13 @@ function localizeStatus(status) {
     error: 'connectionError',
     'creating-room': 'creatingRoom',
     'signal-check': 'creatingRoom',
-    'webrtc-preparing': 'connecting',
-    'signal-saving': 'creatingRoom',
+    'webrtc-preparing': 'preparingConnection',
+    'signal-saving': 'savingRoom',
     'host-waiting': 'hostWaiting',
     'joining-room': 'joiningRoom',
+    'relay-error': 'relayUnavailable',
+    'relay-closed': 'relayUnavailable',
+    'relay-sdk-unavailable': 'relayUnavailable',
     'signal-error': 'signalUnavailable',
     'signal-unavailable': 'signalUnavailable',
     'signal-timeout': 'signalTimeout',
@@ -88,6 +97,8 @@ function localizeError(error) {
     'room_not_found': 'roomNotFound',
     'room_not_found_or_joined': 'roomUnavailable',
     'room-expired': 'roomExpired',
+    'relay-sdk-unavailable': 'relayUnavailable',
+    'relay-invalid-room': 'relayUnavailable',
   };
   const base = t(known[error?.code] ?? 'connectionError');
   const diagnostic = [error?.stage, error?.code, error?.name]
@@ -136,16 +147,22 @@ function resetPairingUi(messageKey = 'roomLan') {
 
 const room = createRoomController(
   status => {
+    const isConnectedStatus = ['connected', 'connected-direct', 'connected-relay'].includes(status);
+
+    // A pre-connection WebRTC close is an implementation detail, not a real
+    // player disconnect. The room controller races a relay fallback in parallel.
+    if (!connectionActive && ['closed', 'disconnected'].includes(status)) return;
+
     lastRoomStatus = status;
     roomStatus.textContent = localizeStatus(status);
-    if (status === 'connected') {
+    if (isConnectedStatus) {
       connectionActive = true;
       roomPanel.classList.add('is-hidden');
       document.body.classList.remove('in-lobby');
       requestWakeLock();
       return;
     }
-    if (['disconnected', 'failed', 'closed', 'error', 'signal-error', 'signal-unavailable', 'signal-timeout', 'room-expired', 'room_not_found', 'room_not_found_or_joined'].includes(status)) {
+    if (['disconnected', 'failed', 'closed', 'error', 'relay-error', 'relay-closed', 'relay-sdk-unavailable', 'signal-error', 'signal-unavailable', 'signal-timeout', 'room-expired', 'room_not_found', 'room_not_found_or_joined'].includes(status)) {
       connectionActive = false;
       releaseWakeLock();
       roomPanel.classList.remove('is-hidden');
@@ -190,9 +207,11 @@ createRoomButton.addEventListener('click', async () => {
   hostRoomCode.textContent = '······';
   roomStatus.textContent = t('creatingRoom');
   try {
-    const code = await room.createQuickRoom();
+    const code = await room.createQuickRoom(nextCode => {
+      hostRoomCode.textContent = nextCode;
+    });
     hostRoomCode.textContent = code;
-    roomStatus.textContent = t('hostWaiting');
+    if (!connectionActive) roomStatus.textContent = t('hostWaiting');
   } catch (error) {
     console.error('Deep Sea Duo create room failed', error);
     roomStatus.textContent = localizeError(error);
