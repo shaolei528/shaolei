@@ -8,84 +8,155 @@ export function normalizeRoomCode(value) {
   return String(value ?? '').replace(/\D/g, '').slice(0, 6);
 }
 
-function signalError(code, message = code) {
+function signalError(code, message = code, stage = null) {
   const error = new Error(message);
   error.code = code;
+  if (stage) error.stage = stage;
   return error;
 }
 
-export async function requestSignal(action, payload = {}, options = {}) {
-  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  if (typeof fetchImpl !== 'function') throw signalError('signal-unavailable');
+function randomDigits(length = 6) {
+  const values = new Uint32Array(length);
+  globalThis.crypto.getRandomValues(values);
+  return Array.from(values, value => String(value % 10)).join('');
+}
 
+function randomToken() {
+  const bytes = new Uint8Array(24);
+  globalThis.crypto.getRandomValues(bytes);
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function timedController(timeoutMs, externalSignal) {
   const controller = new AbortController();
-  const timeoutMs = options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  const externalSignal = options.signal;
   const abortFromExternal = () => controller.abort();
   if (externalSignal?.aborted) controller.abort();
   else externalSignal?.addEventListener?.('abort', abortFromExternal, { once: true });
+  return {
+    controller,
+    cleanup() {
+      clearTimeout(timeout);
+      externalSignal?.removeEventListener?.('abort', abortFromExternal);
+    },
+  };
+}
+
+async function readSignal(action, payload = {}, options = {}) {
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== 'function') throw signalError('signal-unavailable', 'fetch unavailable', 'S1');
+  const timeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  const timed = timedController(timeoutMs, options.signal);
+  const url = new URL(SIGNAL_URL);
+  url.searchParams.set('action', action);
+  for (const [key, value] of Object.entries(payload)) {
+    if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+  }
 
   try {
-    // text/plain keeps this a CORS-safelisted "simple request" on Safari/iOS,
-    // avoiding a fragile OPTIONS preflight through mobile/CDN networks.
-    const response = await fetchImpl(SIGNAL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify({ action, ...payload }),
-      signal: controller.signal,
+    const response = await fetchImpl(url, {
+      method: 'GET',
+      signal: timed.controller.signal,
       cache: 'no-store',
       mode: 'cors',
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw signalError(data.error || `signal-http-${response.status}`);
+    if (!response.ok) throw signalError(data.error || `signal-http-${response.status}`, `HTTP ${response.status}`, options.stage ?? 'S1');
     return data;
   } catch (error) {
     if (error?.code) throw error;
     if (error?.name === 'AbortError') {
-      throw signalError(externalSignal?.aborted ? 'signal-aborted' : 'signal-timeout');
+      throw signalError(options.signal?.aborted ? 'signal-aborted' : 'signal-timeout', error?.message, options.stage ?? 'S1');
     }
-    throw signalError('signal-unavailable', error?.message || 'Signaling unavailable');
+    throw signalError('signal-unavailable', error?.message || 'Signaling unavailable', options.stage ?? 'S1');
   } finally {
-    clearTimeout(timeout);
-    externalSignal?.removeEventListener?.('abort', abortFromExternal);
+    timed.cleanup();
   }
 }
 
-export async function createSignalRoom(offer, options) {
-  const data = await requestSignal('create', { offer }, options);
-  if (!/^\d{6}$/.test(data.roomCode) || typeof data.hostToken !== 'string') {
-    throw signalError('signal-invalid-response');
+async function writeSignal(action, payload = {}, options = {}) {
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== 'function') throw signalError('signal-unavailable', 'fetch unavailable', options.stage ?? 'S2');
+  const timeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  const timed = timedController(timeoutMs, options.signal);
+  try {
+    await fetchImpl(SIGNAL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({ action, ...payload }),
+      signal: timed.controller.signal,
+      cache: 'no-store',
+      mode: options.fetchImpl ? 'cors' : 'no-cors',
+    });
+    return true;
+  } catch (error) {
+    if (error?.code) throw error;
+    if (error?.name === 'AbortError') {
+      throw signalError(options.signal?.aborted ? 'signal-aborted' : 'signal-timeout', error?.message, options.stage ?? 'S2');
+    }
+    throw signalError('signal-unavailable', error?.message || 'Signaling unavailable', options.stage ?? 'S2');
+  } finally {
+    timed.cleanup();
   }
-  return data;
 }
 
-export async function getSignalOffer(roomCode, options) {
-  const code = normalizeRoomCode(roomCode);
-  if (code.length !== 6) throw signalError('invalid-room-code');
-  const data = await requestSignal('offer', { roomCode: code }, options);
-  if (typeof data.offer !== 'string') throw signalError('signal-invalid-response');
-  return data.offer;
-}
-
-export async function submitSignalAnswer(roomCode, answer, options) {
-  const code = normalizeRoomCode(roomCode);
-  if (code.length !== 6) throw signalError('invalid-room-code');
-  await requestSignal('answer', { roomCode: code, answer }, options);
+export async function probeSignal(options = {}) {
+  const data = await readSignal('health', {}, { ...options, stage: 'S1' });
+  if (data?.ok !== true || Number(data?.version) < 3) throw signalError('signal-invalid-response', 'health response invalid', 'S1');
   return true;
 }
 
-export async function pollSignalAnswer(roomCode, hostToken, options) {
+export async function createSignalRoom(offer, options = {}) {
+  if (!options.skipProbe) await probeSignal(options);
+  const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const roomCode = randomDigits(6);
+    const hostToken = randomToken();
+    await writeSignal('create', { roomCode, hostToken, offer }, { ...options, stage: 'S2' });
+    await sleep(70);
+    try {
+      const stored = await getSignalOffer(roomCode, { ...options, stage: 'S2' });
+      if (stored === offer) return { roomCode, hostToken, expiresIn: 600 };
+    } catch (error) {
+      if (!['room_not_found', 'signal-http-404'].includes(error?.code)) throw error;
+    }
+  }
+  throw signalError('signal-write-unconfirmed', 'room write was not confirmed', 'S2');
+}
+
+export async function getSignalOffer(roomCode, options = {}) {
   const code = normalizeRoomCode(roomCode);
-  const data = await requestSignal('poll', { roomCode: code, hostToken }, options);
+  if (code.length !== 6) throw signalError('invalid-room-code', 'invalid room code', options.stage ?? 'S3');
+  const data = await readSignal('offer', { roomCode: code }, { ...options, stage: options.stage ?? 'S3' });
+  if (typeof data.offer !== 'string') throw signalError('signal-invalid-response', 'missing offer', options.stage ?? 'S3');
+  return data.offer;
+}
+
+export async function submitSignalAnswer(roomCode, answer, options = {}) {
+  const code = normalizeRoomCode(roomCode);
+  if (code.length !== 6) throw signalError('invalid-room-code', 'invalid room code', 'S4');
+  await writeSignal('answer', { roomCode: code, answer }, { ...options, stage: 'S4' });
+  const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    await sleep(90 + attempt * 25);
+    const status = await readSignal('status', { roomCode: code }, { ...options, stage: 'S4' });
+    if (status?.hasAnswer === true) return true;
+  }
+  throw signalError('signal-write-unconfirmed', 'answer write was not confirmed', 'S4');
+}
+
+export async function pollSignalAnswer(roomCode, hostToken, options = {}) {
+  const code = normalizeRoomCode(roomCode);
+  const data = await readSignal('poll', { roomCode: code, hostToken }, { ...options, stage: 'S5' });
   return typeof data.answer === 'string' ? data.answer : null;
 }
 
-export async function closeSignalRoom(roomCode, hostToken, options) {
+export async function closeSignalRoom(roomCode, hostToken, options = {}) {
   const code = normalizeRoomCode(roomCode);
   if (code.length !== 6 || !hostToken) return false;
   try {
-    await requestSignal('close', { roomCode: code, hostToken }, options);
+    await writeSignal('close', { roomCode: code, hostToken }, { ...options, stage: 'S6' });
     return true;
   } catch {
     return false;
@@ -99,10 +170,10 @@ export async function waitForSignalAnswer(roomCode, hostToken, options = {}) {
   const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
 
   while (Date.now() - started < timeoutMs) {
-    if (options.signal?.aborted) throw signalError('signal-aborted');
+    if (options.signal?.aborted) throw signalError('signal-aborted', 'aborted', 'S5');
     const answer = await pollSignalAnswer(roomCode, hostToken, options);
     if (answer) return answer;
     await sleep(intervalMs);
   }
-  throw signalError('room-expired');
+  throw signalError('room-expired', 'room timed out', 'S5');
 }
