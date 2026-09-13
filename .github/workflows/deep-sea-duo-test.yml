@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deep-sea-duo-tests-netlify
+  group: deep-sea-duo-tests-netlify-ntfy
   cancel-in-progress: true
 
 jobs:
@@ -44,7 +44,11 @@ jobs:
         run: |
           ! grep -n "supabase.co" src/network/signaling.js src/network/room.js src/main.js
           grep -n "SIGNAL_URL = '/room'" src/network/signaling.js
+          grep -n "NTFY_BASE_URL = 'https://ntfy.sh'" src/network/signaling.js
           grep -n 'path: "/room"' netlify/functions/room.mts
+
+      - name: Verify live ntfy signaling fallback
+        run: node scripts/smoke-ntfy.mjs
 
       - name: Package Netlify site
         uses: actions/upload-artifact@v4
