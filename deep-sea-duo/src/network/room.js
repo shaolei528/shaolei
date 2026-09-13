@@ -4,6 +4,7 @@ import {
   closeSignalRoom,
   createSignalRoom,
   getSignalOffer,
+  probeSignal,
   submitSignalAnswer,
   waitForSignalAnswer,
 } from './signaling.js';
@@ -53,10 +54,13 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
   return {
     async createQuickRoom() {
       closeCurrent();
-      onStatus('creating-room');
+      onStatus('signal-check');
+      await probeSignal();
+      onStatus('webrtc-preparing');
       host = await createLanHost(handlers);
+      onStatus('signal-saving');
       try {
-        const session = await createSignalRoom(host.offerCode);
+        const session = await createSignalRoom(host.offerCode, { skipProbe: true });
         signalSession = session;
         signalAbort = new AbortController();
         onStatus('host-waiting');
@@ -83,9 +87,13 @@ export function createRoomController(onStatus = () => {}, onInput = () => {}, on
 
     async joinQuickRoom(roomCode) {
       closeCurrent();
+      onStatus('signal-check');
+      await probeSignal();
       onStatus('joining-room');
       const offer = await getSignalOffer(roomCode);
+      onStatus('webrtc-preparing');
       guest = await joinLanHost(offer, handlers);
+      onStatus('signal-saving');
       try {
         await submitSignalAnswer(roomCode, guest.answerCode);
         onStatus('waitingDirect');
