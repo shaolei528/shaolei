@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/main.js && node --check src/pwa.js && node --check sw.js && node --check src/game/renderer.js && node --check src/audio/audio.js && node --check src/i18n.js && node --check src/network/signaling.js && node --check src/network/manual-webrtc.js && node --check src/network/realtime-relay.js && node --check src/network/room.js"
+    "check": "node --check src/main.js && node --check src/pwa.js && node --check sw.js && node --check src/game/renderer.js && node --check src/audio/audio.js && node --check src/i18n.js && node --check src/network/signaling.js && node --check src/network/manual-webrtc.js && node --check src/network/room.js && node --check netlify/functions/room.mts"
+  },
+  "dependencies": {
+    "@netlify/blobs": "latest",
+    "@netlify/functions": "latest"
   }
 }
