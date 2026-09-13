@@ -11,7 +11,7 @@ function makeGuestHarness() {
   const room = createRoomController(status => statuses.push(status), noop, noop, noop, {
     probeSignal: async () => true,
     getSignalOffer: async () => '{"type":"offer","sdp":"demo"}',
-    joinLanHost: async nextHandlers => {
+    joinLanHost: async (_offer, nextHandlers) => {
       handlers = nextHandlers;
       return { answerCode: '{"type":"answer","sdp":"demo"}', send: () => true, close() {} };
     },
