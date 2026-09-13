@@ -53,14 +53,9 @@ export function createRoomController(
     directConnectTimer = null;
   };
 
-  const armDirectConnectTimer = runId => {
-    clearDirectConnectTimer();
-    if (!Number.isFinite(directConnectTimeoutMs) || directConnectTimeoutMs <= 0) return;
-    directConnectTimer = setTimeoutImpl?.(() => {
-      directConnectTimer = null;
-      if (runId !== generation || connected) return;
-      onStatus('failed');
-    }, directConnectTimeoutMs) ?? null;
+  const closeSignal = session => {
+    if (!session?.roomCode || !session?.hostToken) return;
+    void Promise.resolve(closeSignalRoomImpl(session.roomCode, session.hostToken)).catch(() => {});
   };
 
   const stopSignalSession = () => {
@@ -68,21 +63,44 @@ export function createRoomController(
     signalAbort = null;
     const current = signalSession;
     signalSession = null;
-    if (current?.roomCode && current?.hostToken) {
-      closeSignalRoomImpl(current.roomCode, current.hostToken).catch(() => {});
-    }
+    closeSignal(current);
   };
 
-  const closeCurrent = () => {
+  const disposeAttempt = runId => {
+    if (runId !== generation) return false;
     generation += 1;
     clearDirectConnectTimer();
     stopSignalSession();
-    guest?.close?.();
-    host?.close?.();
+    const currentGuest = guest;
+    const currentHost = host;
     guest = null;
     host = null;
     sequence = 0;
     connected = false;
+    currentGuest?.close?.();
+    currentHost?.close?.();
+    return true;
+  };
+
+  const terminateAttempt = (runId, status) => {
+    if (!disposeAttempt(runId)) return false;
+    onStatus(status);
+    return true;
+  };
+
+  const armDirectConnectTimer = runId => {
+    clearDirectConnectTimer();
+    if (!Number.isFinite(directConnectTimeoutMs) || directConnectTimeoutMs <= 0) return;
+    directConnectTimer = setTimeoutImpl?.(() => {
+      directConnectTimer = null;
+      if (runId !== generation || connected) return;
+      terminateAttempt(runId, 'failed');
+    }, directConnectTimeoutMs) ?? null;
+  };
+
+  const closeCurrent = () => {
+    const runId = generation;
+    if (!disposeAttempt(runId)) return;
   };
 
   const makeHandlers = runId => ({
@@ -99,16 +117,12 @@ export function createRoomController(
         return;
       }
       if (status === 'failed' || status === 'error') {
-        clearDirectConnectTimer();
-        connected = false;
-        onStatus(status);
+        terminateAttempt(runId, status);
         return;
       }
       if (['disconnected', 'closed'].includes(status)) {
         if (!connected) return;
-        clearDirectConnectTimer();
-        connected = false;
-        onStatus(status);
+        terminateAttempt(runId, status);
       }
     },
     onMessage: message => {
@@ -118,8 +132,7 @@ export function createRoomController(
 
   const reportSignalFailure = (error, runId) => {
     if (runId !== generation || error?.code === 'signal-aborted') return;
-    clearDirectConnectTimer();
-    onStatus(error?.code || 'signal-error');
+    terminateAttempt(runId, error?.code || 'signal-error');
   };
 
   return {
@@ -128,67 +141,79 @@ export function createRoomController(
       const runId = generation;
       const identity = createRoomIdentity();
 
-      onRoomCode(identity.roomCode);
-      onStatus('signal-check');
-      await probeSignalImpl();
+      try {
+        onRoomCode(identity.roomCode);
+        onStatus('signal-check');
+        await probeSignalImpl();
 
-      onStatus('webrtc-preparing');
-      host = await createLanHostImpl(makeHandlers(runId));
-      if (runId !== generation) return identity.roomCode;
+        onStatus('webrtc-preparing');
+        host = await createLanHostImpl(makeHandlers(runId));
+        if (runId !== generation) return identity.roomCode;
 
-      onStatus('signal-saving');
-      const session = await createSignalRoomImpl(host.offerCode, {
-        skipProbe: true,
-        identity,
-        onRoomCode,
-      });
-      if (runId !== generation) return session.roomCode;
+        onStatus('signal-saving');
+        const session = await createSignalRoomImpl(host.offerCode, {
+          skipProbe: true,
+          identity,
+          onRoomCode,
+        });
+        if (runId !== generation) return session.roomCode;
 
-      signalSession = session;
-      signalAbort = new AbortController();
-      onStatus('host-waiting');
+        signalSession = session;
+        signalAbort = new AbortController();
+        onStatus('host-waiting');
 
-      waitForSignalAnswerImpl(session.roomCode, session.hostToken, { signal: signalAbort.signal })
-        .then(async answer => {
-          if (runId !== generation || !host || signalAbort?.signal.aborted) return;
-          try {
-            await host.acceptAnswer(answer);
-            if (runId !== generation) return;
-            onStatus('waitingDirect');
-            armDirectConnectTimer(runId);
-            const finished = signalSession;
-            signalSession = null;
-            signalAbort = null;
-            if (finished) closeSignalRoomImpl(finished.roomCode, finished.hostToken).catch(() => {});
-          } catch (error) {
-            reportSignalFailure(error, runId);
-          }
-        })
-        .catch(error => reportSignalFailure(error, runId));
+        waitForSignalAnswerImpl(session.roomCode, session.hostToken, { signal: signalAbort.signal })
+          .then(async answer => {
+            if (runId !== generation || !host || signalAbort?.signal.aborted) return;
+            try {
+              await host.acceptAnswer(answer);
+              if (runId !== generation) return;
+              const finished = signalSession;
+              signalSession = null;
+              signalAbort = null;
+              closeSignal(finished);
+              if (!connected) {
+                onStatus('waitingDirect');
+                armDirectConnectTimer(runId);
+              }
+            } catch (error) {
+              reportSignalFailure(error, runId);
+            }
+          })
+          .catch(error => reportSignalFailure(error, runId));
 
-      return session.roomCode;
+        return session.roomCode;
+      } catch (error) {
+        disposeAttempt(runId);
+        throw error;
+      }
     },
 
     async joinQuickRoom(roomCode) {
       closeCurrent();
       const runId = generation;
-      onStatus('signal-check');
-      await probeSignalImpl();
-      onStatus('joining-room');
-      const offer = await getSignalOfferImpl(roomCode);
-      if (runId !== generation) return false;
+      try {
+        onStatus('signal-check');
+        await probeSignalImpl();
+        onStatus('joining-room');
+        const offer = await getSignalOfferImpl(roomCode);
+        if (runId !== generation) return false;
 
-      onStatus('webrtc-preparing');
-      guest = await joinLanHostImpl(offer, makeHandlers(runId));
-      if (runId !== generation) return false;
+        onStatus('webrtc-preparing');
+        guest = await joinLanHostImpl(offer, makeHandlers(runId));
+        if (runId !== generation) return false;
 
-      onStatus('signal-saving');
-      await submitSignalAnswerImpl(roomCode, guest.answerCode);
-      if (runId === generation && !connected) {
-        onStatus('waitingDirect');
-        armDirectConnectTimer(runId);
+        onStatus('signal-saving');
+        await submitSignalAnswerImpl(roomCode, guest.answerCode);
+        if (runId === generation && !connected) {
+          onStatus('waitingDirect');
+          armDirectConnectTimer(runId);
+        }
+        return true;
+      } catch (error) {
+        disposeAttempt(runId);
+        throw error;
       }
-      return true;
     },
 
     async createRoom() {
@@ -213,8 +238,12 @@ export function createRoomController(
         error.code = 'host-not-ready';
         throw error;
       }
+      const runId = generation;
       await host.acceptAnswer(answerCode);
-      onStatus('正在等待直连');
+      if (runId === generation && !connected) {
+        onStatus('正在等待直连');
+        armDirectConnectTimer(runId);
+      }
     },
 
     sendInput(input) {
