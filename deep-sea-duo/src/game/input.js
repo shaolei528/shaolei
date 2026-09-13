@@ -1,24 +1,156 @@
 import { normalize } from './math.js';
 
+const MOVE_ZONE_MAX_X = 0.5;
+const SWIPE_RADIUS = 0.16;
+const SWIPE_DEAD_ZONE = 0.025;
+
+export function directionFromDrag(start, current, radius = SWIPE_RADIUS, deadZone = SWIPE_DEAD_ZONE) {
+  if (!start || !current || radius <= 0) return { x: 0, y: 0 };
+  const dx = current.x - start.x;
+  const dy = current.y - start.y;
+  const distance = Math.hypot(dx, dy);
+  if (!Number.isFinite(distance) || distance < deadZone) return { x: 0, y: 0 };
+  const scaledX = dx / radius;
+  const scaledY = dy / radius;
+  const magnitude = Math.hypot(scaledX, scaledY);
+  if (magnitude <= 1) return { x: scaledX, y: scaledY };
+  return normalize(scaledX, scaledY);
+}
+
 export function createInput(canvas) {
-  const input = { movement: { x: 0, y: 0 }, aim: { x: 1, y: 0 }, firing: false, dash: false };
+  const input = {
+    movement: { x: 0, y: 0 },
+    aim: { x: 1, y: 0 },
+    firing: false,
+    dash: false,
+  };
+  const pressedKeys = new Set();
   let movementPointer = null;
   let aimPointer = null;
+  let movementStart = null;
+  let aimStart = null;
+  let touchMovement = { x: 0, y: 0 };
+
   function position(event) {
-    const rect = canvas.getBoundingClientRect(); const x = (event.clientX - rect.left) / rect.width; const y = (event.clientY - rect.top) / rect.height;
-    return { x, y };
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return { x: 0.5, y: 0.5 };
+    return {
+      x: (event.clientX - rect.left) / rect.width,
+      y: (event.clientY - rect.top) / rect.height,
+    };
   }
-  function updateMovement(event) { const point = position(event); input.movement = normalize((point.x - 0.24) / 0.24, (point.y - 0.7) / 0.25); }
-  function updateAim(event) { const point = position(event); input.aim = normalize(point.x - 0.72, point.y - 0.52); input.firing = true; }
-  canvas.addEventListener('pointerdown', e => {
-    canvas.setPointerCapture(e.pointerId);
-    if (position(e).x < 0.47 && movementPointer === null) { movementPointer = e.pointerId; updateMovement(e); }
-    else if (aimPointer === null) { aimPointer = e.pointerId; updateAim(e); }
+
+  function keyboardMovement() {
+    const x = (pressedKeys.has('d') ? 1 : 0) - (pressedKeys.has('a') ? 1 : 0);
+    const y = (pressedKeys.has('s') ? 1 : 0) - (pressedKeys.has('w') ? 1 : 0);
+    return normalize(x, y);
+  }
+
+  function syncMovement() {
+    input.movement = movementPointer === null ? keyboardMovement() : touchMovement;
+  }
+
+  function updateMovement(event) {
+    touchMovement = directionFromDrag(movementStart, position(event));
+    syncMovement();
+  }
+
+  function updateAim(event) {
+    const direction = directionFromDrag(aimStart, position(event));
+    if (direction.x || direction.y) input.aim = normalize(direction.x, direction.y);
+    input.firing = true;
+  }
+
+  function releasePointer(pointerId) {
+    if (pointerId === movementPointer) {
+      movementPointer = null;
+      movementStart = null;
+      touchMovement = { x: 0, y: 0 };
+      syncMovement();
+    }
+    if (pointerId === aimPointer) {
+      aimPointer = null;
+      aimStart = null;
+      input.firing = false;
+    }
+  }
+
+  function reset() {
+    movementPointer = null;
+    aimPointer = null;
+    movementStart = null;
+    aimStart = null;
+    touchMovement = { x: 0, y: 0 };
+    pressedKeys.clear();
+    input.movement = { x: 0, y: 0 };
+    input.firing = false;
+    input.dash = false;
+  }
+
+  canvas.addEventListener('pointerdown', event => {
+    const point = position(event);
+    try { canvas.setPointerCapture(event.pointerId); } catch {}
+    if (point.x < MOVE_ZONE_MAX_X && movementPointer === null) {
+      movementPointer = event.pointerId;
+      movementStart = point;
+      touchMovement = { x: 0, y: 0 };
+      syncMovement();
+      return;
+    }
+    if (aimPointer === null) {
+      aimPointer = event.pointerId;
+      aimStart = point;
+      input.firing = true;
+    }
   });
-  canvas.addEventListener('pointermove', e => { if (e.pointerId === movementPointer) updateMovement(e); if (e.pointerId === aimPointer) updateAim(e); });
-  function end(e) { if (e.pointerId === movementPointer) { movementPointer = null; input.movement = { x: 0, y: 0 }; } if (e.pointerId === aimPointer) { aimPointer = null; input.firing = false; } }
-  canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
-  window.addEventListener('keydown', e => { const key = e.key.toLowerCase(); if (key === 'w') input.movement.y = -1; if (key === 's') input.movement.y = 1; if (key === 'a') input.movement.x = -1; if (key === 'd') input.movement.x = 1; if (key === ' ') input.dash = true; });
-  window.addEventListener('keyup', e => { if ('wasd'.includes(e.key.toLowerCase())) input.movement = { x: 0, y: 0 }; });
-  return { input, consumeDash() { const active = input.dash; input.dash = false; return active; } };
+
+  canvas.addEventListener('pointermove', event => {
+    if (event.pointerId === movementPointer) updateMovement(event);
+    if (event.pointerId === aimPointer) updateAim(event);
+  });
+  canvas.addEventListener('pointerup', event => releasePointer(event.pointerId));
+  canvas.addEventListener('pointercancel', event => releasePointer(event.pointerId));
+  canvas.addEventListener('lostpointercapture', event => releasePointer(event.pointerId));
+
+  window.addEventListener('keydown', event => {
+    const key = event.key.toLowerCase();
+    if ('wasd'.includes(key)) {
+      pressedKeys.add(key);
+      syncMovement();
+    }
+    if (event.key === ' ') {
+      event.preventDefault();
+      input.dash = true;
+    }
+  });
+  window.addEventListener('keyup', event => {
+    const key = event.key.toLowerCase();
+    if ('wasd'.includes(key)) {
+      pressedKeys.delete(key);
+      syncMovement();
+    }
+  });
+  window.addEventListener('blur', reset);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') reset();
+  });
+
+  return {
+    input,
+    reset,
+    requestDash() { input.dash = true; },
+    consumeDash() {
+      const active = input.dash;
+      input.dash = false;
+      return active;
+    },
+    frame() {
+      return {
+        movement: { ...input.movement },
+        aim: { ...input.aim },
+        firing: input.firing,
+        dash: this.consumeDash(),
+      };
+    },
+  };
 }
