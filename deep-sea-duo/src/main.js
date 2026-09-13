@@ -18,6 +18,10 @@ const roomAction = document.querySelector('#room-action');
 const roomStatus = document.querySelector('#room-status');
 const languageButton = document.querySelector('#language-button');
 const audioButton = document.querySelector('#audio-button');
+const copyCodeButton = document.querySelector('#copy-code');
+const pasteCodeButton = document.querySelector('#paste-code');
+const shareCodeButton = document.querySelector('#share-code');
+const retryRoomButton = document.querySelector('#retry-room');
 
 const controller = createInput(canvas);
 const audio = createAdaptiveAudio();
@@ -29,11 +33,20 @@ let inputClock = 0;
 let hudClock = 0;
 let pendingGuestDash = false;
 let roomMode = null;
-let lastRoomStatus = 'roomLan';
+let lastRoomStatus = 'idle';
+let lastGeneratedCode = '';
+let connectionActive = false;
+let wakeLock = null;
 
 function localizeStatus(status) {
   const known = {
+    idle: 'roomLan',
     connected: 'connected',
+    connecting: 'connecting',
+    disconnected: 'disconnected',
+    failed: 'failed',
+    closed: 'closed',
+    error: 'connectionError',
     '把房主连接码发给朋友': 'hostOfferReady',
     '把加入者应答码发回房主': 'guestAnswerReady',
     '正在等待直连': 'waitingDirect',
@@ -41,11 +54,60 @@ function localizeStatus(status) {
   return known[status] ? t(known[status]) : status;
 }
 
+function localizeError(error) {
+  const known = {
+    'ice-timeout': 'errorIceTimeout',
+    'invalid-code': 'errorInvalidCode',
+    'expected-answer': 'errorExpectedAnswer',
+    'expected-offer': 'errorExpectedOffer',
+    'host-not-ready': 'errorHostNotReady',
+  };
+  return t(known[error?.code] ?? 'connectionError');
+}
+
+async function requestWakeLock() {
+  if (!connectionActive || !globalThis.navigator?.wakeLock?.request || wakeLock) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; }, { once: true });
+  } catch {}
+}
+
+async function releaseWakeLock() {
+  const lock = wakeLock;
+  wakeLock = null;
+  try { await lock?.release?.(); } catch {}
+}
+
+function resetPairingUi(messageKey = 'roomLan') {
+  roomMode = null;
+  lastGeneratedCode = '';
+  roomCode.value = '';
+  roomCode.placeholder = t('roomCodePlaceholder');
+  roomAction.classList.add('is-hidden');
+  roomAction.disabled = false;
+  retryRoomButton.classList.add('is-hidden');
+  roomStatus.textContent = t(messageKey);
+}
+
 const room = createRoomController(
   status => {
     lastRoomStatus = status;
     roomStatus.textContent = localizeStatus(status);
-    if (status === 'connected') roomPanel.classList.add('is-hidden');
+    if (status === 'connected') {
+      connectionActive = true;
+      retryRoomButton.classList.add('is-hidden');
+      roomPanel.classList.add('is-hidden');
+      requestWakeLock();
+      return;
+    }
+    if (['disconnected', 'failed', 'closed', 'error'].includes(status)) {
+      connectionActive = false;
+      releaseWakeLock();
+      roomPanel.classList.remove('is-hidden');
+      retryRoomButton.classList.remove('is-hidden');
+      roomAction.disabled = false;
+    }
   },
   input => applyRemoteInput(game, input),
   snapshot => applyHostSnapshot(game, snapshot),
@@ -75,41 +137,130 @@ function refreshStaticText() {
   hudClock = 0;
 }
 
+async function copyCurrentCode() {
+  const text = roomCode.value.trim();
+  if (!text) { roomStatus.textContent = t('codeEmpty'); return false; }
+  try {
+    await navigator.clipboard.writeText(text);
+    roomStatus.textContent = t('codeCopied');
+    return true;
+  } catch {
+    roomCode.focus();
+    roomCode.select();
+    try {
+      const copied = document.execCommand?.('copy');
+      roomStatus.textContent = copied ? t('codeCopied') : t('pasteManual');
+      return Boolean(copied);
+    } catch {
+      roomStatus.textContent = t('pasteManual');
+      return false;
+    }
+  }
+}
+
+async function pasteCurrentCode() {
+  try {
+    const text = (await navigator.clipboard.readText()).trim();
+    if (!text) throw new Error('empty clipboard');
+    roomCode.value = text;
+    roomStatus.textContent = t('codePasted');
+    roomCode.focus();
+    return true;
+  } catch {
+    roomStatus.textContent = t('pasteManual');
+    roomCode.focus();
+    return false;
+  }
+}
+
+async function shareCurrentCode() {
+  const text = roomCode.value.trim();
+  if (!text) { roomStatus.textContent = t('codeEmpty'); return; }
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: t('gameTitle'), text });
+      roomStatus.textContent = t('codeShared');
+      return;
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+    }
+  }
+  await copyCurrentCode();
+}
+
 document.querySelector('#create-room').onclick = async () => {
   await audio.unlock();
+  connectionActive = false;
+  retryRoomButton.classList.add('is-hidden');
   roomMode = 'host';
-  roomCode.value = await room.createRoom();
-  roomAction.textContent = t('pasteAnswer');
-  roomAction.disabled = false;
-  roomAction.classList.remove('is-hidden');
+  roomCode.value = '';
+  roomAction.classList.add('is-hidden');
+  try {
+    roomCode.value = await room.createRoom();
+    lastGeneratedCode = roomCode.value;
+    roomAction.textContent = t('pasteAnswer');
+    roomAction.disabled = false;
+    roomAction.classList.remove('is-hidden');
+  } catch (error) {
+    roomStatus.textContent = localizeError(error);
+    retryRoomButton.classList.remove('is-hidden');
+  }
 };
 
 document.querySelector('#join-room').onclick = async () => {
   await audio.unlock();
+  connectionActive = false;
+  retryRoomButton.classList.add('is-hidden');
   roomMode = 'guest';
+  lastGeneratedCode = '';
   roomCode.value = '';
   roomCode.placeholder = t('pasteOffer');
+  roomStatus.textContent = t('guestPastePrompt');
   roomAction.textContent = t('generateAnswer');
   roomAction.disabled = false;
   roomAction.classList.remove('is-hidden');
+  roomCode.focus();
 };
 
 roomAction.onclick = async () => {
   await audio.unlock();
+  const code = roomCode.value.trim();
+  if (roomMode === 'host' && (!code || code === lastGeneratedCode)) {
+    roomStatus.textContent = t('needGuestAnswer');
+    roomCode.focus();
+    return;
+  }
+  if (roomMode === 'guest' && !code) {
+    roomStatus.textContent = t('needHostOffer');
+    roomCode.focus();
+    return;
+  }
   try {
     if (roomMode === 'host') {
-      await room.acceptGuest(roomCode.value.trim());
+      await room.acceptGuest(code);
       roomAction.textContent = t('waiting');
       roomAction.disabled = true;
     } else {
-      roomCode.value = await room.joinRoom(roomCode.value.trim());
+      roomCode.value = await room.joinRoom(code);
+      lastGeneratedCode = roomCode.value;
       roomAction.classList.add('is-hidden');
     }
   } catch (error) {
-    roomStatus.textContent = error?.message || String(error);
+    roomStatus.textContent = localizeError(error);
     roomAction.disabled = false;
+    retryRoomButton.classList.remove('is-hidden');
   }
 };
+
+copyCodeButton.addEventListener('click', copyCurrentCode);
+pasteCodeButton.addEventListener('click', pasteCurrentCode);
+shareCodeButton.addEventListener('click', shareCurrentCode);
+retryRoomButton.addEventListener('click', () => {
+  room.reset();
+  connectionActive = false;
+  releaseWakeLock();
+  resetPairingUi('pairingReset');
+});
 
 languageButton.addEventListener('click', () => {
   toggleLanguage();
@@ -127,6 +278,9 @@ refreshStaticText();
 const unlockAudio = () => { audio.unlock(); };
 window.addEventListener('pointerdown', unlockAudio, { once: true, capture: true });
 window.addEventListener('keydown', unlockAudio, { once: true, capture: true });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
 
 function reset() {
   game = createGame();

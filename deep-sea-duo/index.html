@@ -19,13 +19,20 @@
         <div class="room-card">
           <div class="logo-orb" aria-hidden="true"><span>◉</span></div>
           <h1 data-i18n="gameTitle">深海搭档</h1>
-          <p id="room-status" data-i18n="roomLan">局域网 / 热点双人直连</p>
+          <p id="room-status" aria-live="polite" data-i18n="roomLan">局域网 / 热点双人直连</p>
           <div class="room-buttons">
             <button id="create-room" data-i18n="createRoom">创建房间</button>
             <button id="join-room" data-i18n="joinRoom">加入房间</button>
           </div>
-          <textarea id="room-code" data-i18n-placeholder="roomCodePlaceholder" placeholder="这里会显示或粘贴连接码" spellcheck="false"></textarea>
+          <textarea id="room-code" data-i18n-placeholder="roomCodePlaceholder" placeholder="这里会显示或粘贴连接码" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+          <div class="code-actions">
+            <button id="copy-code" type="button" data-i18n="copyCode">复制连接码</button>
+            <button id="paste-code" type="button" data-i18n="pasteCode">粘贴连接码</button>
+            <button id="share-code" type="button" data-i18n="shareCode">分享连接码</button>
+          </div>
           <button id="room-action" class="is-hidden" data-i18n="roomActionConfirm">确认连接</button>
+          <button id="retry-room" class="retry-button is-hidden" type="button" data-i18n="retryRoom">重新配对</button>
+          <small class="network-tip" data-i18n="roomSameNetwork">两台手机连接同一个 Wi‑Fi，或一台开热点让另一台连接。</small>
           <small data-i18n="roomFirstPair">首次配对：房主码 → 加入者应答码 → 房主确认</small>
         </div>
       </section>
