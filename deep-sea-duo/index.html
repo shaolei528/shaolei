@@ -22,7 +22,7 @@
         <div class="room-card">
           <div class="logo-orb" aria-hidden="true"><span>◉</span></div>
           <h1 data-i18n="gameTitle">深海搭档</h1>
-          <p id="room-status" aria-live="polite" data-i18n="roomLan">局域网 / 热点双人直连</p>
+          <p id="room-status" aria-live="polite" data-i18n="roomLan">局域网 / 热点双人联机</p>
 
           <div id="lobby-actions" class="room-buttons">
             <button id="create-room" data-i18n="createRoom">创建房间</button>
@@ -47,9 +47,9 @@
           <small data-i18n="quickPairHint">正常情况只需要 6 位房间码，不需要复制长连接码。</small>
 
           <details class="manual-fallback">
-            <summary data-i18n="manualFallbackTitle">高级备用：无网时手动连接</summary>
+            <summary data-i18n="manualFallbackTitle">高级备用：手动局域网连接</summary>
             <div class="manual-fallback-body">
-              <small data-i18n="manualFallbackHint">只有信令服务不可用、但两台手机仍在同一局域网时才需要这里。</small>
+              <small data-i18n="manualFallbackHint">只有自动联机服务不可用时才需要这里。</small>
               <div class="room-buttons">
                 <button id="manual-create" type="button" data-i18n="manualCreate">生成房主长码</button>
                 <button id="manual-join" type="button" data-i18n="manualJoin">使用房主长码</button>
@@ -58,6 +58,8 @@
               <button id="manual-action" class="is-hidden" type="button" data-i18n="manualContinue">继续手动连接</button>
             </div>
           </details>
+
+          <small id="build-badge" class="build-badge" aria-label="Build version">NET-R7</small>
         </div>
       </section>
 
