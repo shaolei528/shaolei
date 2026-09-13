@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deep-sea-duo-tests
+  group: deep-sea-duo-tests-v2
   cancel-in-progress: true
 
 jobs:
