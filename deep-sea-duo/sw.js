@@ -1,4 +1,4 @@
-const CACHE_NAME = 'deep-sea-duo-static-20260914-v6';
+const CACHE_NAME = 'deep-sea-duo-static-20260914-v7';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
