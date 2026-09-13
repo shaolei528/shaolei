@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "check": "node --check src/main.js && node --check src/game/renderer.js && node --check src/audio/audio.js && node --check src/i18n.js"
   }
 }
