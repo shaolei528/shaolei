@@ -1,4 +1,4 @@
-const CACHE_NAME = 'deep-sea-duo-static-20260913-v5';
+const CACHE_NAME = 'deep-sea-duo-static-20260914-v6';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
@@ -22,7 +22,6 @@ const CORE_ASSETS = [
   './src/network/room.js',
   './src/network/signaling.js',
   './src/network/manual-webrtc.js',
-  './src/network/realtime-relay.js',
   './src/network/messages.js',
 ];
 
@@ -47,6 +46,7 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname === '/room') return;
 
   if (request.mode === 'navigate') {
     event.respondWith(
