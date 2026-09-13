@@ -34,10 +34,10 @@ export function createGameSession(options = {}) {
   let snapshotSequence = 0;
   let pendingGuestDash = false;
 
-  function resetClocks() {
+  function resetClocks({ preserveSnapshotSequence = false } = {}) {
     snapshotClock = 0;
     inputClock = 0;
-    snapshotSequence = 0;
+    if (!preserveSnapshotSequence) snapshotSequence = 0;
     pendingGuestDash = false;
   }
 
@@ -58,6 +58,13 @@ export function createGameSession(options = {}) {
     connected = false;
     resetClocks();
     return game;
+  }
+
+  function restart() {
+    if (role !== 'host' && role !== 'guest') return false;
+    game = createGame(random);
+    resetClocks({ preserveSnapshotSequence: connected && role === 'host' });
+    return true;
   }
 
   function connect() {
@@ -105,6 +112,7 @@ export function createGameSession(options = {}) {
   return {
     begin,
     reset,
+    restart,
     connect,
     disconnect,
     tick,
