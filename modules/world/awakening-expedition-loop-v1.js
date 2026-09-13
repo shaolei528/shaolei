@@ -122,8 +122,11 @@ function objectiveText(snapshot,observation={}){
       return`SECURE SALVAGE · 目标物资已取得 ${shard}。离开 MIRE MART，开始返程。`;
     case PHASES.RETURN_HOME:
       return`RETURN HOME · 异质碎片 ${shard} 已取得。沿北路返回 Safe Camp。`;
-    case PHASES.COMPLETE:
-      return observation.lantern?'COMPLETE · MIRE MART 物资已安全带回。下一步：补给并准备下一次远征。':'COMPLETE · MIRE MART 物资已安全带回。下一步：前往工作台，用碎片准备提灯。';
+    case PHASES.COMPLETE:{
+      const home=globalThis.ABYSSAL_HOME_WORKBENCH_V1?.getState?.();
+      if(home?.tier>=2)return 'COMPLETE · MIRE MART 物资已安全带回。Field Rig 已上线：下一次离营护佑延长至 25 秒。';
+      return 'COMPLETE · MIRE MART 物资已安全带回。下一步：前往工作台，用 2 异质碎片 + 3 石头升级 Field Rig。';
+    }
     default:return null;
   }
 }
@@ -135,6 +138,7 @@ function updateRuntime(){
   const snapshot=machine.step(observation);
   if(before!==PHASES.COMPLETE&&snapshot.phase===PHASES.COMPLETE&&!machine.state.completionAnnounced){
     machine.state.completionAnnounced=true;
+    try{globalThis.ABYSSAL_HOME_WORKBENCH_V1?.recordExpeditionReturn?.({expeditionId:CONTRACT.id,attempt:snapshot.attempt,at:Date.now()});}catch{}
     try{toast('远征完成 · MIRE MART 物资已带回 Safe Camp。');}catch{}
   }
   const text=objectiveText(snapshot,observation);
