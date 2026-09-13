@@ -1,4 +1,4 @@
-export const SIGNAL_URL = 'https://kqwlkleuguixkgutwuda.supabase.co/functions/v1/deep-sea-duo-signal';
+export const SIGNAL_URL = '/room';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 8000;
 const DEFAULT_POLL_INTERVAL_MS = 650;
@@ -31,8 +31,11 @@ export function createRoomIdentity() {
   return { roomCode: randomDigits(6), hostToken: randomToken() };
 }
 
-export function createRelayToken() {
-  return randomToken();
+function signalEndpoint() {
+  const base = globalThis.location?.origin && globalThis.location.origin !== 'null'
+    ? globalThis.location.origin
+    : 'https://deep-sea-duo.netlify.app';
+  return new URL(SIGNAL_URL, base);
 }
 
 function timedController(timeoutMs, externalSignal) {
@@ -52,10 +55,9 @@ function timedController(timeoutMs, externalSignal) {
 
 async function readSignal(action, payload = {}, options = {}) {
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  if (typeof fetchImpl !== 'function') throw signalError('signal-unavailable', 'fetch unavailable', 'S1');
-  const timeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
-  const timed = timedController(timeoutMs, options.signal);
-  const url = new URL(SIGNAL_URL);
+  if (typeof fetchImpl !== 'function') throw signalError('signal-unavailable', 'fetch unavailable', options.stage ?? 'S1');
+  const timed = timedController(options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS, options.signal);
+  const url = signalEndpoint();
   url.searchParams.set('action', action);
   for (const [key, value] of Object.entries(payload)) {
     if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
@@ -66,10 +68,12 @@ async function readSignal(action, payload = {}, options = {}) {
       method: 'GET',
       signal: timed.controller.signal,
       cache: 'no-store',
-      mode: 'cors',
+      credentials: 'same-origin',
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw signalError(data.error || `signal-http-${response.status}`, `HTTP ${response.status}`, options.stage ?? 'S1');
+    if (!response.ok) {
+      throw signalError(data.error || `signal-http-${response.status}`, `HTTP ${response.status}`, options.stage ?? 'S1');
+    }
     return data;
   } catch (error) {
     if (error?.code) throw error;
@@ -85,18 +89,22 @@ async function readSignal(action, payload = {}, options = {}) {
 async function writeSignal(action, payload = {}, options = {}) {
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
   if (typeof fetchImpl !== 'function') throw signalError('signal-unavailable', 'fetch unavailable', options.stage ?? 'S2');
-  const timeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
-  const timed = timedController(timeoutMs, options.signal);
+  const timed = timedController(options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS, options.signal);
+
   try {
-    await fetchImpl(SIGNAL_URL, {
+    const response = await fetchImpl(signalEndpoint(), {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ action, ...payload }),
       signal: timed.controller.signal,
       cache: 'no-store',
-      mode: options.fetchImpl ? 'cors' : 'no-cors',
+      credentials: 'same-origin',
     });
-    return true;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw signalError(data.error || `signal-http-${response.status}`, `HTTP ${response.status}`, options.stage ?? 'S2');
+    }
+    return data;
   } catch (error) {
     if (error?.code) throw error;
     if (error?.name === 'AbortError') {
@@ -110,7 +118,9 @@ async function writeSignal(action, payload = {}, options = {}) {
 
 export async function probeSignal(options = {}) {
   const data = await readSignal('health', {}, { ...options, stage: 'S1' });
-  if (data?.ok !== true || Number(data?.version) < 3) throw signalError('signal-invalid-response', 'health response invalid', 'S1');
+  if (data?.ok !== true || Number(data?.version) < 1) {
+    throw signalError('signal-invalid-response', 'health response invalid', 'S1');
+  }
   return true;
 }
 
@@ -122,14 +132,15 @@ export async function createSignalRoom(offer, options = {}) {
   for (let attempt = 0; attempt < 6; attempt += 1) {
     if (attempt > 0) identity = createRoomIdentity();
     options.onRoomCode?.(identity.roomCode);
-    await writeSignal('create', { ...identity, offer }, { ...options, stage: 'S2' });
-    await sleep(70);
     try {
-      const stored = await getSignalOffer(identity.roomCode, { ...options, stage: 'S2' });
-      if (stored === offer) return { ...identity, expiresIn: 600 };
+      await writeSignal('create', { ...identity, offer }, { ...options, stage: 'S2' });
     } catch (error) {
-      if (!['room_not_found', 'signal-http-404'].includes(error?.code)) throw error;
+      if (error?.code === 'room_code_collision') continue;
+      throw error;
     }
+    await sleep(30);
+    const stored = await getSignalOffer(identity.roomCode, { ...options, stage: 'S2' });
+    if (stored === offer) return { ...identity, expiresIn: 600 };
   }
   throw signalError('signal-write-unconfirmed', 'room write was not confirmed', 'S2');
 }
@@ -148,7 +159,7 @@ export async function submitSignalAnswer(roomCode, answer, options = {}) {
   await writeSignal('answer', { roomCode: code, answer }, { ...options, stage: 'S4' });
   const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    await sleep(90 + attempt * 25);
+    await sleep(50 + attempt * 25);
     const status = await readSignal('status', { roomCode: code }, { ...options, stage: 'S4' });
     if (status?.hasAnswer === true) return true;
   }
