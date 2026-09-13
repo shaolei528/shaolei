@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createRelayToken,
+  SIGNAL_URL,
   createRoomIdentity,
   createSignalRoom,
   getSignalOffer,
@@ -12,7 +12,11 @@ import {
 
 const jsonResponse = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
-  headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' },
+  headers: { 'content-type': 'application/json' },
+});
+
+test('uses a same-origin room endpoint', () => {
+  assert.equal(SIGNAL_URL, '/room');
 });
 
 test('normalizes a room code to six digits', () => {
@@ -20,26 +24,23 @@ test('normalizes a room code to six digits', () => {
   assert.equal(normalizeRoomCode('42'), '42');
 });
 
-test('creates local room and relay identities before WebRTC finishes', () => {
+test('creates a local room identity before WebRTC finishes', () => {
   const identity = createRoomIdentity();
-  const relayToken = createRelayToken();
   assert.match(identity.roomCode, /^\d{6}$/);
   assert.match(identity.hostToken, /^[a-f0-9]{48}$/);
-  assert.match(relayToken, /^[a-f0-9]{48}$/);
-  assert.notEqual(identity.hostToken, relayToken);
 });
 
-test('health probe accepts signaling v3', async () => {
+test('health probe accepts Netlify signaling v1', async () => {
   const ok = await probeSignal({
     fetchImpl: async url => {
-      assert.match(String(url), /action=health/);
-      return jsonResponse({ ok: true, version: 3 });
+      assert.match(String(url), /\/room\?action=health/);
+      return jsonResponse({ ok: true, version: 1 });
     },
   });
   assert.equal(ok, true);
 });
 
-test('creates a signaling room with a supplied identity and exposes its code immediately', async () => {
+test('creates a signaling room with JSON POST and confirms the stored offer', async () => {
   let stored = null;
   let writeContentType = null;
   const announcedCodes = [];
@@ -52,7 +53,7 @@ test('creates a signaling room with a supplied identity and exposes its code imm
     sleep: async () => {},
     fetchImpl: async (url, init = {}) => {
       if (init.method === 'POST') {
-        writeContentType = init.headers['Content-Type'];
+        writeContentType = init.headers['content-type'];
         stored = JSON.parse(init.body);
         return jsonResponse({ ok: true });
       }
@@ -68,7 +69,29 @@ test('creates a signaling room with a supplied identity and exposes its code imm
   assert.equal(stored.roomCode, result.roomCode);
   assert.equal(stored.hostToken, result.hostToken);
   assert.equal(stored.offer, offer);
-  assert.equal(writeContentType, 'text/plain;charset=UTF-8');
+  assert.equal(writeContentType, 'application/json');
+});
+
+test('retries when a generated room code collides', async () => {
+  let writes = 0;
+  const offer = '{"type":"offer","sdp":"demo-offer"}';
+  const result = await createSignalRoom(offer, {
+    skipProbe: true,
+    identity: { roomCode: '111111', hostToken: 'a'.repeat(48) },
+    sleep: async () => {},
+    fetchImpl: async (url, init = {}) => {
+      if (init.method === 'POST') {
+        writes += 1;
+        if (writes === 1) return jsonResponse({ error: 'room_code_collision' }, 409);
+        const body = JSON.parse(init.body);
+        return jsonResponse({ ok: true, roomCode: body.roomCode });
+      }
+      return jsonResponse({ offer });
+    },
+  });
+  assert.equal(writes, 2);
+  assert.match(result.roomCode, /^\d{6}$/);
+  assert.notEqual(result.roomCode, '111111');
 });
 
 test('surfaces room-not-found from the signaling service', async () => {
