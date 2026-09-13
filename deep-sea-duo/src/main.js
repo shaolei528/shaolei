@@ -1,5 +1,7 @@
+import { BUILD_ID } from './build.js';
+import { createGameSession } from './app/game-session.js';
 import { createInput } from './game/input.js';
-import { applyHostSnapshot, applyRemoteInput, createGame, chooseRemoteUpgrade, chooseUpgrade, getUpgradeChoices, step } from './game/simulation.js';
+import { getUpgradeChoices } from './game/simulation.js';
 import { UPGRADES } from './game/constants.js';
 import { render, resizeCanvas } from './game/renderer.js';
 import { hideUpgrades, showUpgrades, updateHud } from './ui/hud.js';
@@ -8,7 +10,6 @@ import { normalizeRoomCode } from './network/signaling.js';
 import { applyDocumentTranslations, onLanguageChange, t, toggleLanguage } from './i18n.js';
 import { createAdaptiveAudio } from './audio/audio.js';
 
-const BUILD_ID = 'NET-R7';
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d', { alpha: false });
 const hud = document.querySelector('#hud');
@@ -34,17 +35,12 @@ const manualJoinButton = document.querySelector('#manual-join');
 const manualActionButton = document.querySelector('#manual-action');
 
 const controller = createInput(canvas);
+const session = createGameSession();
 const audio = createAdaptiveAudio();
-let game = createGame();
 let last = performance.now();
 let choices = [];
-let snapshotClock = 0;
-let inputClock = 0;
 let hudClock = 0;
-let pendingGuestDash = false;
-let roomMode = null;
 let lastRoomStatus = 'idle';
-let connectionActive = false;
 let wakeLock = null;
 let manualGeneratedCode = '';
 
@@ -110,7 +106,7 @@ function localizeError(error) {
 }
 
 async function requestWakeLock() {
-  if (!connectionActive || !globalThis.navigator?.wakeLock?.request || wakeLock) return;
+  if (!session.connected || !globalThis.navigator?.wakeLock?.request || wakeLock) return;
   try {
     wakeLock = await navigator.wakeLock.request('screen');
     wakeLock.addEventListener('release', () => { wakeLock = null; }, { once: true });
@@ -123,6 +119,18 @@ async function releaseWakeLock() {
   try { await lock?.release?.(); } catch {}
 }
 
+function clearMatchUi() {
+  choices = [];
+  hideUpgrades(panel);
+  controller.reset();
+  hudClock = 0;
+}
+
+function prepareSession(role) {
+  session.begin(role);
+  clearMatchUi();
+}
+
 function setLobbyView(view = 'home') {
   lobbyActions.classList.toggle('is-hidden', view !== 'home');
   hostRoomView.classList.toggle('is-hidden', view !== 'host');
@@ -131,11 +139,12 @@ function setLobbyView(view = 'home') {
 }
 
 function resetPairingUi(messageKey = 'roomLan') {
-  roomMode = null;
-  connectionActive = false;
+  session.reset();
+  clearMatchUi();
   manualGeneratedCode = '';
   manualCode.value = '';
   quickRoomInput.value = '';
+  quickJoinButton.disabled = true;
   hostRoomCode.textContent = '------';
   manualActionButton.classList.add('is-hidden');
   manualActionButton.disabled = false;
@@ -149,39 +158,38 @@ const room = createRoomController(
   status => {
     const isConnectedStatus = ['connected', 'connected-direct', 'connected-relay'].includes(status);
 
-    // A pre-connection WebRTC close is an implementation detail, not a real
-    // player disconnect. The room controller races a relay fallback in parallel.
-    if (!connectionActive && ['closed', 'disconnected'].includes(status)) return;
+    if (!session.connected && ['closed', 'disconnected'].includes(status)) return;
 
     lastRoomStatus = status;
     roomStatus.textContent = localizeStatus(status);
     if (isConnectedStatus) {
-      connectionActive = true;
+      session.connect();
       roomPanel.classList.add('is-hidden');
       document.body.classList.remove('in-lobby');
       requestWakeLock();
       return;
     }
     if (['disconnected', 'failed', 'closed', 'error', 'relay-error', 'relay-closed', 'relay-sdk-unavailable', 'signal-error', 'signal-unavailable', 'signal-timeout', 'room-expired', 'room_not_found', 'room_not_found_or_joined'].includes(status)) {
-      connectionActive = false;
+      session.disconnect();
+      clearMatchUi();
       releaseWakeLock();
       roomPanel.classList.remove('is-hidden');
       retryRoomButton.classList.remove('is-hidden');
       document.body.classList.add('in-lobby');
     }
   },
-  input => applyRemoteInput(game, input),
-  snapshot => applyHostSnapshot(game, snapshot),
-  id => chooseRemoteUpgrade(game, UPGRADES.find(upgrade => upgrade.id === id)),
+  input => session.applyRemoteInput(input),
+  snapshot => session.applySnapshot(snapshot),
+  id => session.chooseRemoteUpgrade(UPGRADES.find(upgrade => upgrade.id === id)),
 );
 
 function currentPlayer() {
-  return roomMode === 'guest' ? game.remotePlayer : game.player;
+  return session.localPlayer;
 }
 
 function selectUpgrade(id) {
-  if (roomMode === 'guest') room.sendUpgrade(id);
-  else chooseUpgrade(game, choices.find(choice => choice.id === id));
+  if (session.role === 'guest') room.sendUpgrade(id);
+  else session.chooseLocalUpgrade(choices.find(choice => choice.id === id));
   choices = [];
   hideUpgrades(panel);
 }
@@ -200,9 +208,7 @@ function refreshStaticText() {
 createRoomButton.addEventListener('click', async () => {
   await audio.unlock();
   room.reset();
-  game = createGame();
-  roomMode = 'host';
-  connectionActive = false;
+  prepareSession('host');
   setLobbyView('host');
   hostRoomCode.textContent = '······';
   roomStatus.textContent = t('creatingRoom');
@@ -211,7 +217,7 @@ createRoomButton.addEventListener('click', async () => {
       hostRoomCode.textContent = nextCode;
     });
     hostRoomCode.textContent = code;
-    if (!connectionActive) roomStatus.textContent = t('hostWaiting');
+    if (!session.connected) roomStatus.textContent = t('hostWaiting');
   } catch (error) {
     console.error('Deep Sea Duo create room failed', error);
     roomStatus.textContent = localizeError(error);
@@ -222,8 +228,7 @@ createRoomButton.addEventListener('click', async () => {
 joinRoomButton.addEventListener('click', async () => {
   await audio.unlock();
   room.reset();
-  roomMode = 'guest';
-  connectionActive = false;
+  prepareSession('guest');
   setLobbyView('join');
   roomStatus.textContent = t('enterRoomCode');
   setTimeout(() => quickRoomInput.focus(), 50);
@@ -266,7 +271,8 @@ retryRoomButton.addEventListener('click', () => {
 
 manualCreateButton.addEventListener('click', async () => {
   await audio.unlock();
-  roomMode = 'host';
+  room.reset();
+  prepareSession('host');
   roomStatus.textContent = t('manualCreating');
   try {
     manualCode.value = await room.createRoom();
@@ -280,7 +286,8 @@ manualCreateButton.addEventListener('click', async () => {
 
 manualJoinButton.addEventListener('click', async () => {
   await audio.unlock();
-  roomMode = 'guest';
+  room.reset();
+  prepareSession('guest');
   manualGeneratedCode = '';
   manualCode.value = '';
   manualCode.placeholder = t('pasteOffer');
@@ -293,7 +300,7 @@ manualJoinButton.addEventListener('click', async () => {
 manualActionButton.addEventListener('click', async () => {
   const code = manualCode.value.trim();
   try {
-    if (roomMode === 'host') {
+    if (session.role === 'host') {
       if (!code || code === manualGeneratedCode) {
         roomStatus.textContent = t('needGuestAnswer');
         return;
@@ -301,7 +308,7 @@ manualActionButton.addEventListener('click', async () => {
       await room.acceptGuest(code);
       manualActionButton.disabled = true;
       roomStatus.textContent = t('waitingDirect');
-    } else if (roomMode === 'guest') {
+    } else if (session.role === 'guest') {
       if (!code) {
         roomStatus.textContent = t('needHostOffer');
         return;
@@ -335,68 +342,49 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') requestWakeLock();
 });
 
-function reset() {
-  game = createGame();
-  choices = [];
-  hideUpgrades(panel);
-  hudClock = 0;
+function restartMatch() {
+  if (!session.restart()) return;
+  clearMatchUi();
 }
 
 function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
 
-  if (connectionActive) {
-    controller.input.dash ||= controller.consumeDash();
-    inputClock -= dt;
-    if (roomMode === 'guest') {
-      pendingGuestDash ||= controller.input.dash;
-      if (inputClock <= 0) {
-        room.sendInput({ ...controller.input, dash: pendingGuestDash });
-        pendingGuestDash = false;
-        inputClock = 1 / 30;
-      }
-    } else {
-      step(game, controller.input, dt);
-    }
+  const frameInput = controller.frame();
+  session.tick(dt, frameInput, {
+    sendInput: input => room.sendInput(input),
+    sendSnapshot: (state, tick) => room.sendSnapshot(state, tick),
+  });
 
-    snapshotClock -= dt;
-    if (roomMode === 'host' && snapshotClock <= 0) {
-      room.sendSnapshot(game, Math.floor(now));
-      snapshotClock = 1 / 15;
-    }
-    controller.input.dash = false;
-
+  if (session.connected) {
     const levelingPlayer = currentPlayer();
     if (levelingPlayer.pendingLevel && !choices.length) {
       choices = getUpgradeChoices();
       showUpgrades(panel, choices, selectUpgrade);
     }
-    audio.sync(game, levelingPlayer);
-  } else {
-    controller.input.dash = false;
-    pendingGuestDash = false;
+    audio.sync(session.game, levelingPlayer);
   }
 
   hudClock -= dt;
   if (hudClock <= 0) {
-    updateHud(hud, game, currentPlayer());
+    updateHud(hud, session.game, currentPlayer());
     hudClock = 0.1;
   }
 
-  render(ctx, game);
+  render(ctx, session.game);
   requestAnimationFrame(loop);
 }
 
 dashButton.addEventListener('pointerdown', event => {
   event.preventDefault();
-  if (!connectionActive) return;
-  controller.input.dash = true;
+  if (!session.connected) return;
+  controller.requestDash();
   audio.unlock();
 });
 
 canvas.addEventListener('pointerdown', () => {
-  if (connectionActive && game.state === 'gameover' && roomMode !== 'guest') reset();
+  if (session.connected && session.game.state === 'gameover' && session.role !== 'guest') restartMatch();
 });
 
 function handleResize() { resizeCanvas(canvas); }
