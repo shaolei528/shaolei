@@ -1,4 +1,4 @@
-const CACHE_NAME = 'deep-sea-duo-static-20260913-v4';
+const CACHE_NAME = 'deep-sea-duo-static-20260913-v5';
 const CORE_ASSETS = [
   './index.html',
   './manifest.webmanifest',
@@ -22,6 +22,7 @@ const CORE_ASSETS = [
   './src/network/room.js',
   './src/network/signaling.js',
   './src/network/manual-webrtc.js',
+  './src/network/realtime-relay.js',
   './src/network/messages.js',
 ];
 
