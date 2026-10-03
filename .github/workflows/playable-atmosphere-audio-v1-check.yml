@@ -1,0 +1,42 @@
+name: playable-atmosphere-audio-v1-check
+
+on:
+  push:
+    paths:
+      - 'modules/audio/playable-feel-audio-v1.js'
+      - 'modules/world/awakening-world-v1.js'
+      - 'tests/playable-slice-atmosphere-audio-v1.test.mjs'
+      - '.github/workflows/playable-atmosphere-audio-v1-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Atmosphere state transition soak and authority invariants
+        run: node tests/playable-slice-atmosphere-audio-v1.test.mjs
+      - name: Existing audio mixer and lifecycle regressions
+        run: |
+          node tests/playable-slice-audio-mixer-v1.test.mjs
+          node tests/playable-slice-feel-audio-v1.test.mjs
+      - name: Combat presentation regression
+        run: node tests/playable-slice-combat-presentation-v1.test.mjs
+      - name: Smoothness and PC mobile input regressions
+        run: |
+          node tests/playable-slice-smoothness-v1.test.mjs
+          node tests/platform-inventory-v19.test.mjs
+          node tests/interaction-v12.test.mjs
+      - name: Existing world presentation state contract
+        run: |
+          node tests/awakening-world-v1.test.mjs
+          node tests/awakening-world-logic-hardening-v1.test.mjs
+      - name: Atmosphere audio syntax
+        run: node --check modules/audio/playable-feel-audio-v1.js

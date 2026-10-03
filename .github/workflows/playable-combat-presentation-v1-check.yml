@@ -1,0 +1,68 @@
+name: playable-combat-presentation-v1-check
+
+on:
+  push:
+    paths:
+      - 'modules/combat/hit-feedback.js'
+      - 'modules/combat/weapon-presentation-v1.js'
+      - 'modules/combat/playable-feel-v1.js'
+      - 'modules/audio/playable-feel-audio-v1.js'
+      - 'modules/combat/player-combat.js'
+      - 'tests/playable-slice-combat-presentation-v1.test.mjs'
+      - 'tests/combat-hit-feedback.test.mjs'
+      - 'tests/weapon-presentation-v1.test.mjs'
+      - 'tests/playable-slice-audio-mixer-v1.test.mjs'
+      - 'tests/playable-slice-feel-audio-v1.test.mjs'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
+      - 'tests/interaction-v12.test.mjs'
+      - 'tests/dev-performance-v1.test.mjs'
+      - '.github/workflows/playable-combat-presentation-v1-check.yml'
+  pull_request:
+    paths:
+      - 'modules/combat/hit-feedback.js'
+      - 'modules/combat/weapon-presentation-v1.js'
+      - 'modules/combat/playable-feel-v1.js'
+      - 'modules/audio/playable-feel-audio-v1.js'
+      - 'modules/combat/player-combat.js'
+      - 'tests/playable-slice-combat-presentation-v1.test.mjs'
+      - 'tests/combat-hit-feedback.test.mjs'
+      - 'tests/weapon-presentation-v1.test.mjs'
+      - 'tests/playable-slice-audio-mixer-v1.test.mjs'
+      - 'tests/playable-slice-feel-audio-v1.test.mjs'
+      - 'tests/playable-slice-smoothness-v1.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
+      - 'tests/interaction-v12.test.mjs'
+      - 'tests/dev-performance-v1.test.mjs'
+      - '.github/workflows/playable-combat-presentation-v1-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Combat presentation soak and invariants
+        run: node tests/playable-slice-combat-presentation-v1.test.mjs
+      - name: Existing hit and weapon presentation regressions
+        run: |
+          node tests/combat-hit-feedback.test.mjs
+          node tests/weapon-presentation-v1.test.mjs
+      - name: Audio mixer and playable feel regressions
+        run: |
+          node tests/playable-slice-audio-mixer-v1.test.mjs
+          node tests/playable-slice-feel-audio-v1.test.mjs
+      - name: Smoothness and PC mobile input regressions
+        run: |
+          node tests/playable-slice-smoothness-v1.test.mjs
+          node tests/platform-inventory-v19.test.mjs
+          node tests/interaction-v12.test.mjs
+          node tests/dev-performance-v1.test.mjs
+      - name: Changed presentation syntax
+        run: |
+          node --check modules/combat/hit-feedback.js
+          node --check modules/combat/weapon-presentation-v1.js
+          node --check modules/combat/playable-feel-v1.js
+          node --check tests/playable-slice-combat-presentation-v1.test.mjs
