@@ -10,6 +10,8 @@ on:
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
       - 'awakening-assets-preview.html'
+      - 'awakening-scene-preview.html'
+      - 'tests/awakening-scene-placement-preview-v1.test.mjs'
       - 'survival-v21.html'
       - 'game-play.js'
       - 'package.json'
@@ -45,6 +47,8 @@ on:
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
       - 'awakening-assets-preview.html'
+      - 'awakening-scene-preview.html'
+      - 'tests/awakening-scene-placement-preview-v1.test.mjs'
       - 'survival-v21.html'
       - 'game-play.js'
       - 'package.json'
@@ -77,6 +81,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Scene placement preview isolation
+        run: node tests/awakening-scene-placement-preview-v1.test.mjs
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
