@@ -17,6 +17,12 @@
   - no network event/payload/frequency changes.
 */
 
+const existingMotion=window.ABYSSAL_MOTION_V18;
+if(existingMotion?.active){
+  existingMotion.reentryCount=(Number(existingMotion.reentryCount)||0)+1;
+  return;
+}
+
 if(typeof update!=='function'||typeof draw!=='function'||typeof onMove!=='function'){
   console.error('[Abyssal V18 motion] update/draw/onMove are not ready');
   return;
@@ -43,6 +49,7 @@ const MOTION={
   frames:0,
   lastDt:0,
   legacyTicksBlocked:0,
+  reentryCount:0,
   remoteSnapshots:new Map()
 };
 window.ABYSSAL_MOTION_V18=MOTION;
