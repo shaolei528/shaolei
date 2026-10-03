@@ -1,6 +1,12 @@
 (()=>{
   'use strict';
 
+  const existingInteraction=window.ABYSSAL_INTERACTION_V12;
+  if(existingInteraction?.bound){
+    existingInteraction.reentryCount=(Number(existingInteraction.reentryCount)||0)+1;
+    return;
+  }
+
   const GUIDE={x:2325,y:2370};
   const FIRE={x:2400,y:2400};
   const WORKBENCH={x:2195,y:2535};
@@ -337,7 +343,7 @@
 
   document.getElementById('guideDialogV12')?.addEventListener('pointerdown',event=>event.stopPropagation());
 
-  setInterval(()=>{
+  const interactionIntervalId=setInterval(()=>{
     if(dialogOpen){prompt.style.display='none';return;}
     const target=interactionTarget();
     if(!target){prompt.style.display='none';}
@@ -347,6 +353,9 @@
 
   window.ABYSSAL_INTERACTION_V12={
     version:12,
+    bound:true,
+    reentryCount:Number(existingInteraction?.reentryCount)||0,
+    intervalId:interactionIntervalId,
     triggerContextInteraction,
     openGuide:openGuideDialog,
     closeGuide:closeGuideDialog,
