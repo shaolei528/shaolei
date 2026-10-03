@@ -1,6 +1,12 @@
 (()=>{
 'use strict';
 
+const existingPlatform=window.ABYSSAL_PLATFORM_V19;
+if(existingPlatform?.bound){
+  existingPlatform.reentryCount=(Number(existingPlatform.reentryCount)||0)+1;
+  return;
+}
+
 /*
   V19 cross-platform controls + inventory UI.
 
@@ -55,7 +61,7 @@ function detectDesktop({finePointer=false,hover=false,navigatorLike={}}={}){
   return !!(finePointer||hover||desktopPlatform);
 }
 
-const API={version:19,keyboardVector,isTypingTarget,inventorySnapshot,inventorySignature,looksMobileNavigator,detectDesktop,desktop:false,panelOpen:false,inventoryRenderCount:0};
+const API={version:19,bound:false,reentryCount:Number(existingPlatform?.reentryCount)||0,keyboardVector,isTypingTarget,inventorySnapshot,inventorySignature,looksMobileNavigator,detectDesktop,desktop:false,panelOpen:false,inventoryRenderCount:0};
 window.ABYSSAL_PLATFORM_V19=API;
 
 const root=typeof game!=='undefined'?game:document.getElementById('game');
@@ -272,4 +278,5 @@ window.addEventListener('resize',()=>requestAnimationFrame(fitDesktopCanvas),{pa
 for(const m of [fineMedia,hoverMedia])if(m.addEventListener)m.addEventListener('change',applyPlatform);
 if('ResizeObserver' in window)new ResizeObserver(()=>requestAnimationFrame(fitDesktopCanvas)).observe(arenaWrap);
 applyPlatform();
+API.bound=true;
 })();
