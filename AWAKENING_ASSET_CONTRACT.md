@@ -160,6 +160,7 @@ Art Lab may propose visual changes, but if a visual footprint changes substantia
 - No semi-transparent fringe caused by resampling.
 - Avoid premultiplied-looking halos around dark pixel art.
 - Base terrain: normally opaque.
+- Production validation checks that every selected base terrain PNG/sourceRect is fully opaque, including actual decoded pixel alpha.
 
 ## Animation frames
 Most V1 world assets are static: **1 frame**.
@@ -189,6 +190,10 @@ Examples:
 - frame count
 - frame duration
 - visual category
+
+The production gate pins these seven redraw blocker dimensions to their approved outputs: cold grass A/B/detail **64×64**, early residue decal **96×72**, store debris **80×64**, failing light **96×16**, and early residue FX **96×72**. Their selected crop dimensions are checked against the source pixels.
+
+Every required semantic binding must use exactly its approved candidate ID list. Extra same-category assets cannot be added as runtime substitutes. All three cold-grass IDs, including detail, belong in `terrain.cold_grass`.
 
 It must not contain authoritative gameplay collision.
 

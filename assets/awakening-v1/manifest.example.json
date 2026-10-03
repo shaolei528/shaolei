@@ -3,7 +3,7 @@
   "pack": "Awakening World Art Pack 01",
   "bindings": {
     "terrain": {
-      "cold_grass": ["aw_v1_terrain_cold_grass_a", "aw_v1_terrain_cold_grass_b"],
+      "cold_grass": ["aw_v1_terrain_cold_grass_a", "aw_v1_terrain_cold_grass_b", "aw_v1_terrain_cold_grass_detail"],
       "dirt_shoulder": ["aw_v1_terrain_dirt_shoulder_a", "aw_v1_terrain_dirt_shoulder_b"],
       "asphalt": ["aw_v1_terrain_asphalt_a", "aw_v1_terrain_asphalt_b", "aw_v1_terrain_asphalt_cracked"],
       "store_floor": ["aw_v1_terrain_concrete_floor_a", "aw_v1_terrain_concrete_floor_b"]

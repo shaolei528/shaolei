@@ -26,7 +26,7 @@ General acceptance rules:
 |---|---|---:|---|---|---|---|
 | `aw_v1_terrain_cold_grass_a` | `terrain.cold_grass` | **64×64** | opaque | none | reference ID `ref_aw_s01_r0_c0`; approved cold-grass material source | **REDRAW REQUIRED** |
 | `aw_v1_terrain_cold_grass_b` | `terrain.cold_grass` | **64×64** | opaque | none | same cold-grass source family; A must not be duplicated compositionally | **REDRAW REQUIRED** |
-| `aw_v1_terrain_cold_grass_detail` | support asset required by production gate for `terrain.cold_grass` | **64×64** | opaque | none | same cold-grass source family + Macro Terrain Rollout Contract | **REDRAW REQUIRED** |
+| `aw_v1_terrain_cold_grass_detail` | `terrain.cold_grass` candidate; all three approved grass IDs must be bound | **64×64** | opaque | none | same cold-grass source family + Macro Terrain Rollout Contract | **REDRAW REQUIRED** |
 | `aw_v1_decal_early_residue_01` | `decal.residue` | **96×72** | RGBA transparent | `{x:0.5,y:0.5}` | `AWAKENING_ASSET_CONTRACT.md` early Stage-1 anomaly direction; existing store grime is **not** a substitute | **MISSING / DRAW REQUIRED** |
 | `aw_v1_prop_store_debris_01` | `prop.debris` | **80×64** | RGBA transparent | `{x:0.5,y:1}` | abandoned convenience-store contract; G roadside debris may inform material language but is **not** this semantic | **MISSING / DRAW REQUIRED** |
 | `aw_v1_fx_store_failing_light_01` | `fx.flicker` | **96×16** | RGBA transparent | `{x:0.5,y:0.5}` | abandoned-store failing fluorescent requirement | **MISSING / DRAW REQUIRED** |

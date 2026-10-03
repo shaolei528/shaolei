@@ -10,6 +10,7 @@ on:
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
       - 'awakening-assets-preview.html'
+      - 'docs/contracts/PRODUCTION_BLOCKER_REDRAW_SPEC_V1.md'
       - 'awakening-scene-preview.html'
       - 'tests/awakening-scene-placement-preview-v1.test.mjs'
       - 'survival-v21.html'
@@ -47,6 +48,7 @@ on:
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
       - 'awakening-assets-preview.html'
+      - 'docs/contracts/PRODUCTION_BLOCKER_REDRAW_SPEC_V1.md'
       - 'awakening-scene-preview.html'
       - 'tests/awakening-scene-placement-preview-v1.test.mjs'
       - 'survival-v21.html'
@@ -81,11 +83,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Scene placement preview isolation
-        run: node tests/awakening-scene-placement-preview-v1.test.mjs
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Scene placement preview isolation
+        run: node tests/awakening-scene-placement-preview-v1.test.mjs
       - name: Module-sort byte equivalence and load order
         run: node tests/module-sort.test.mjs
       - name: V18 retry ownership regression
@@ -101,7 +103,9 @@ jobs:
           if [ -f assets/awakening-v1/manifest.json ]; then
             node tools/awakening-assets/validate-pack.mjs assets/awakening-v1 --strict-required
           else
-            echo "No production Awakening manifest yet; fixture validator tests remain authoritative."
+            echo "BLOCKED: no production Awakening manifest exists; fixture gate tests do not validate a production art pack."
+            echo "## Production art readiness: BLOCKED" >> "$GITHUB_STEP_SUMMARY"
+            echo "No production manifest exists. Fixture tests validate the gate logic only; production art is not approved." >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Awakening art mapping and fallback
         run: node tests/awakening-art-mapping-v1.test.mjs

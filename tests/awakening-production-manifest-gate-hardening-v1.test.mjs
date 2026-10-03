@@ -6,13 +6,13 @@ import {validatePack,REQUIRED_PRODUCTION_IDS} from '../tools/awakening-assets/li
 import {encodeRgbaPng} from '../tools/awakening-assets/png.mjs';
 
 const BINDINGS={
-  terrain:{cold_grass:['aw_v1_terrain_cold_grass_a','aw_v1_terrain_cold_grass_b'],dirt_shoulder:['aw_v1_terrain_dirt_shoulder_a','aw_v1_terrain_dirt_shoulder_b'],asphalt:['aw_v1_terrain_asphalt_a','aw_v1_terrain_asphalt_b','aw_v1_terrain_asphalt_cracked'],store_floor:['aw_v1_terrain_concrete_floor_a','aw_v1_terrain_concrete_floor_b']},
+  terrain:{cold_grass:['aw_v1_terrain_cold_grass_a','aw_v1_terrain_cold_grass_b','aw_v1_terrain_cold_grass_detail'],dirt_shoulder:['aw_v1_terrain_dirt_shoulder_a','aw_v1_terrain_dirt_shoulder_b'],asphalt:['aw_v1_terrain_asphalt_a','aw_v1_terrain_asphalt_b','aw_v1_terrain_asphalt_cracked'],store_floor:['aw_v1_terrain_concrete_floor_a','aw_v1_terrain_concrete_floor_b']},
   decal:{puddle:['aw_v1_decal_puddle_01'],crack:['aw_v1_decal_asphalt_crack_01'],tire:['aw_v1_decal_tire_mark_01'],glass:['aw_v1_decal_broken_glass_01'],residue:['aw_v1_decal_early_residue_01']},
   prop:{fence:['aw_v1_prop_fence_01'],barrier:['aw_v1_prop_road_barrier_01'],wall:['aw_v1_prop_store_exterior_wall_01'],sign:['aw_v1_prop_store_sign_mire_mart'],counter:['aw_v1_prop_store_counter_01'],shelf:['aw_v1_prop_store_shelf_01'],fridge:['aw_v1_prop_store_fridge_01'],debris:['aw_v1_prop_store_debris_01']},
   fx:{flicker:['aw_v1_fx_store_failing_light_01'],anomaly:['aw_v1_fx_store_early_residue_01']}
 };
-function rgbaPng(alpha=true){
-  const w=64,h=64,b=Buffer.alloc(w*h*4);
+function rgbaPng(alpha=true,w=64,h=64){
+  const b=Buffer.alloc(w*h*4);
   for(let i=0;i<w*h;i++){const p=i*4;b[p]=42;b[p+1]=66;b[p+2]=78;b[p+3]=alpha&&i===0?0:255;}
   return encodeRgbaPng(w,h,b);
 }
@@ -21,8 +21,9 @@ function makeFullPack(){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'aw-gate-')),assets=[];
   for(const id of REQUIRED_PRODUCTION_IDS){
     const category=id.split('_')[2],file=`${category}/${id}.png`;
-    save(root,file,rgbaPng(category!=='terrain'));
-    const asset={id,category,file,width:64,height:64};
+    const [width,height]=({aw_v1_decal_early_residue_01:[96,72],aw_v1_prop_store_debris_01:[80,64],aw_v1_fx_store_failing_light_01:[96,16],aw_v1_fx_store_early_residue_01:[96,72]})[id]||[64,64];
+    save(root,file,rgbaPng(category!=='terrain',width,height));
+    const asset={id,category,file,width,height};
     if(category==='prop')asset.anchor={x:.5,y:1};
     else if(category!=='terrain')asset.anchor={x:.5,y:.5};
     if(category==='fx')asset.frames=1;
@@ -49,8 +50,22 @@ for(const id of ['aw_v1_terrain_cold_grass_a','aw_v1_decal_early_residue_01','aw
 }
 // Missing semantic binding fails even when its asset exists.
 expectStrictFail(m=>{delete m.bindings.decal.residue;},'required production binding missing: decal.residue');
+// An approved binding must be the exact candidate list; extra same-category IDs can change runtime selection.
+expectStrictFail(m=>{m.bindings.prop.sign.push('aw_v1_prop_fence_01');},'must exactly equal');
 // MIRE MART is the explicit required sign binding.
-expectStrictFail(m=>{m.bindings.prop.sign=['aw_v1_prop_fence_01'];},'required production binding prop.sign must include aw_v1_prop_store_sign_mire_mart');
+expectStrictFail(m=>{m.bindings.prop.sign=['aw_v1_prop_fence_01'];},'must exactly equal');
+// Exact source dimensions are required for the seven redraw blockers.
+for(const [id,width,height] of [['aw_v1_terrain_cold_grass_a',128,64],['aw_v1_decal_early_residue_01',64,64],['aw_v1_prop_store_debris_01',96,72],['aw_v1_fx_store_failing_light_01',64,64],['aw_v1_fx_store_early_residue_01',64,64]]){
+  const {root,manifest}=makeFullPack(),asset=manifest.assets.find(a=>a.id===id);
+  asset.width=width;asset.height=height;save(root,asset.file,rgbaPng(asset.category!=='terrain',width,height));writeManifest(root,manifest);
+  const r=validatePack(root,{strictRequired:true});assert.equal(r.ok,false,`${id} wrong size must fail strict gate`);assert.ok(r.errors.some(e=>e.includes(`${id} must be exactly`)),r.errors.join('\n'));
+}
+// Terrain pixels must be opaque in the actual selected region.
+{
+  const {root,manifest}=makeFullPack(),asset=manifest.assets.find(a=>a.id==='aw_v1_terrain_cold_grass_a');
+  save(root,asset.file,rgbaPng(true));writeManifest(root,manifest);
+  const r=validatePack(root,{strictRequired:true});assert.equal(r.ok,false);assert.ok(r.errors.some(e=>e.includes('terrain PNG/sourceRect base pixels must be fully opaque')));
+}
 // Grime / entrance / bollard may exist as unbound inventory but may not create runtime semantics.
 {
   const {root,manifest}=makeFullPack();
