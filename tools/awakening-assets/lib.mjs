@@ -4,168 +4,55 @@ import {decodePng,inspectRgbaRegion} from './png.mjs';
 
 export const ASSET_ID_RE=/^aw_v1_(terrain|decal|prop|fx)_[a-z0-9]+(?:_[a-z0-9]+)*$/;
 export const CATEGORIES=new Set(['terrain','decal','prop','fx']);
-export const REQUIRED_BASE_IDS=[
-  'aw_v1_terrain_cold_grass_a',
-  'aw_v1_terrain_cold_grass_b',
-  'aw_v1_terrain_cold_grass_detail',
-  'aw_v1_terrain_dirt_shoulder_a',
-  'aw_v1_terrain_dirt_shoulder_b',
-  'aw_v1_terrain_asphalt_a',
-  'aw_v1_terrain_asphalt_b',
-  'aw_v1_terrain_asphalt_cracked',
-  'aw_v1_terrain_concrete_floor_a',
-  'aw_v1_terrain_concrete_floor_b'
-];
-const PNG_SIGNATURE=Buffer.from([137,80,78,71,13,10,26,10]);
-const MAX_DIMENSION=8192;
-const FORBIDDEN_GAMEPLAY_FIELDS=new Set(['collision','collider','hitbox','hitboxes','solid','walkable','blocked']);
-
-function positiveInt(value){return Number.isInteger(value)&&value>0;}
-function safeRelativeFile(file){
-  if(typeof file!=='string'||!file||file.includes('\\'))return false;
-  const normalized=path.posix.normalize(file);
-  return normalized===file&&!normalized.startsWith('../')&&!path.posix.isAbsolute(normalized)&&normalized.toLowerCase().endsWith('.png');
-}
-function findForbiddenGameplayFields(value,currentPath='manifest',out=[]){
-  if(Array.isArray(value)){
-    for(let i=0;i<value.length;i++)findForbiddenGameplayFields(value[i],`${currentPath}[${i}]`,out);
-    return out;
+export const APPROVED_SEMANTIC_BINDINGS=Object.freeze({
+  terrain:{cold_grass:['aw_v1_terrain_cold_grass_a','aw_v1_terrain_cold_grass_b'],dirt_shoulder:['aw_v1_terrain_dirt_shoulder_a','aw_v1_terrain_dirt_shoulder_b'],asphalt:['aw_v1_terrain_asphalt_a','aw_v1_terrain_asphalt_b','aw_v1_terrain_asphalt_cracked'],store_floor:['aw_v1_terrain_concrete_floor_a','aw_v1_terrain_concrete_floor_b']},
+  decal:{puddle:['aw_v1_decal_puddle_01'],crack:['aw_v1_decal_asphalt_crack_01'],tire:['aw_v1_decal_tire_mark_01'],glass:['aw_v1_decal_broken_glass_01'],residue:['aw_v1_decal_early_residue_01']},
+  prop:{fence:['aw_v1_prop_fence_01'],barrier:['aw_v1_prop_road_barrier_01'],wall:['aw_v1_prop_store_exterior_wall_01'],sign:['aw_v1_prop_store_sign_mire_mart'],counter:['aw_v1_prop_store_counter_01'],shelf:['aw_v1_prop_store_shelf_01'],fridge:['aw_v1_prop_store_fridge_01'],debris:['aw_v1_prop_store_debris_01']},
+  fx:{flicker:['aw_v1_fx_store_failing_light_01'],anomaly:['aw_v1_fx_store_early_residue_01']}
+});
+for(const group of Object.values(APPROVED_SEMANTIC_BINDINGS))for(const a of Object.values(group))Object.freeze(a);for(const group of Object.values(APPROVED_SEMANTIC_BINDINGS))Object.freeze(group);
+export const REQUIRED_PRODUCTION_IDS=Object.freeze([
+  'aw_v1_terrain_cold_grass_a','aw_v1_terrain_cold_grass_b','aw_v1_terrain_cold_grass_detail','aw_v1_terrain_dirt_shoulder_a','aw_v1_terrain_dirt_shoulder_b','aw_v1_terrain_asphalt_a','aw_v1_terrain_asphalt_b','aw_v1_terrain_asphalt_cracked','aw_v1_terrain_concrete_floor_a','aw_v1_terrain_concrete_floor_b',
+  'aw_v1_decal_puddle_01','aw_v1_decal_asphalt_crack_01','aw_v1_decal_tire_mark_01','aw_v1_decal_broken_glass_01','aw_v1_decal_early_residue_01',
+  'aw_v1_prop_fence_01','aw_v1_prop_road_barrier_01','aw_v1_prop_store_exterior_wall_01','aw_v1_prop_store_sign_mire_mart','aw_v1_prop_store_counter_01','aw_v1_prop_store_shelf_01','aw_v1_prop_store_fridge_01','aw_v1_prop_store_debris_01',
+  'aw_v1_fx_store_failing_light_01','aw_v1_fx_store_early_residue_01'
+]);
+const SIG=Buffer.from([137,80,78,71,13,10,26,10]),MAX=8192;
+const F={root:new Set(['version','pack','bindings','sheets','assets']),asset:new Set(['id','category','file','sourceRect','width','height','anchor','frames','frameDurationMs']),sheet:new Set(['id','file','cellWidth','cellHeight','entries']),entry:new Set(['id','category','file','col','row','cols','rows','x','y','w','h','width','height','anchor','frames','frameDurationMs']),rect:new Set(['x','y','w','h']),anchor:new Set(['x','y'])};
+const obj=v=>!!v&&typeof v==='object'&&!Array.isArray(v),pos=v=>Number.isInteger(v)&&v>0;
+function safe(file){if(typeof file!=='string'||!file||file.includes('\\'))return false;const n=path.posix.normalize(file);return n===file&&!n.startsWith('../')&&!path.posix.isAbsolute(n)&&n.toLowerCase().endsWith('.png');}
+function allow(o,set,p,e){if(obj(o))for(const k of Object.keys(o))if(!set.has(k))e.push(`presentation-only manifest field not allowed: ${p}.${k}`);}
+function schema(m,e){
+  if(!obj(m)){e.push('manifest root must be an object');return;}allow(m,F.root,'manifest',e);
+  if(m.pack!=null&&typeof m.pack!=='string')e.push('manifest.pack must be a string');
+  if(m.assets!=null&&!Array.isArray(m.assets))e.push('manifest.assets must be an array');
+  if(m.sheets!=null&&!Array.isArray(m.sheets))e.push('manifest.sheets must be an array');
+  if(m.bindings!=null&&!obj(m.bindings))e.push('manifest.bindings must be an object');
+  for(const [cat,map] of Object.entries(m.bindings||{})){
+    const approved=APPROVED_SEMANTIC_BINDINGS[cat];if(!approved){e.push(`unsupported binding category: ${cat}`);continue;}if(!obj(map)){e.push(`manifest.bindings.${cat} must be an object`);continue;}
+    for(const [sem,ids] of Object.entries(map)){if(!(sem in approved))e.push(`unsupported binding semantic: ${cat}.${sem}`);if(!Array.isArray(ids)||!ids.length||ids.some(id=>typeof id!=='string'))e.push(`manifest.bindings.${cat}.${sem} must be a non-empty array of asset ids`);}
   }
-  if(!value||typeof value!=='object')return out;
-  for(const[key,child]of Object.entries(value)){
-    if(FORBIDDEN_GAMEPLAY_FIELDS.has(key))out.push(`${currentPath}.${key}`);
-    findForbiddenGameplayFields(child,`${currentPath}.${key}`,out);
+  for(const [i,a] of (Array.isArray(m.assets)?m.assets:[]).entries()){const p=`manifest.assets[${i}]`;if(!obj(a)){e.push(`${p} must be an object`);continue;}allow(a,F.asset,p,e);if(a.sourceRect!=null){if(!obj(a.sourceRect))e.push(`${p}.sourceRect must be an object`);else allow(a.sourceRect,F.rect,`${p}.sourceRect`,e);}if(a.anchor!=null){if(!obj(a.anchor))e.push(`${p}.anchor must be an object`);else allow(a.anchor,F.anchor,`${p}.anchor`,e);}}
+  for(const [i,s] of (Array.isArray(m.sheets)?m.sheets:[]).entries()){const p=`manifest.sheets[${i}]`;if(!obj(s)){e.push(`${p} must be an object`);continue;}allow(s,F.sheet,p,e);if(s.entries!=null&&!Array.isArray(s.entries))e.push(`${p}.entries must be an array`);for(const [j,a] of (Array.isArray(s.entries)?s.entries:[]).entries()){const q=`${p}.entries[${j}]`;if(!obj(a)){e.push(`${q} must be an object`);continue;}allow(a,F.entry,q,e);if(a.anchor!=null){if(!obj(a.anchor))e.push(`${q}.anchor must be an object`);else allow(a.anchor,F.anchor,`${q}.anchor`,e);}}}
+}
+
+export function inspectPngBuffer(b){
+  if(!Buffer.isBuffer(b)||b.length<33||!b.subarray(0,8).equals(SIG))throw new Error('invalid PNG signature');let o=8,h=null,t=false,n=0,end=false;
+  while(o+12<=b.length){const l=b.readUInt32BE(o),type=b.toString('ascii',o+4,o+8),s=o+8,z=s+l;if(z+4>b.length)throw new Error(`truncated PNG chunk ${type}`);if(type==='IHDR'){if(l!==13||h)throw new Error('invalid PNG IHDR');h={width:b.readUInt32BE(s),height:b.readUInt32BE(s+4),bitDepth:b[s+8],colorType:b[s+9],compression:b[s+10],filter:b[s+11],interlace:b[s+12]};}else if(type==='tRNS')t=true;else if(type==='IDAT')n++;else if(type==='IEND'){end=true;break;}o=z+4;}
+  if(!h)throw new Error('PNG missing IHDR');if(!n)throw new Error('PNG missing IDAT');if(!end)throw new Error('PNG missing IEND');if(!pos(h.width)||!pos(h.height)||h.width>MAX||h.height>MAX)throw new Error(`illegal PNG dimensions ${h.width}x${h.height}`);if(h.compression!==0||h.filter!==0||![0,1].includes(h.interlace))throw new Error('unsupported PNG header flags');return{...h,hasAlpha:[4,6].includes(h.colorType)||t,hasTrns:t,idatChunks:n};
+}
+export function normalizeManifest(m){const x=m&&typeof m==='object'?m:{},assets=Array.isArray(x.assets)?x.assets.map(a=>({...a})):[];for(const s of Array.isArray(x.sheets)?x.sheets:[]){const cw=Number(s.cellWidth),ch=Number(s.cellHeight);for(const a of Array.isArray(s.entries)?s.entries:[]){const r=[a.x,a.y,a.w,a.h].every(Number.isFinite)?{x:+a.x,y:+a.y,w:+a.w,h:+a.h}:{x:+(a.col||0)*cw,y:+(a.row||0)*ch,w:(pos(a.cols)?a.cols:1)*cw,h:(pos(a.rows)?a.rows:1)*ch};assets.push({...a,file:a.file||s.file,sourceRect:r,width:a.width||r.w,height:a.height||r.h,sheet:s.id||s.file});}}return{...x,assets};}
+function binds(b){const out=[];for(const [c,m] of Object.entries(b||{}))if(obj(m))for(const [s,ids] of Object.entries(m))if(Array.isArray(ids))for(const id of ids)out.push({category:c,semantic:s,id});return out;}
+function strict(m,seen,e){for(const id of REQUIRED_PRODUCTION_IDS)if(!seen.has(id))e.push(`required production asset missing: ${id}`);for(const [c,map] of Object.entries(APPROVED_SEMANTIC_BINDINGS))for(const [s,ids] of Object.entries(map)){const a=m.bindings?.[c]?.[s];if(!Array.isArray(a)||!a.length){e.push(`required production binding missing: ${c}.${s}`);continue;}for(const id of ids)if(!a.includes(id))e.push(`required production binding ${c}.${s} must include ${id}`);}}
+
+export function validatePack(root,{readFile=fs.readFileSync,exists=fs.existsSync,strictRequired=false}={}){
+  const errors=[],warnings=[],pc=new Map(),dc=new Map(),mp=path.join(root,'manifest.json');if(!exists(mp))return{ok:false,errors:['missing manifest.json'],warnings,assets:[],files:[]};let parsed;try{parsed=JSON.parse(readFile(mp,'utf8'));}catch(x){return{ok:false,errors:[`invalid manifest.json: ${x.message}`],warnings,assets:[],files:[]};}
+  schema(parsed,errors);if(parsed.version!==1)errors.push('manifest.version must be 1');const m=normalizeManifest(parsed),assets=m.assets||[],seen=new Set(),by=new Map(),files=new Set();if(!assets.length)errors.push('manifest must declare at least one asset or sheet entry');
+  for(const a of assets){const id=a?.id,c=a?.category,file=a?.file;if(!ASSET_ID_RE.test(String(id||'')))errors.push(`invalid asset id: ${id||'<missing>'}`);if(seen.has(id))errors.push(`duplicate id: ${id}`);else if(id){seen.add(id);by.set(id,a);}if(!CATEGORIES.has(c))errors.push(`${id||'<missing>'}: invalid category ${c}`);else if(id&&!String(id).startsWith(`aw_v1_${c}_`))errors.push(`${id}: id/category mismatch (${c})`);if(!safe(file)){errors.push(`${id||'<missing>'}: invalid PNG file path ${file||'<missing>'}`);continue;}files.add(file);const full=path.join(root,...file.split('/'));if(!exists(full)){errors.push(`${id}: missing file ${file}`);continue;}let buf,p=pc.get(file);if(!p)try{buf=readFile(full);p=inspectPngBuffer(buf);pc.set(file,p);}catch(x){errors.push(`${id}: ${file}: ${x.message}`);continue;}const r=a.sourceRect,rw=r?+r.w:p.width,rh=r?+r.h:p.height;if(r){const x=+r.x,y=+r.y;if(![x,y,rw,rh].every(Number.isInteger)||x<0||y<0||rw<=0||rh<=0||x+rw>p.width||y+rh>p.height)errors.push(`${id}: sourceRect outside ${file} (${p.width}x${p.height})`);}if(pos(a.width)&&+a.width!==rw)errors.push(`${id}: declared width ${a.width} != source width ${rw}`);if(pos(a.height)&&+a.height!==rh)errors.push(`${id}: declared height ${a.height} != source height ${rh}`);
+    if(c==='terrain'){if(p.width%64||p.height%64)errors.push(`${id}: terrain PNG dimensions must be 64x64 or 64px multiples; got ${p.width}x${p.height}`);if(r&&(rw%64||rh%64))errors.push(`${id}: terrain sourceRect must use 64px multiples; got ${rw}x${rh}`);}else{if(!p.hasAlpha)errors.push(`${id}: ${c} PNG must expose an alpha channel (RGBA/GA or tRNS)`);else try{let d=dc.get(file);if(!d){if(!buf)buf=readFile(full);d=decodePng(buf);dc.set(file,d);}const q=r?{x:+r.x,y:+r.y,w:rw,h:rh}:{x:0,y:0,w:d.width,h:d.height};if(!inspectRgbaRegion(d,q).hasTransparentPixels)errors.push(`${id}: ${c} PNG/sourceRect must contain at least one transparent pixel`);}catch(x){errors.push(`${id}: ${file}: pixel transparency validation failed: ${x.message}`);}}
+    if(c==='prop'){if(+a.anchor?.x!==.5||+a.anchor?.y!==1)errors.push(`${id}: prop anchor must be bottom-center {x:0.5,y:1}`);}else if(a.anchor){const x=+a.anchor.x,y=+a.anchor.y;if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>1||y<0||y>1)errors.push(`${id}: anchor must be normalized 0..1`);}if(a.frames!=null&&(!pos(+a.frames)||+a.frames>64))errors.push(`${id}: frames must be an integer from 1 to 64`);if(a.frameDurationMs!=null&&(!pos(+a.frameDurationMs)||+a.frameDurationMs>60000))errors.push(`${id}: frameDurationMs must be an integer from 1 to 60000`);
   }
-  return out;
+  const be=binds(m.bindings);for(const {category,semantic,id} of be){if(!seen.has(id)){errors.push(`binding references missing asset id: ${id}`);continue;}if(by.get(id)?.category!==category)errors.push(`binding ${category}.${semantic} references ${id} with category ${by.get(id)?.category||'<missing>'}`);}const bound=be.map(x=>x.id);for(const id of seen)if(!bound.includes(id))warnings.push(`unbound asset: ${id}`);
+  for(const s of Array.isArray(parsed.sheets)?parsed.sheets:[]){if(!safe(s.file))errors.push(`invalid sheet file path: ${s.file||'<missing>'}`);if(!pos(+s.cellWidth)||!pos(+s.cellHeight))errors.push(`${s.id||s.file||'<sheet>'}: cellWidth/cellHeight must be positive integers`);}if(strictRequired)strict(m,seen,errors);return{ok:!errors.length,errors,warnings,assets,files:[...files].sort(),manifest:m};
 }
-
-export function inspectPngBuffer(buffer){
-  if(!Buffer.isBuffer(buffer)||buffer.length<33||!buffer.subarray(0,8).equals(PNG_SIGNATURE))throw new Error('invalid PNG signature');
-  let offset=8,ihdr=null,hasTrns=false,idat=0,ended=false;
-  while(offset+12<=buffer.length){
-    const length=buffer.readUInt32BE(offset),type=buffer.toString('ascii',offset+4,offset+8),dataStart=offset+8,dataEnd=dataStart+length;
-    if(dataEnd+4>buffer.length)throw new Error(`truncated PNG chunk ${type}`);
-    if(type==='IHDR'){
-      if(length!==13||ihdr)throw new Error('invalid PNG IHDR');
-      ihdr={width:buffer.readUInt32BE(dataStart),height:buffer.readUInt32BE(dataStart+4),bitDepth:buffer[dataStart+8],colorType:buffer[dataStart+9],compression:buffer[dataStart+10],filter:buffer[dataStart+11],interlace:buffer[dataStart+12]};
-    }else if(type==='tRNS')hasTrns=true;
-    else if(type==='IDAT')idat++;
-    else if(type==='IEND'){ended=true;break;}
-    offset=dataEnd+4;
-  }
-  if(!ihdr)throw new Error('PNG missing IHDR');
-  if(!idat)throw new Error('PNG missing IDAT');
-  if(!ended)throw new Error('PNG missing IEND');
-  if(!positiveInt(ihdr.width)||!positiveInt(ihdr.height)||ihdr.width>MAX_DIMENSION||ihdr.height>MAX_DIMENSION)throw new Error(`illegal PNG dimensions ${ihdr.width}x${ihdr.height}`);
-  if(ihdr.compression!==0||ihdr.filter!==0||![0,1].includes(ihdr.interlace))throw new Error('unsupported PNG header flags');
-  const hasAlpha=[4,6].includes(ihdr.colorType)||hasTrns;
-  return{...ihdr,hasAlpha,hasTrns,idatChunks:idat};
-}
-
-export function normalizeManifest(manifest){
-  const input=manifest&&typeof manifest==='object'?manifest:{};
-  const assets=Array.isArray(input.assets)?input.assets.map(asset=>({...asset})):[];
-  for(const sheet of Array.isArray(input.sheets)?input.sheets:[]){
-    const cellWidth=Number(sheet.cellWidth),cellHeight=Number(sheet.cellHeight);
-    for(const entry of Array.isArray(sheet.entries)?sheet.entries:[]){
-      const hasRect=[entry.x,entry.y,entry.w,entry.h].every(Number.isFinite);
-      const cols=positiveInt(entry.cols)?entry.cols:1,rows=positiveInt(entry.rows)?entry.rows:1;
-      const sourceRect=hasRect
-        ?{x:Number(entry.x),y:Number(entry.y),w:Number(entry.w),h:Number(entry.h)}
-        :{x:Number(entry.col||0)*cellWidth,y:Number(entry.row||0)*cellHeight,w:cols*cellWidth,h:rows*cellHeight};
-      assets.push({...entry,file:entry.file||sheet.file,sourceRect,width:entry.width||sourceRect.w,height:entry.height||sourceRect.h,sheet:sheet.id||sheet.file});
-    }
-  }
-  return{...input,assets};
-}
-
-function collectBindingIds(value,out=[]){
-  if(typeof value==='string')out.push(value);
-  else if(Array.isArray(value))for(const item of value)collectBindingIds(item,out);
-  else if(value&&typeof value==='object')for(const item of Object.values(value))collectBindingIds(item,out);
-  return out;
-}
-
-export function validatePack(rootDir,{readFile=fs.readFileSync,exists=fs.existsSync,strictRequired=false}={}){
-  const errors=[],warnings=[],pngCache=new Map(),decodedCache=new Map();
-  const manifestPath=path.join(rootDir,'manifest.json');
-  if(!exists(manifestPath))return{ok:false,errors:['missing manifest.json'],warnings,assets:[],files:[]};
-  let parsed;
-  try{parsed=JSON.parse(readFile(manifestPath,'utf8'));}catch(error){return{ok:false,errors:[`invalid manifest.json: ${error.message}`],warnings,assets:[],files:[]};}
-  if(parsed.version!==1)errors.push('manifest.version must be 1');
-  for(const fieldPath of findForbiddenGameplayFields(parsed))errors.push(`art manifest must not define gameplay field: ${fieldPath}`);
-  const manifest=normalizeManifest(parsed),assets=manifest.assets||[],seen=new Set(),files=new Set();
-  if(!assets.length)errors.push('manifest must declare at least one asset or sheet entry');
-
-  for(const asset of assets){
-    const id=asset?.id,category=asset?.category,file=asset?.file;
-    if(!ASSET_ID_RE.test(String(id||'')))errors.push(`invalid asset id: ${id||'<missing>'}`);
-    if(seen.has(id))errors.push(`duplicate id: ${id}`);else if(id)seen.add(id);
-    if(!CATEGORIES.has(category))errors.push(`${id||'<missing>'}: invalid category ${category}`);
-    else if(id&&!String(id).startsWith(`aw_v1_${category}_`))errors.push(`${id}: id/category mismatch (${category})`);
-    if(!safeRelativeFile(file)){errors.push(`${id||'<missing>'}: invalid PNG file path ${file||'<missing>'}`);continue;}
-    files.add(file);
-    const full=path.join(rootDir,...file.split('/'));
-    if(!exists(full)){errors.push(`${id}: missing file ${file}`);continue;}
-    let buffer,png=pngCache.get(file);
-    if(!png){
-      try{buffer=readFile(full);png=inspectPngBuffer(buffer);pngCache.set(file,png);}catch(error){errors.push(`${id}: ${file}: ${error.message}`);continue;}
-    }
-    const rect=asset.sourceRect;
-    const rw=rect?Number(rect.w):png.width,rh=rect?Number(rect.h):png.height;
-    if(rect){
-      const rx=Number(rect.x),ry=Number(rect.y);
-      if(![rx,ry,rw,rh].every(Number.isInteger)||rx<0||ry<0||rw<=0||rh<=0||rx+rw>png.width||ry+rh>png.height)errors.push(`${id}: sourceRect outside ${file} (${png.width}x${png.height})`);
-    }
-    if(positiveInt(asset.width)&&Number(asset.width)!==rw)errors.push(`${id}: declared width ${asset.width} != source width ${rw}`);
-    if(positiveInt(asset.height)&&Number(asset.height)!==rh)errors.push(`${id}: declared height ${asset.height} != source height ${rh}`);
-    if(category==='terrain'){
-      if(png.width%64!==0||png.height%64!==0)errors.push(`${id}: terrain PNG dimensions must be 64x64 or 64px multiples; got ${png.width}x${png.height}`);
-      if(rect&&(rw%64!==0||rh%64!==0))errors.push(`${id}: terrain sourceRect must use 64px multiples; got ${rw}x${rh}`);
-    }else{
-      if(!png.hasAlpha)errors.push(`${id}: ${category} PNG must expose an alpha channel (RGBA/GA or tRNS)`);
-      else{
-        try{
-          let decoded=decodedCache.get(file);
-          if(!decoded){
-            if(!buffer)buffer=readFile(full);
-            decoded=decodePng(buffer);decodedCache.set(file,decoded);
-          }
-          const alpha=rect?inspectRgbaRegion(decoded,{x:Number(rect.x),y:Number(rect.y),w:rw,h:rh}):inspectRgbaRegion(decoded,{x:0,y:0,w:decoded.width,h:decoded.height});
-          if(!alpha.hasTransparentPixels)errors.push(`${id}: ${category} PNG/sourceRect must contain at least one transparent pixel`);
-        }catch(error){errors.push(`${id}: ${file}: pixel transparency validation failed: ${error.message}`);}
-      }
-    }
-    if(category==='prop'){
-      const ax=Number(asset.anchor?.x),ay=Number(asset.anchor?.y);
-      if(ax!==0.5||ay!==1)errors.push(`${id}: prop anchor must be bottom-center {x:0.5,y:1}`);
-    }else if(asset.anchor){
-      const ax=Number(asset.anchor.x),ay=Number(asset.anchor.y);
-      if(!Number.isFinite(ax)||!Number.isFinite(ay)||ax<0||ax>1||ay<0||ay>1)errors.push(`${id}: anchor must be normalized 0..1`);
-    }
-    if(asset.frames!=null&&(!positiveInt(Number(asset.frames))||Number(asset.frames)>64))errors.push(`${id}: frames must be an integer from 1 to 64`);
-  }
-
-  const boundIds=collectBindingIds(manifest.bindings||{});
-  for(const id of boundIds)if(!seen.has(id))errors.push(`binding references missing asset id: ${id}`);
-  for(const id of seen)if(!boundIds.includes(id))warnings.push(`unbound asset: ${id}`);
-  for(const sheet of Array.isArray(parsed.sheets)?parsed.sheets:[]){
-    if(!safeRelativeFile(sheet.file))errors.push(`invalid sheet file path: ${sheet.file||'<missing>'}`);
-    if(!positiveInt(Number(sheet.cellWidth))||!positiveInt(Number(sheet.cellHeight)))errors.push(`${sheet.id||sheet.file||'<sheet>'}: cellWidth/cellHeight must be positive integers`);
-  }
-  if(strictRequired)for(const id of REQUIRED_BASE_IDS)if(!seen.has(id))errors.push(`required production asset missing: ${id}`);
-  return{ok:errors.length===0,errors,warnings,assets,files:[...files].sort(),manifest};
-}
-
-export function runtimeManifest(manifest){
-  const normalized=normalizeManifest(manifest);
-  const assets=normalized.assets.map(asset=>{
-    const out={id:asset.id,category:asset.category,file:asset.file,width:asset.width,height:asset.height};
-    if(asset.sourceRect)out.sourceRect=asset.sourceRect;
-    if(asset.anchor)out.anchor=asset.anchor;
-    if(asset.frames)out.frames=asset.frames;
-    if(asset.frameDurationMs)out.frameDurationMs=asset.frameDurationMs;
-    return out;
-  });
-  return{version:1,pack:normalized.pack||'Awakening World Art Pack',bindings:normalized.bindings||{},assets};
-}
+export function runtimeManifest(m){const n=normalizeManifest(m),assets=n.assets.map(a=>{const o={id:a.id,category:a.category,file:a.file,width:a.width,height:a.height};for(const k of ['sourceRect','anchor','frames','frameDurationMs'])if(a[k])o[k]=a[k];return o;});return{version:1,pack:n.pack||'Awakening World Art Pack',bindings:n.bindings||{},assets};}

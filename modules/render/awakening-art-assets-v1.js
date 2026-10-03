@@ -2,7 +2,8 @@
 'use strict';
 
 const ROOT='assets/awakening-v1/';
-const MANIFEST_URL=ROOT+'manifest.json';
+const PREVIEW_MODE=typeof window!=='undefined'&&typeof URLSearchParams!=='undefined'&&new URLSearchParams(window.location?.search||'').get('awArtPreview')==='1';
+const MANIFEST_URL=ROOT+(PREVIEW_MODE?'manifest.preview.json':'manifest.json');
 const DEFAULT_BINDINGS={
   terrain:{
     cold_grass:['aw_v1_terrain_cold_grass_a','aw_v1_terrain_cold_grass_b','aw_v1_terrain_cold_grass_detail'],
@@ -25,6 +26,13 @@ const DEFAULT_BINDINGS={
 };
 
 const state={status:'idle',reason:'',manifest:null,assets:new Map(),images:new Map(),bindings:DEFAULT_BINDINGS,loadPromise:null};
+let previewBadge=null;
+function updatePreviewBadge(){
+  if(!PREVIEW_MODE||typeof document==='undefined'||!document.body)return;
+  if(!previewBadge){previewBadge=document.createElement('div');previewBadge.id='aw-art-preview-status';previewBadge.setAttribute('role','status');previewBadge.style.cssText='position:fixed;z-index:2147483647;top:8px;left:50%;transform:translateX(-50%);padding:7px 10px;border:1px solid #f2c15b;background:rgba(27,24,18,.94);color:#ffe4a0;font:700 11px/1.35 monospace;letter-spacing:.03em;text-align:center;pointer-events:none;max-width:calc(100vw - 24px);box-shadow:0 2px 10px #0008';document.body.appendChild(previewBadge);}
+  const loaded=state.images.size,total=state.assets.size;
+  previewBadge.textContent=`DEV ART PREVIEW — NOT PRODUCTION · ${state.status.toUpperCase()} · ${loaded}/${total} files · raw source size`;
+}
 function hashString(value){let h=2166136261;for(const c of String(value||'')){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
 function mergeBindings(base,extra){const out={};for(const section of new Set([...Object.keys(base||{}),...Object.keys(extra||{})]))out[section]={...(base?.[section]||{}),...(extra?.[section]||{})};return out;}
 function normalizeManifest(input){
@@ -69,20 +77,20 @@ async function load(){
   if(state.loadPromise)return state.loadPromise;
   state.status='loading';state.reason='';
   state.loadPromise=(async()=>{
-    if(typeof fetch!=='function'){state.status='fallback';state.reason='fetch-unavailable';return false;}
-    let response;try{response=await fetch(MANIFEST_URL,{cache:'no-store'});}catch(error){state.status='fallback';state.reason='manifest-fetch-failed';return false;}
-    if(!response?.ok){state.status='fallback';state.reason=`manifest-${response?.status||'missing'}`;return false;}
-    let manifest;try{manifest=normalizeManifest(await response.json());}catch(error){state.status='fallback';state.reason='manifest-invalid-json';return false;}
+    if(typeof fetch!=='function'){state.status='fallback';state.reason='fetch-unavailable';updatePreviewBadge();return false;}
+    let response;try{response=await fetch(MANIFEST_URL,{cache:'no-store'});}catch(error){state.status='fallback';state.reason='manifest-fetch-failed';updatePreviewBadge();return false;}
+    if(!response?.ok){state.status='fallback';state.reason=`manifest-${response?.status||'missing'}`;updatePreviewBadge();return false;}
+    let manifest;try{manifest=normalizeManifest(await response.json());}catch(error){state.status='fallback';state.reason='manifest-invalid-json';updatePreviewBadge();return false;}
     state.manifest=manifest;state.assets=new Map((manifest.assets||[]).filter(a=>a?.id&&a?.file).map(a=>[a.id,a]));state.bindings=mergeBindings(DEFAULT_BINDINGS,manifest.bindings||{});
-    if(typeof Image==='undefined'){state.status='fallback';state.reason='image-unavailable';return false;}
+    if(typeof Image==='undefined'){state.status='fallback';state.reason='image-unavailable';updatePreviewBadge();return false;}
     const files=[...new Set([...state.assets.values()].map(a=>a.file))];
     await Promise.all(files.map(file=>new Promise(resolve=>{const image=new Image();image.onload=()=>{state.images.set(file,image);resolve();};image.onerror=()=>resolve();image.src=ROOT+file;})));
-    state.status=state.images.size?'ready':'fallback';state.reason=state.images.size?'':'png-load-failed';return state.status==='ready';
+    state.status=state.images.size?'ready':'fallback';state.reason=state.images.size?'':'png-load-failed';updatePreviewBadge();return state.status==='ready';
   })();
   return state.loadPromise;
 }
 
-const API={version:1,root:ROOT,manifestUrl:MANIFEST_URL,state,load,status:()=>state.status,reason:()=>state.reason,hasBinding,drawTerrain,drawDecal,drawProp,drawFx,pick,normalizeManifest,defaults:DEFAULT_BINDINGS};
+const API={version:1,root:ROOT,manifestUrl:MANIFEST_URL,previewMode:PREVIEW_MODE,state,load,status:()=>state.status,reason:()=>state.reason,hasBinding,drawTerrain,drawDecal,drawProp,drawFx,pick,normalizeManifest,defaults:DEFAULT_BINDINGS};
 window.ABYSSAL_AWAKENING_ART_V1=API;
 load();
 })();
