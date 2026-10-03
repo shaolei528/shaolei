@@ -1,6 +1,12 @@
 (()=>{
 'use strict';
 
+const existingRuntime=window.ABYSSAL_PLAYABLE_FEEL_RUNTIME_V1;
+if(existingRuntime?.bound&&window.ABYSSAL_PLAYABLE_FEEL_V1){
+  existingRuntime.reentryCount=(Number(existingRuntime.reentryCount)||0)+1;
+  return;
+}
+
 /*
   Local presentation bridge for the playable slice.
   Existing hit-feedback remains authoritative for sparks, attack trails, hurt flash
@@ -109,4 +115,7 @@ drawLighting=function(W,H){
 };
 
 Object.assign(FEEL,{kick,applyCanvasKick,reducedMotion});
+window.ABYSSAL_PLAYABLE_FEEL_RUNTIME_V1={
+  version:1,bound:true,reentryCount:Number(existingRuntime?.reentryCount)||0
+};
 })();
