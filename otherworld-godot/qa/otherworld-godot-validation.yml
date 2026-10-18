@@ -1,0 +1,50 @@
+name: Otherworld Godot validation
+on:
+  pull_request:
+    paths: ['otherworld-godot/**', '.github/workflows/otherworld-godot-validation.yml']
+  push:
+    branches: ['codex/otherworld-godot-validation-20261019']
+    paths: ['otherworld-godot/**', '.github/workflows/otherworld-godot-validation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  godot-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: otherworld-godot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned official engine and templates
+        run: python3 qa/setup_engine.py
+      - name: Import, test, run and Web export
+        env:
+          XDG_DATA_HOME: ${{ github.workspace }}/otherworld-godot/.tools/share
+        run: |
+          set -euo pipefail
+          mkdir -p qa/results game/build/web
+          GODOT="$PWD/.tools/Godot_v4.7.2-stable_linux.x86_64"
+          "$GODOT" --headless --path game --editor --quit > qa/results/import.log 2>&1
+          "$GODOT" --headless --path game --script res://tests/smoke.gd > qa/results/smoke.log 2>&1
+          "$GODOT" --headless --path game --quit-after 180 > qa/results/run.log 2>&1
+          "$GODOT" --headless --path game --export-release Web build/web/index.html > qa/results/export.log 2>&1
+          if grep -E 'SCRIPT ERROR|Parse Error|Failed to load script|ERROR:' qa/results/*.log; then exit 1; fi
+          test -s game/build/web/index.wasm
+          test -s game/build/web/index.pck
+      - name: Browser verification
+        run: |
+          npm install --no-save --package-lock=false playwright-core@1.62.1
+          npx playwright-core install --with-deps chromium --only-shell
+          node qa/browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: otherworld-godot-web-and-qa
+          path: |
+            otherworld-godot/qa/results/
+            otherworld-godot/game/build/web/
