@@ -2,13 +2,17 @@ extends Node3D
 
 const Crafting = preload("res://scripts/crafting_system.gd")
 const EnemyController = preload("res://scripts/enemy_controller.gd")
+const CAMPFIRE_INTERACTION_RANGE := 3.0
+const UPGRADED_CAMPFIRE_LIGHT_RANGE := 8.0
 
 var ember_light: OmniLight3D
 var ember: MeshInstance3D
 var collected := false
 var campfire: Node3D
 var campfire_light: OmniLight3D
+var campfire_flame_material: StandardMaterial3D
 var campfire_crafted := false
+var campfire_upgraded := false
 var enemy
 var ash_shard_drop: MeshInstance3D
 var player_ref: CharacterBody3D
@@ -103,11 +107,11 @@ func _setup_campfire_ghost() -> void:
 	fire_mesh.height = 0.6
 	flame.mesh = fire_mesh
 	flame.position.y = 0.38
-	var fire_material := StandardMaterial3D.new()
-	fire_material.albedo_color = Color("ff9c3a")
-	fire_material.emission_enabled = true
-	fire_material.emission = Color("ff6b22")
-	flame.material_override = fire_material
+	campfire_flame_material = StandardMaterial3D.new()
+	campfire_flame_material.albedo_color = Color("ff9c3a")
+	campfire_flame_material.emission_enabled = true
+	campfire_flame_material.emission = Color("ff6b22")
+	flame.material_override = campfire_flame_material
 	campfire.add_child(flame)
 	campfire_light = OmniLight3D.new()
 	campfire_light.position.y = 0.5
@@ -171,7 +175,7 @@ func craft_campfire(player_position: Vector3) -> bool:
 	if campfire_crafted:
 		status = "The campfire is already built."
 		return false
-	if player_position.distance_to(camp_position) > 3.0:
+	if player_position.distance_to(camp_position) > CAMPFIRE_INTERACTION_RANGE:
 		status = "Return to the camp work area to build."
 		return false
 	if not crafting.craft("campfire"):
@@ -181,6 +185,28 @@ func craft_campfire(player_position: Vector3) -> bool:
 	campfire.visible = true
 	enemy.target = player_ref
 	status = "Campfire built · Ember 0 · The fire draws an Ashling nearby."
+	return true
+
+func upgrade_campfire(player_position: Vector3) -> bool:
+	if not campfire_crafted:
+		status = "Build a campfire before upgrading it."
+		return false
+	if player_position.distance_to(camp_position) > CAMPFIRE_INTERACTION_RANGE:
+		status = "Move within 3 m of the campfire to upgrade it."
+		return false
+	if campfire_upgraded:
+		status = "The campfire is already empowered."
+		return false
+	if not crafting.craft("campfire_upgrade"):
+		status = "Need one Ashen Shard to empower the campfire."
+		return false
+	campfire_upgraded = true
+	campfire_light.light_color = Color("77d7ff")
+	campfire_light.light_energy = 2.4
+	campfire_light.omni_range = UPGRADED_CAMPFIRE_LIGHT_RANGE
+	campfire_flame_material.albedo_color = Color("8edcff")
+	campfire_flame_material.emission = Color("4abfff")
+	status = "Campfire empowered · Ashen Shard 0 · brighter blue flame."
 	return true
 
 func attack(player_position: Vector3) -> bool:
