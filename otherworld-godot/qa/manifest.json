@@ -1,48 +1,69 @@
 {
   "project": "Otherworld Embers Godot 2.5D isolated slice",
-  "iteration": "0.3.0",
-  "base_commit": "db59bb798ef7ca809ed85616cd969d6cff804709",
-  "validated_commit": "b27a5ea84c66ca60b76f7bb4fdbe26905bbc7350",
+  "iteration": "0.4.0",
+  "base_commit": "3ebe2985a665683236f38be7887b730f1f998565",
+  "validated_commit": "3632b0871796ad1962e0203c323e70c1fda46685",
   "branch": "codex/otherworld-godot-validation-20261019",
   "pull_request": "https://github.com/shaolei528/shaolei/pull/3",
   "scope": [
-    "preserve the 0.2.1 Ember pickup and campfire-crafting loop",
-    "one 2-HP Ashling awakens when the first campfire is built",
-    "F-key and touch-button melee attack",
-    "Shift-key and touch-button directional dodge with a brief damage-immunity window",
-    "one-time ashen_shard drop into the shared inventory",
-    "player health, hit feedback, and respawn"
+    "preserve the 0.3.0 Ember pickup, campfire, Ashling combat and unique Ashen Shard loop",
+    "add one campfire_upgrade recipe costing exactly one ashen_shard",
+    "allow the upgrade only within 3 m of a built campfire",
+    "reject missing shard, out-of-range upgrade and repeat upgrade without inventory loss",
+    "show the upgrade by extending the fire light radius from 5 m to 8 m and changing the flame to blue",
+    "support U keyboard and Upgrade Fire touch button"
   ],
   "tests": {
     "engine": "Godot 4.7.2 stable official",
-    "godot_smoke_assertions_expected": 34,
     "godot_import": "passed",
-    "godot_smoke": "passed: 34 assertions, 0 failures",
-    "headless_runtime": "passed: no script/parser errors",
-    "web_export": "passed: index.wasm and index.pck generated",
+    "godot_smoke_assertions": {"passed": 45, "failed": 0},
+    "headless_runtime": "passed; no script/parser errors",
+    "web_export": "passed; index.wasm and index.pck generated",
     "browser_end_to_end": {
       "passed": true,
-      "keyboard_movement_m": 1.8750016892515031,
+      "keyboard_movement_m": 1.5750014033471929,
       "ember_pickup_inventory": 1,
       "campfire_craft_consumed_ember": true,
-      "F_attack_reduced_ashling_hp_to": 1,
-      "shift_dodge_distance_m": 4.15000020744815,
-      "player_health_before_after_dodge_sequence": [2, 1],
+      "ashling_first_hit_hp": 1,
       "ashling_defeated": true,
-      "ashen_shard_inventory": 1,
-      "mobile_viewport": "390x844; all action/direction buttons in bounds",
-      "touch_movement_m": 1.8000016177754274,
+      "ashen_shard_after_defeat": 1,
+      "dodge_distance_m": 4.150001086303024,
+      "upgrade_rejected_out_of_range": true,
+      "upgrade_keyboard_U": true,
+      "upgrade_consumed_one_shard": true,
+      "upgrade_light_range_m": 8,
+      "duplicate_upgrade_rejected": true,
+      "mobile_upgrade_button_preserved_one_time_state": true,
+      "mobile_viewport": "390x844; all direction/action buttons in bounds",
+      "touch_movement_m": 3.675002769745256,
       "browser_errors": 0
     },
-    "logic_dodge_immunity": "passed: smoke test injects an incoming hit during the dodge window and verifies no health loss",
-    "local_godot": "not run: Godot binary absent from this workspace; official engine tests ran in GitHub Actions",
     "local_node_syntax": "passed",
-    "push_ci": {"run_id": 39161930943, "status": "success", "url": "https://github.com/shaolei528/shaolei/actions/runs/39161930943"},
-    "pull_request_ci": {"run_id": 39161934081, "status": "success", "url": "https://github.com/shaolei528/shaolei/actions/runs/39161934081"},
-    "ci_artifact": {"artifact_id": 12148769061, "sha256": "1c7fc2679994b3b34bbdd0444e19797d7d75792e8b7a286ef78976328c315878"}
+    "local_godot": "not run; Godot binary absent in this workspace",
+    "pr_ci": {
+      "run_id": 39166804148,
+      "status": "success",
+      "url": "https://github.com/shaolei528/shaolei/actions/runs/39166804148"
+    },
+    "ci_artifact": {
+      "artifact_id": 12151410509,
+      "sha256": "5a8906f50f58ecfe21ccbc64131cff8b18b06bb36f385477a75dab84acc9c150"
+    },
+    "attempt_history": [
+      {
+        "run_id": 39166477121,
+        "status": "failed",
+        "reason": "smoke test could not infer Vector3 type for upgrade_position; corrected with explicit type"
+      },
+      {
+        "run_id": 39166563590,
+        "status": "failed",
+        "reason": "browser flow did not observe campfire upgrade after returning to camp; route was tightened, telemetry added, and the next full run passed with keyboard U confirmed"
+      }
+    ]
   },
   "production_deployment": "unchanged",
   "full_game_migration": false,
   "multiplayer_migration": false,
-  "notes": "The Godot project remains an isolated playable slice. The existing JavaScript game, saves, multiplayer service, and production deployment were not modified. Ashling and loot visuals remain procedural placeholders; browser touch is Chromium simulation, not physical-device QA."
+  "notes": "This remains an isolated Godot gameplay slice. The existing JavaScript game, production entry point, saves, multiplayer service and production deployment were not modified. Ashling, shard and campfire visuals remain procedural placeholders; Chromium touch simulation is not physical-device QA."
 }
