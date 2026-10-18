@@ -5,10 +5,11 @@ This standalone fixture validates a proposed **real 3D world + Sprite3D characte
 ## Modules
 
 - `scripts/player_3d.gd`: CharacterBody3D capsule, gravity, jumping, camera-relative movement, touch input.
-- `scripts/world_3d.gd`: real 3D meshes/colliders, sloped ramp, elevated terrace, cabin, trees, collectible and point light.
+- `scripts/world_3d.gd`: real 3D meshes/colliders, sloped ramp, elevated terrace, cabin, trees, collectible and crafted campfire/light.
+- `scripts/crafting_system.gd`: item counts and a small recipe table with ingredient checks/consumption.
 - `scripts/camera_rig.gd`: orthographic Camera3D; configurable azimuth/elevation.
-- `scripts/hud.gd`: keyboard/touch instructions, directional buttons and collection/jump buttons.
-- `tests/smoke.gd`: collision, movement, ramp climbing, elevation, jump, interaction and camera assertions.
+- `scripts/hud.gd`: keyboard/touch instructions, directional buttons, collection, jump and campfire crafting.
+- `tests/smoke.gd`: collision, movement, ramp climbing, elevation, jump, collection, inventory, recipe checks and camera assertions.
 
 ## Run / verify
 
@@ -23,9 +24,9 @@ Web export is Compatibility and **single threaded** (`variant/thread_support=fal
 
 ## Controls
 
-WASD / arrow keys move relative to the screen. Space jumps. E collects the nearby gold ember. On-screen buttons support pointer/touch play. Walk north up the beige ramp to reach the elevated terrace. Trees and cabin occlude the hero through real 3D depth testing.
+WASD / arrow keys move relative to the screen. Space jumps. E collects the nearby gold ember. Return to the cabin work area and press C to spend it on a campfire. On-screen buttons support pointer/touch play. Walk north up the beige ramp to reach the elevated terrace. Trees and cabin occlude the hero through real 3D depth testing.
 
-HUD uses actual viewport dimensions instead of a fixed landscape letterbox. U/L/D/R directional controls are 56 pixels; collection and jump buttons are vertically stacked. Browser-only `window.__otherworldQA` telemetry updates every 0.15 seconds with player coordinates, collection state, viewport dimensions and the six button rectangles. It exposes no command or state mutation API.
+HUD uses actual viewport dimensions instead of a fixed landscape letterbox. U/L/D/R directional controls are 56 pixels; action buttons are vertically stacked. Browser-only `window.__otherworldQA` telemetry updates every 0.15 seconds with player coordinates, collection/crafting state, inventory, viewport dimensions and button rectangles. It exposes no command or state mutation API.
 
 ## Official API references consulted
 

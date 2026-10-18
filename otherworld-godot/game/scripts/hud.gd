@@ -27,7 +27,7 @@ func _ready() -> void:
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.add_child(title)
 	var hint := Label.new()
-	hint.text = "WASD / arrows: move  ·  Space: jump  ·  E: collect  ·  Real 3D terrain + sprite hero"
+	hint.text = "WASD / arrows: move  ·  Space: jump  ·  E: collect  ·  C: build at camp"
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 14)
 	text.add_child(hint)
@@ -50,7 +50,7 @@ func _ready() -> void:
 	root.add_child(actions)
 	actions.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	actions.offset_left = -144
-	actions.offset_top = -144
+	actions.offset_top = -204
 	actions.offset_right = -12
 	actions.offset_bottom = -24
 	var collect := Button.new()
@@ -65,6 +65,12 @@ func _ready() -> void:
 	jump.pressed.connect(func(): player.jump_requested = true)
 	actions.add_child(jump)
 	buttons["jump"] = jump
+	var build := Button.new()
+	build.text = "Build Fire [C]"
+	build.custom_minimum_size = Vector2(132,56)
+	build.pressed.connect(func(): world.craft_campfire(player.global_position))
+	actions.add_child(build)
+	buttons["build"] = build
 
 func _direction_button(parent: Control, title: String, at: Vector2, direction: Vector2) -> void:
 	var button := Button.new()
@@ -89,8 +95,10 @@ func _process(_delta: float) -> void:
 	for direction in directions.values():
 		movement += direction
 	player.touch_direction = movement.limit_length()
-	message.text = "%s   |   Height %.2f m" % [world.status, player.position.y]
+	message.text = "%s   |   Ember %d   |   Height %.2f m" % [world.status, world.crafting.count("ember"), player.position.y]
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_E:
 		world.interact(player.global_position)
+	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_C:
+		world.craft_campfire(player.global_position)

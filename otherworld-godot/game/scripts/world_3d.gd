@@ -1,10 +1,17 @@
 extends Node3D
 
+const Crafting = preload("res://scripts/crafting_system.gd")
+
 var ember_light: OmniLight3D
 var ember: MeshInstance3D
 var collected := false
-var status := "Find the glowing ember beside the camp."
+var campfire: Node3D
+var campfire_light: OmniLight3D
+var campfire_crafted := false
+var status := "Find the glowing ember, then craft a campfire at camp."
 var ember_position := Vector3(2.8, 0.5, 3.1)
+var camp_position := Vector3(-4.6, 0.0, 1.2)
+var crafting = Crafting.new()
 
 func _ready() -> void:
 	name = "World3D"
@@ -53,6 +60,45 @@ func _ready() -> void:
 	ember_light.light_energy = 2.5
 	ember_light.omni_range = 4.0
 	add_child(ember_light)
+	_setup_campfire_ghost()
+
+func _setup_campfire_ghost() -> void:
+	campfire = Node3D.new()
+	campfire.name = "CraftedCampfire"
+	campfire.position = camp_position
+	campfire.visible = false
+	add_child(campfire)
+	for index in range(6):
+		var angle := TAU * float(index) / 6.0
+		var stone := MeshInstance3D.new()
+		var rock := SphereMesh.new()
+		rock.radius = 0.22
+		rock.height = 0.2
+		stone.mesh = rock
+		stone.position = Vector3(cos(angle) * 0.42, 0.12, sin(angle) * 0.42)
+		var stone_material := StandardMaterial3D.new()
+		stone_material.albedo_color = Color("77736a")
+		stone.material_override = stone_material
+		campfire.add_child(stone)
+	var flame := MeshInstance3D.new()
+	flame.name = "FireCore"
+	var fire_mesh := SphereMesh.new()
+	fire_mesh.radius = 0.25
+	fire_mesh.height = 0.6
+	flame.mesh = fire_mesh
+	flame.position.y = 0.38
+	var fire_material := StandardMaterial3D.new()
+	fire_material.albedo_color = Color("ff9c3a")
+	fire_material.emission_enabled = true
+	fire_material.emission = Color("ff6b22")
+	flame.material_override = fire_material
+	campfire.add_child(flame)
+	campfire_light = OmniLight3D.new()
+	campfire_light.position.y = 0.5
+	campfire_light.light_color = Color("ff9140")
+	campfire_light.light_energy = 1.8
+	campfire_light.omni_range = 5.0
+	campfire.add_child(campfire_light)
 
 func _box(label: String, size: Vector3, origin: Vector3, color: Color, collision := true) -> Node3D:
 	var body: Node3D = StaticBody3D.new() if collision else Node3D.new()
@@ -93,13 +139,29 @@ func _tree(origin: Vector3) -> void:
 
 func interact(player_position: Vector3) -> bool:
 	if collected:
-		status = "Ember secured. Explore the elevated northern terrace."
+		status = "Ember already recovered. Explore the elevated northern terrace."
 		return false
 	if player_position.distance_to(ember_position) > 2.0:
 		status = "Move closer to the glowing ember (gold orb)."
 		return false
 	collected = true
+	crafting.add_item("ember")
 	ember.visible = false
 	ember_light.visible = false
-	status = "Ember +1 · The camp is ready for its next expedition."
+	status = "Ember +1 · Return to camp and craft a campfire."
+	return true
+
+func craft_campfire(player_position: Vector3) -> bool:
+	if campfire_crafted:
+		status = "The campfire is already built."
+		return false
+	if player_position.distance_to(camp_position) > 3.0:
+		status = "Return to the camp work area to build."
+		return false
+	if not crafting.craft("campfire"):
+		status = "Need one glowing ember to build a campfire."
+		return false
+	campfire_crafted = true
+	campfire.visible = true
+	status = "Campfire built · Ember 0 · Your first shelter is ready."
 	return true

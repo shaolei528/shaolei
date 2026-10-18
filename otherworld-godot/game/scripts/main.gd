@@ -37,6 +37,8 @@ func _process(delta: float) -> void:
 	var payload := {
 		"player": {"x": player.position.x, "y": player.position.y, "z": player.position.z},
 		"collected": world.collected,
+		"ember_count": world.crafting.count("ember"),
+		"campfire_crafted": world.campfire_crafted,
 		"viewport": {"width": viewport_size.x, "height": viewport_size.y},
 		"buttons": hud.button_rects()
 	}

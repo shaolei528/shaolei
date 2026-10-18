@@ -1,0 +1,26 @@
+{
+  "project": "Otherworld Embers Godot 2.5D isolated slice",
+  "iteration": "0.2.0",
+  "base_commit": "7bbe13233b0de056816c7340b6639604b69d46e2",
+  "scope": [
+    "recipe-backed inventory",
+    "collectible Ember",
+    "camp work-area range validation",
+    "campfire craft consuming one Ember",
+    "responsive HUD and Web QA telemetry"
+  ],
+  "tests": {
+    "godot_smoke_assertions_expected": 22,
+    "browser_acceptance": [
+      "WebGL loads without browser errors",
+      "keyboard movement changes player coordinates",
+      "Ember pickup increments inventory",
+      "campfire craft consumes Ember and creates visible fire/light",
+      "390x844 controls remain in viewport and touch movement changes coordinates"
+    ],
+    "local_node_syntax": "passed",
+    "local_godot_engine": "not run: binary absent in fresh scheduled workspace",
+    "ci": "pending"
+  },
+  "production_deployment": "unchanged"
+}

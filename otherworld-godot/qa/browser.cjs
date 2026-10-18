@@ -13,6 +13,14 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
  const after=await page.evaluate(()=>window.__otherworldQA);
  const distance=Math.hypot(after.player.x-start.player.x,after.player.z-start.player.z);
  if(distance<0.1)throw Error('Keyboard movement failed');
+ await page.keyboard.press('e');await page.waitForTimeout(300);
+ const gathered=await page.evaluate(()=>window.__otherworldQA);
+ if(!gathered.collected||gathered.ember_count!==1)throw Error('Ember pickup/inventory flow failed');
+ await page.keyboard.down('a');await page.keyboard.down('w');await page.waitForTimeout(1650);await page.keyboard.up('a');await page.keyboard.up('w');await page.waitForTimeout(300);
+ const atCamp=await page.evaluate(()=>window.__otherworldQA);
+ await page.keyboard.press('c');await page.waitForTimeout(300);
+ const crafted=await page.evaluate(()=>window.__otherworldQA);
+ if(!crafted.campfire_crafted||crafted.ember_count!==0)throw Error('Campfire crafting/ingredient consumption failed');
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(500);
  const mobile=await page.evaluate(()=>window.__otherworldQA);
  for(const [name,r] of Object.entries(mobile.buttons)) {
@@ -27,8 +35,8 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
  if(touchDistance<0.1)throw Error('Touch movement failed');
  if(errors.length)throw Error(JSON.stringify(errors));
  fs.mkdirSync('qa/results',{recursive:true});
- fs.writeFileSync('qa/results/browser.json',JSON.stringify({passed:true,distance,touchDistance,start,after,mobile,touchAfter,errors},null,2));
- console.log(JSON.stringify({passed:true,distance,touchDistance,errors}));
+ fs.writeFileSync('qa/results/browser.json',JSON.stringify({passed:true,distance,gathered,atCamp,crafted,touchDistance,start,after,mobile,touchAfter,errors},null,2));
+ console.log(JSON.stringify({passed:true,distance,gathered:{collected:gathered.collected,ember_count:gathered.ember_count},campPlayer:atCamp.player,crafted:{campfire_crafted:crafted.campfire_crafted,ember_count:crafted.ember_count},touchDistance,errors}));
  await page.screenshot({path:'qa/results/mobile.png'});
  await browser.close();server.kill();
 })().catch(e=>{console.error(e);process.exit(1)});
