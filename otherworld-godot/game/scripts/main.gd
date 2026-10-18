@@ -43,6 +43,7 @@ func _process(delta: float) -> void:
 		"campfire_upgraded": world.campfire_upgraded,
 		"campfire_light_range": world.campfire_light.omni_range,
 		"campfire_light_energy": world.campfire_light.light_energy,
+		"status": world.status,
 		"enemy": {
 			"x": world.enemy.global_position.x,
 			"z": world.enemy.global_position.z,
