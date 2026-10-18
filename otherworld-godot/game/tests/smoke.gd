@@ -67,7 +67,7 @@ func run() -> void:
 	check(not world.craft_campfire(world.camp_position), "campfire cannot be crafted twice")
 	check(not world.interact(world.ember_position), "ember cannot be collected twice")
 	world.enemy.testing = true
-	player.position = Vector3(2.4, 0.1, 0.5)
+	player.position = Vector3(4.2, 0.1, 0.5)
 	player.velocity = Vector3.ZERO
 	player.test_direction = Vector3.ZERO
 	await ticks(12)
