@@ -1,0 +1,27 @@
+{
+  "iteration": "0.3.0",
+  "validated_commit": "b27a5ea84c66ca60b76f7bb4fdbe26905bbc7350",
+  "engine": "Godot 4.7.2 stable official",
+  "runs": {
+    "push": {"id": 39161930943, "status": "success", "url": "https://github.com/shaolei528/shaolei/actions/runs/39161930943"},
+    "pull_request": {"id": 39161934081, "status": "success", "url": "https://github.com/shaolei528/shaolei/actions/runs/39161934081"},
+    "artifact_id": 12148769061,
+    "artifact_sha256": "1c7fc2679994b3b34bbdd0444e19797d7d75792e8b7a286ef78976328c315878"
+  },
+  "checks": {
+    "project_import": "passed",
+    "smoke_assertions": {"passed": 34, "failed": 0},
+    "headless_runtime": "passed; no script/parser errors",
+    "web_export": "passed; index.wasm and index.pck present",
+    "browser_load_and_console": "passed; no browser errors",
+    "keyboard_move_distance_m": 1.8750016892515031,
+    "ember_pickup": {"passed": true, "inventory_after_pickup": 1},
+    "campfire_craft": {"passed": true, "ember_consumed": true},
+    "ashling_combat": {"first_F_hit_hp": 1, "defeated": true, "ashen_shard_inventory": 1, "duplicate_drop": false},
+    "dodge": {"browser_movement_m": 4.15000020744815, "smoke_immunity_assertion": "passed"},
+    "mobile_viewport": {"width": 390, "height": 844, "all_controls_in_bounds": true},
+    "touch_move_distance_m": 1.8000016177754274,
+    "local_godot": "not run; binary unavailable in this workspace"
+  },
+  "production_deployment": "unchanged"
+}
