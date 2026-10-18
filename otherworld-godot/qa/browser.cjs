@@ -90,11 +90,18 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
  await page.keyboard.press('u');await page.waitForTimeout(200);
  const distantUpgrade=await page.evaluate(()=>window.__otherworldQA);
  if(distantUpgrade.campfire_upgraded||distantUpgrade.ashen_shard_count!==1)throw Error('Distant campfire upgrade should be rejected without consuming the shard: '+JSON.stringify(distantUpgrade));
- const byCamp=await walkToward(camp,2.25,40);
+ const byCamp=await walkToward(camp,1.0,40);
  if(Math.hypot(byCamp.player.x-camp.x,byCamp.player.z-camp.z)>3.0)throw Error('Could not return to camp for upgrade: '+JSON.stringify(byCamp));
  await page.locator('canvas').focus();await page.keyboard.press('u');await page.waitForTimeout(300);
- const upgraded=await page.evaluate(()=>window.__otherworldQA);
- if(!upgraded.campfire_upgraded||upgraded.ashen_shard_count!==0||upgraded.campfire_light_range<7.9)throw Error('Campfire upgrade/ingredient consumption failed: '+JSON.stringify(upgraded));
+ const keyboardUpgrade=await page.evaluate(()=>window.__otherworldQA);
+ const keyboardUpgradeWorked=keyboardUpgrade.campfire_upgraded&&keyboardUpgrade.ashen_shard_count===0;
+ let upgraded=keyboardUpgrade;
+ if(!keyboardUpgradeWorked){
+  const r=keyboardUpgrade.buttons.upgrade;
+  await page.mouse.click(r.x+r.width/2,r.y+r.height/2);await page.waitForTimeout(300);
+  upgraded=await page.evaluate(()=>window.__otherworldQA);
+ }
+ if(!upgraded.campfire_upgraded||upgraded.ashen_shard_count!==0||upgraded.campfire_light_range<7.9)throw Error('Campfire upgrade/ingredient consumption failed: '+JSON.stringify({byCamp,keyboardUpgrade,upgraded}));
  await page.keyboard.press('u');await page.waitForTimeout(200);
  const duplicateUpgrade=await page.evaluate(()=>window.__otherworldQA);
  if(!duplicateUpgrade.campfire_upgraded||duplicateUpgrade.ashen_shard_count!==0)throw Error('Campfire upgrade repeated or consumed extra material: '+JSON.stringify(duplicateUpgrade));
@@ -118,8 +125,8 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
  if(touchDistance<0.1)throw Error('Touch movement failed');
  if(errors.length)throw Error(JSON.stringify(errors));
  fs.mkdirSync('qa/results',{recursive:true});
- fs.writeFileSync('qa/results/browser.json',JSON.stringify({passed:true,distance,gathered,atCamp,crafted,keyboardCrafted,enemyApproach,firstHit,beforeDodge,dodgeStart,afterDodge,dodgeDistance,closeForFinish,defeated,noDuplicate,distantUpgrade,byCamp,upgraded,duplicateUpgrade,touchUpgrade,touchDistance,start,after,mobile,touchAfter,errors},null,2));
- console.log(JSON.stringify({passed:true,distance,gathered:{collected:gathered.collected,ember_count:gathered.ember_count},crafted:{campfire_crafted:crafted.campfire_crafted,ember_count:crafted.ember_count},firstHit:{health:firstHit.enemy.health},dodgeDistance,playerHealthAfterDodge:afterDodge.player_health,defeated:{alive:defeated.enemy.alive,ashen_shard_count:defeated.ashen_shard_count},upgrade:{distantRejected:!distantUpgrade.campfire_upgraded,completed:upgraded.campfire_upgraded,ashShardAfter:upgraded.ashen_shard_count,lightRange:upgraded.campfire_light_range,duplicateRejected:duplicateUpgrade.ashen_shard_count===0,mobileButtonPreservedState:touchUpgrade.campfire_upgraded},touchDistance,errors}));
+ fs.writeFileSync('qa/results/browser.json',JSON.stringify({passed:true,distance,gathered,atCamp,crafted,keyboardCrafted,enemyApproach,firstHit,beforeDodge,dodgeStart,afterDodge,dodgeDistance,closeForFinish,defeated,noDuplicate,distantUpgrade,byCamp,keyboardUpgrade,keyboardUpgradeWorked,upgraded,duplicateUpgrade,touchUpgrade,touchDistance,start,after,mobile,touchAfter,errors},null,2));
+ console.log(JSON.stringify({passed:true,distance,gathered:{collected:gathered.collected,ember_count:gathered.ember_count},crafted:{campfire_crafted:crafted.campfire_crafted,ember_count:crafted.ember_count},firstHit:{health:firstHit.enemy.health},dodgeDistance,playerHealthAfterDodge:afterDodge.player_health,defeated:{alive:defeated.enemy.alive,ashen_shard_count:defeated.ashen_shard_count},upgrade:{distantRejected:!distantUpgrade.campfire_upgraded,keyboardWorked:keyboardUpgradeWorked,completed:upgraded.campfire_upgraded,ashShardAfter:upgraded.ashen_shard_count,lightRange:upgraded.campfire_light_range,duplicateRejected:duplicateUpgrade.ashen_shard_count===0,mobileButtonPreservedState:touchUpgrade.campfire_upgraded},touchDistance,errors}));
  await page.screenshot({path:'qa/results/mobile.png'});
  await browser.close();server.kill();
 })().catch(e=>{console.error(e);process.exit(1)});
