@@ -2,7 +2,8 @@ extends RefCounted
 class_name CraftingSystem
 
 const RECIPES := {
-	"campfire": {"ember": 1}
+	"campfire": {"ember": 1},
+	"campfire_upgrade": {"ashen_shard": 1}
 }
 
 var inventory: Dictionary = {}
