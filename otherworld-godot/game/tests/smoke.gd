@@ -95,7 +95,7 @@ func run() -> void:
 	check(not world.attack(player.global_position) and world.crafting.count("ashen_shard") == 1, "defeated enemy cannot be farmed for duplicate drops")
 	check(not world.upgrade_campfire(Vector3(20, 0, 20)), "upgrading away from camp is rejected")
 	check(world.crafting.count("ashen_shard") == 1, "out-of-range upgrade preserves the Ashen Shard")
-	var upgrade_position := world.camp_position + Vector3(2.5, 0, 0)
+	var upgrade_position: Vector3 = world.camp_position + Vector3(2.5, 0, 0)
 	check(world.upgrade_campfire(upgrade_position), "campfire upgrade succeeds within interaction range")
 	check(world.campfire_upgraded and world.crafting.count("ashen_shard") == 0, "successful upgrade consumes exactly one Ashen Shard")
 	check(is_equal_approx(world.campfire_light.omni_range, 8.0) and world.campfire_flame_material.emission == Color("4abfff"), "campfire upgrade visibly increases light and changes flame color")
