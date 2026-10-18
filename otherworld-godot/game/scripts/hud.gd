@@ -27,7 +27,7 @@ func _ready() -> void:
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.add_child(title)
 	var hint := Label.new()
-	hint.text = "WASD: move · Space: jump · E: collect · C: build · F: attack · Shift: dodge"
+	hint.text = "WASD: move · Space: jump · E: collect · C: build · U: upgrade · F: attack · Shift: dodge"
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 14)
 	text.add_child(hint)
@@ -50,7 +50,7 @@ func _ready() -> void:
 	root.add_child(actions)
 	actions.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	actions.offset_left = -144
-	actions.offset_top = -360
+	actions.offset_top = -420
 	actions.offset_right = -12
 	actions.offset_bottom = -24
 	var collect := Button.new()
@@ -71,6 +71,12 @@ func _ready() -> void:
 	build.pressed.connect(func(): world.craft_campfire(player.global_position))
 	actions.add_child(build)
 	buttons["build"] = build
+	var upgrade := Button.new()
+	upgrade.text = "Upgrade Fire [U]"
+	upgrade.custom_minimum_size = Vector2(132,56)
+	upgrade.pressed.connect(func(): world.upgrade_campfire(player.global_position))
+	actions.add_child(upgrade)
+	buttons["upgrade"] = upgrade
 	var attack := Button.new()
 	attack.text = "Attack [F]"
 	attack.custom_minimum_size = Vector2(132,56)
@@ -116,5 +122,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		world.interact(player.global_position)
 	if event.keycode == KEY_C or event.physical_keycode == KEY_C:
 		world.craft_campfire(player.global_position)
+	if event.keycode == KEY_U or event.physical_keycode == KEY_U:
+		world.upgrade_campfire(player.global_position)
 	if event.keycode == KEY_F or event.physical_keycode == KEY_F:
 		world.attack(player.global_position)
