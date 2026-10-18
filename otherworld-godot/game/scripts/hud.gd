@@ -110,9 +110,11 @@ func _process(_delta: float) -> void:
 	message.text = "%s   |   Ember %d · Ashen Shard %d   |   HP %d   |   Height %.2f m" % [world.status, world.crafting.count("ember"), world.crafting.count("ashen_shard"), player.health, player.position.y]
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_E:
+	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if event.keycode == KEY_E or event.physical_keycode == KEY_E:
 		world.interact(player.global_position)
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_C:
+	if event.keycode == KEY_C or event.physical_keycode == KEY_C:
 		world.craft_campfire(player.global_position)
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F:
+	if event.keycode == KEY_F or event.physical_keycode == KEY_F:
 		world.attack(player.global_position)
