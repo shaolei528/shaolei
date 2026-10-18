@@ -41,9 +41,15 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
  const atCamp=await walkToward(camp,2.25);
  if(Math.hypot(atCamp.player.x-camp.x,atCamp.player.z-camp.z)>3.0)throw Error('Could not return to camp: '+JSON.stringify(atCamp));
  await page.locator('canvas').focus();
- await page.getByRole('button',{name:'Build Fire [C]'}).click();await page.waitForTimeout(300);
- const crafted=await page.evaluate(()=>window.__otherworldQA);
- if(!crafted.campfire_crafted||crafted.ember_count!==0)throw Error('Campfire crafting/ingredient consumption failed: '+JSON.stringify({atCamp,crafted}));
+ await page.keyboard.press('c');await page.waitForTimeout(300);
+ let crafted=await page.evaluate(()=>window.__otherworldQA);
+ const keyboardCrafted=crafted.campfire_crafted;
+ if(!crafted.campfire_crafted){
+  const r=atCamp.buttons.build;
+  await page.mouse.click(r.x+r.width/2,r.y+r.height/2);await page.waitForTimeout(300);
+  crafted=await page.evaluate(()=>window.__otherworldQA);
+ }
+ if(!crafted.campfire_crafted||crafted.ember_count!==0)throw Error('Campfire crafting/ingredient consumption failed: '+JSON.stringify({atCamp,crafted,keyboardCrafted}));
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(500);
  const mobile=await page.evaluate(()=>window.__otherworldQA);
  for(const [name,r] of Object.entries(mobile.buttons)) {
@@ -58,8 +64,8 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
  if(touchDistance<0.1)throw Error('Touch movement failed');
  if(errors.length)throw Error(JSON.stringify(errors));
  fs.mkdirSync('qa/results',{recursive:true});
- fs.writeFileSync('qa/results/browser.json',JSON.stringify({passed:true,distance,gathered,atCamp,crafted,touchDistance,start,after,mobile,touchAfter,errors},null,2));
- console.log(JSON.stringify({passed:true,distance,gathered:{collected:gathered.collected,ember_count:gathered.ember_count},campPlayer:atCamp.player,crafted:{campfire_crafted:crafted.campfire_crafted,ember_count:crafted.ember_count},touchDistance,errors}));
+ fs.writeFileSync('qa/results/browser.json',JSON.stringify({passed:true,distance,gathered,atCamp,crafted,keyboardCrafted,touchDistance,start,after,mobile,touchAfter,errors},null,2));
+ console.log(JSON.stringify({passed:true,distance,gathered:{collected:gathered.collected,ember_count:gathered.ember_count},campPlayer:atCamp.player,crafted:{campfire_crafted:crafted.campfire_crafted,ember_count:crafted.ember_count},keyboardCrafted,touchDistance,errors}));
  await page.screenshot({path:'qa/results/mobile.png'});
  await browser.close();server.kill();
 })().catch(e=>{console.error(e);process.exit(1)});

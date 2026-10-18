@@ -50,7 +50,7 @@ func _ready() -> void:
 	root.add_child(actions)
 	actions.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	actions.offset_left = -144
-	actions.offset_top = -204
+	actions.offset_top = -240
 	actions.offset_right = -12
 	actions.offset_bottom = -24
 	var collect := Button.new()
