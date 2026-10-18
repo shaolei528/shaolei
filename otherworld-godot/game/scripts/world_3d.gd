@@ -11,6 +11,7 @@ var campfire_light: OmniLight3D
 var campfire_crafted := false
 var enemy
 var ash_shard_drop: MeshInstance3D
+var player_ref: CharacterBody3D
 var status := "Find the glowing ember, then craft a campfire at camp."
 var ember_position := Vector3(2.8, 0.5, 3.1)
 var camp_position := Vector3(-4.6, 0.0, 1.2)
@@ -75,7 +76,7 @@ func _setup_enemy() -> void:
 	add_child(enemy)
 
 func set_player(player: CharacterBody3D) -> void:
-	enemy.target = player
+	player_ref = player
 
 func _setup_campfire_ghost() -> void:
 	campfire = Node3D.new()
@@ -178,7 +179,8 @@ func craft_campfire(player_position: Vector3) -> bool:
 		return false
 	campfire_crafted = true
 	campfire.visible = true
-	status = "Campfire built · Ember 0 · Your first shelter is ready."
+	enemy.target = player_ref
+	status = "Campfire built · Ember 0 · The fire draws an Ashling nearby."
 	return true
 
 func attack(player_position: Vector3) -> bool:

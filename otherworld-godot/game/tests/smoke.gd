@@ -63,6 +63,7 @@ func run() -> void:
 	check(world.crafting.count("ember") == 1, "failed crafting preserves ingredients")
 	check(world.craft_campfire(world.camp_position), "campfire crafts at the camp work area")
 	check(world.campfire_crafted and world.campfire.visible and world.campfire_light.visible, "crafted campfire appears and lights the area")
+	check(world.enemy.target == player, "lighting the first campfire awakens the Ashling")
 	check(world.crafting.count("ember") == 0, "crafting consumes the ember")
 	check(not world.craft_campfire(world.camp_position), "campfire cannot be crafted twice")
 	check(not world.interact(world.ember_position), "ember cannot be collected twice")
