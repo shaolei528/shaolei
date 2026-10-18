@@ -16,11 +16,28 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
  await page.keyboard.press('e');await page.waitForTimeout(300);
  const gathered=await page.evaluate(()=>window.__otherworldQA);
  if(!gathered.collected||gathered.ember_count!==1)throw Error('Ember pickup/inventory flow failed');
- await page.keyboard.down('a');await page.keyboard.down('w');await page.waitForTimeout(1650);await page.keyboard.up('a');await page.keyboard.up('w');await page.waitForTimeout(300);
+ const camp={x:-4.6,z:1.2};
+ const moves=[
+  {keys:['a','w'],x:-0.985,z:-0.174},{keys:['a'],x:-0.819,z:0.574},
+  {keys:['w'],x:-0.574,z:-0.819},{keys:['d','w'],x:0.174,z:-0.985},
+  {keys:['a','s'],x:-0.174,z:0.985},{keys:['d'],x:0.819,z:-0.574},
+  {keys:['s'],x:0.574,z:0.819},{keys:['d','s'],x:0.985,z:0.174}
+ ];
+ for(let i=0;i<24;i++){
+  const state=await page.evaluate(()=>window.__otherworldQA);
+  const dx=camp.x-state.player.x,dz=camp.z-state.player.z,remaining=Math.hypot(dx,dz);
+  if(remaining<2.25)break;
+  const move=moves.reduce((best,candidate)=>(candidate.x*dx+candidate.z*dz)>(best.x*dx+best.z*dz)?candidate:best);
+  for(const key of move.keys)await page.keyboard.down(key);
+  await page.waitForTimeout(Math.min(400,Math.max(120,(remaining-2.0)/4.5*1000)));
+  for(const key of move.keys)await page.keyboard.up(key);
+  await page.waitForTimeout(100);
+ }
  const atCamp=await page.evaluate(()=>window.__otherworldQA);
+ if(Math.hypot(atCamp.player.x-camp.x,atCamp.player.z-camp.z)>3.0)throw Error('Could not return to camp: '+JSON.stringify(atCamp));
  await page.keyboard.press('c');await page.waitForTimeout(300);
  const crafted=await page.evaluate(()=>window.__otherworldQA);
- if(!crafted.campfire_crafted||crafted.ember_count!==0)throw Error('Campfire crafting/ingredient consumption failed');
+ if(!crafted.campfire_crafted||crafted.ember_count!==0)throw Error('Campfire crafting/ingredient consumption failed: '+JSON.stringify({atCamp,crafted}));
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(500);
  const mobile=await page.evaluate(()=>window.__otherworldQA);
  for(const [name,r] of Object.entries(mobile.buttons)) {
