@@ -40,13 +40,14 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
  const camp={x:-4.6,z:1.2};
  const atCamp=await walkToward(camp,2.25);
  if(Math.hypot(atCamp.player.x-camp.x,atCamp.player.z-camp.z)>3.0)throw Error('Could not return to camp: '+JSON.stringify(atCamp));
- await page.keyboard.press('c');await page.waitForTimeout(300);
+ await page.locator('canvas').focus();
+ await page.getByRole('button',{name:'Build Fire [C]'}).click();await page.waitForTimeout(300);
  const crafted=await page.evaluate(()=>window.__otherworldQA);
  if(!crafted.campfire_crafted||crafted.ember_count!==0)throw Error('Campfire crafting/ingredient consumption failed: '+JSON.stringify({atCamp,crafted}));
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(500);
  const mobile=await page.evaluate(()=>window.__otherworldQA);
  for(const [name,r] of Object.entries(mobile.buttons)) {
-  if(r.width<48||r.height<48||r.x<0||r.y<0||r.x+r.width>390||r.y+r.height>844)throw Error('Mobile button bounds failed: '+name);
+  if(r.width<48||r.height<48||r.x<0||r.y<0||r.x+r.width>390||r.y+r.height>844)throw Error('Mobile button bounds failed: '+name+' '+JSON.stringify({rect:r,viewport:mobile.viewport,buttons:mobile.buttons}));
  }
  const b=mobile.buttons.D,client=await page.context().newCDPSession(page);
  await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:b.x+b.width/2,y:b.y+b.height/2}]});
