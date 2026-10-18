@@ -17,6 +17,7 @@ func _ready() -> void:
 	player = Player.new()
 	player.position = Vector3(0, 0.1, 4)
 	add_child(player)
+	world.set_player(player)
 	rig = Rig.new()
 	rig.target = player
 	add_child(rig)
@@ -39,6 +40,15 @@ func _process(delta: float) -> void:
 		"collected": world.collected,
 		"ember_count": world.crafting.count("ember"),
 		"campfire_crafted": world.campfire_crafted,
+		"enemy": {
+			"x": world.enemy.global_position.x,
+			"z": world.enemy.global_position.z,
+			"health": world.enemy.health,
+			"alive": world.enemy.is_alive
+		},
+		"ashen_shard_count": world.crafting.count("ashen_shard"),
+		"player_health": player.health,
+		"player_dodging": player.is_dodging,
 		"viewport": {"width": viewport_size.x, "height": viewport_size.y},
 		"buttons": hud.button_rects()
 	}

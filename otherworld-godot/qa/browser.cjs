@@ -27,6 +27,20 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
   }
   return await page.evaluate(()=>window.__otherworldQA);
  };
+ const approachEnemy=async(stopDistance=1.75,maxSteps=36)=>{
+  for(let i=0;i<maxSteps;i++){
+   const state=await page.evaluate(()=>window.__otherworldQA);
+   if(!state.enemy.alive)return state;
+   const dx=state.enemy.x-state.player.x,dz=state.enemy.z-state.player.z,remaining=Math.hypot(dx,dz);
+   if(remaining<=stopDistance)return state;
+   const move=moves.reduce((best,candidate)=>(candidate.x*dx+candidate.z*dz)>(best.x*dx+best.z*dz)?candidate:best);
+   for(const key of move.keys)await page.keyboard.down(key);
+   await page.waitForTimeout(Math.min(350,Math.max(120,(remaining-stopDistance)/4.5*1000)));
+   for(const key of move.keys)await page.keyboard.up(key);
+   await page.waitForTimeout(100);
+  }
+  return await page.evaluate(()=>window.__otherworldQA);
+ };
  const start=await page.evaluate(()=>window.__otherworldQA);
  await page.locator('canvas').focus();await page.keyboard.down('ArrowRight');await page.waitForTimeout(800);await page.keyboard.up('ArrowRight');await page.waitForTimeout(300);
  const after=await page.evaluate(()=>window.__otherworldQA);
@@ -50,6 +64,29 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
   crafted=await page.evaluate(()=>window.__otherworldQA);
  }
  if(!crafted.campfire_crafted||crafted.ember_count!==0)throw Error('Campfire crafting/ingredient consumption failed: '+JSON.stringify({atCamp,crafted,keyboardCrafted}));
+ const enemyApproach=await approachEnemy();
+ if(!enemyApproach.enemy.alive||Math.hypot(enemyApproach.enemy.x-enemyApproach.player.x,enemyApproach.enemy.z-enemyApproach.player.z)>2.8)throw Error('Could not reach the Ashling: '+JSON.stringify(enemyApproach));
+ await page.locator('canvas').focus();
+ await page.keyboard.press('f');await page.waitForTimeout(250);
+ const firstHit=await page.evaluate(()=>window.__otherworldQA);
+ if(!firstHit.enemy.alive||firstHit.enemy.health!==1)throw Error('Attack did not reduce Ashling health: '+JSON.stringify(firstHit));
+ const beforeDodge=await page.evaluate(()=>window.__otherworldQA);
+ await page.keyboard.down('d');await page.waitForTimeout(160);
+ const dodgeStart=await page.evaluate(()=>window.__otherworldQA);
+ await page.keyboard.down('Shift');await page.waitForTimeout(220);
+ await page.keyboard.up('Shift');await page.keyboard.up('d');await page.waitForTimeout(250);
+ const afterDodge=await page.evaluate(()=>window.__otherworldQA);
+ const dodgeDistance=Math.hypot(afterDodge.player.x-dodgeStart.player.x,afterDodge.player.z-dodgeStart.player.z);
+ if(dodgeDistance<0.35)throw Error('Shift dodge did not move the player: '+JSON.stringify({dodgeStart,afterDodge,dodgeDistance}));
+ if(afterDodge.player_health<1||afterDodge.player_health>beforeDodge.player_health)throw Error('Unexpected player health during/after dodge: '+JSON.stringify({beforeDodge,afterDodge}));
+ const closeForFinish=await approachEnemy(2.2,20);
+ if(Math.hypot(closeForFinish.enemy.x-closeForFinish.player.x,closeForFinish.enemy.z-closeForFinish.player.z)>2.8)throw Error('Could not re-engage Ashling after dodge: '+JSON.stringify(closeForFinish));
+ await page.keyboard.press('f');await page.waitForTimeout(300);
+ const defeated=await page.evaluate(()=>window.__otherworldQA);
+ if(defeated.enemy.alive||defeated.ashen_shard_count!==1)throw Error('Ashling defeat/drop failed: '+JSON.stringify(defeated));
+ await page.keyboard.press('f');await page.waitForTimeout(200);
+ const noDuplicate=await page.evaluate(()=>window.__otherworldQA);
+ if(noDuplicate.ashen_shard_count!==1)throw Error('Ashling gave a duplicate drop: '+JSON.stringify(noDuplicate));
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(500);
  const mobile=await page.evaluate(()=>window.__otherworldQA);
  for(const [name,r] of Object.entries(mobile.buttons)) {
@@ -64,8 +101,8 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
  if(touchDistance<0.1)throw Error('Touch movement failed');
  if(errors.length)throw Error(JSON.stringify(errors));
  fs.mkdirSync('qa/results',{recursive:true});
- fs.writeFileSync('qa/results/browser.json',JSON.stringify({passed:true,distance,gathered,atCamp,crafted,keyboardCrafted,touchDistance,start,after,mobile,touchAfter,errors},null,2));
- console.log(JSON.stringify({passed:true,distance,gathered:{collected:gathered.collected,ember_count:gathered.ember_count},campPlayer:atCamp.player,crafted:{campfire_crafted:crafted.campfire_crafted,ember_count:crafted.ember_count},keyboardCrafted,touchDistance,errors}));
+ fs.writeFileSync('qa/results/browser.json',JSON.stringify({passed:true,distance,gathered,atCamp,crafted,keyboardCrafted,enemyApproach,firstHit,beforeDodge,dodgeStart,afterDodge,dodgeDistance,closeForFinish,defeated,noDuplicate,touchDistance,start,after,mobile,touchAfter,errors},null,2));
+ console.log(JSON.stringify({passed:true,distance,gathered:{collected:gathered.collected,ember_count:gathered.ember_count},crafted:{campfire_crafted:crafted.campfire_crafted,ember_count:crafted.ember_count},firstHit:{health:firstHit.enemy.health},dodgeDistance,playerHealthAfterDodge:afterDodge.player_health,defeated:{alive:defeated.enemy.alive,ashen_shard_count:defeated.ashen_shard_count},touchDistance,errors}));
  await page.screenshot({path:'qa/results/mobile.png'});
  await browser.close();server.kill();
 })().catch(e=>{console.error(e);process.exit(1)});

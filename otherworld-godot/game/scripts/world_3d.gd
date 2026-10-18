@@ -1,6 +1,7 @@
 extends Node3D
 
 const Crafting = preload("res://scripts/crafting_system.gd")
+const EnemyController = preload("res://scripts/enemy_controller.gd")
 
 var ember_light: OmniLight3D
 var ember: MeshInstance3D
@@ -8,9 +9,12 @@ var collected := false
 var campfire: Node3D
 var campfire_light: OmniLight3D
 var campfire_crafted := false
+var enemy
+var ash_shard_drop: MeshInstance3D
 var status := "Find the glowing ember, then craft a campfire at camp."
 var ember_position := Vector3(2.8, 0.5, 3.1)
 var camp_position := Vector3(-4.6, 0.0, 1.2)
+var enemy_position := Vector3(3.8, 0.0, 0.5)
 var crafting = Crafting.new()
 
 func _ready() -> void:
@@ -61,6 +65,17 @@ func _ready() -> void:
 	ember_light.omni_range = 4.0
 	add_child(ember_light)
 	_setup_campfire_ghost()
+	_setup_enemy()
+
+func _setup_enemy() -> void:
+	enemy = EnemyController.new()
+	enemy.name = "Ashling"
+	enemy.position = enemy_position
+	enemy.defeated.connect(_on_enemy_defeated)
+	add_child(enemy)
+
+func set_player(player: CharacterBody3D) -> void:
+	enemy.target = player
 
 func _setup_campfire_ghost() -> void:
 	campfire = Node3D.new()
@@ -165,3 +180,29 @@ func craft_campfire(player_position: Vector3) -> bool:
 	campfire.visible = true
 	status = "Campfire built · Ember 0 · Your first shelter is ready."
 	return true
+
+func attack(player_position: Vector3) -> bool:
+	if not enemy.attack_from(player_position):
+		status = "Move closer to the Ashling before striking."
+		return false
+	if enemy.is_alive:
+		status = "Ashling hit · %d/%d HP." % [enemy.health, enemy.max_health]
+	else:
+		status = "Ashling defeated · Ashen Shard +1."
+	return true
+
+func _on_enemy_defeated(drop_id: String) -> void:
+	crafting.add_item(drop_id)
+	ash_shard_drop = MeshInstance3D.new()
+	ash_shard_drop.name = "AshenShardDrop"
+	var shard := SphereMesh.new()
+	shard.radius = 0.2
+	shard.height = 0.56
+	ash_shard_drop.mesh = shard
+	ash_shard_drop.position = enemy.global_position + Vector3(0, 0.32, 0)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color("b48eff")
+	material.emission_enabled = true
+	material.emission = Color("794dff")
+	ash_shard_drop.material_override = material
+	add_child(ash_shard_drop)

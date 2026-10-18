@@ -66,6 +66,28 @@ func run() -> void:
 	check(world.crafting.count("ember") == 0, "crafting consumes the ember")
 	check(not world.craft_campfire(world.camp_position), "campfire cannot be crafted twice")
 	check(not world.interact(world.ember_position), "ember cannot be collected twice")
+	world.enemy.testing = true
+	player.position = Vector3(2.4, 0.1, 0.5)
+	player.velocity = Vector3.ZERO
+	player.test_direction = Vector3.ZERO
+	await ticks(12)
+	check(not world.attack(Vector3(-8, 0, 8)), "melee attack rejects a distant enemy")
+	var health_before_dodge: int = player.health
+	player.test_direction = Vector3.LEFT
+	check(player.request_dodge(), "dodge can start while its cooldown is ready")
+	var dodge_start: Vector3 = player.position
+	await ticks(5)
+	check(player.is_dodging and player.position.x < dodge_start.x - 0.5, "dodge gives a short directional burst")
+	check(not player.receive_damage(1) and player.health == health_before_dodge, "dodge window blocks an incoming hit")
+	player.test_direction = Vector3.ZERO
+	await ticks(18)
+	check(not player.is_dodging, "dodge window ends cleanly")
+	check(world.attack(player.global_position), "melee attack hits a nearby Ashling")
+	check(world.enemy.health == 1 and world.crafting.count("ashen_shard") == 0, "first hit lowers enemy health without dropping early")
+	check(world.attack(player.global_position), "second melee attack defeats the Ashling")
+	check(not world.enemy.is_alive and not world.enemy.visible, "defeated enemy leaves the encounter")
+	check(world.crafting.count("ashen_shard") == 1 and world.ash_shard_drop.visible, "Ashen Shard drop enters the shared inventory and is visible")
+	check(not world.attack(player.global_position) and world.crafting.count("ashen_shard") == 1, "defeated enemy cannot be farmed for duplicate drops")
 	print("GODOT_25D_SMOKE=" + JSON.stringify({"passed": failures.is_empty(), "checks": checks.size(), "failures": failures, "engine": Engine.get_version_info().string}))
 	scene.queue_free()
 	await process_frame

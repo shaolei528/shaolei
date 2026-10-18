@@ -2,12 +2,24 @@ extends CharacterBody3D
 
 const SPEED := 4.5
 const JUMP_SPEED := 6.0
+const DODGE_SPEED := 12.0
+const DODGE_DURATION := 0.22
+const DODGE_COOLDOWN := 1.0
+const MAX_HEALTH := 3
 var camera: Camera3D
 var touch_direction := Vector2.ZERO
 var test_direction := Vector3.ZERO
 var testing := false
 var jump_requested := false
+var health := MAX_HEALTH
+var is_dodging := false
 var hero_sprite: Sprite3D
+var _last_direction := Vector3.RIGHT
+var _dodge_direction := Vector3.RIGHT
+var _dodge_requested := false
+var _dodge_timer := 0.0
+var _dodge_cooldown := 0.0
+var _damage_grace_timer := 0.0
 
 func _ready() -> void:
 	name = "Player3D"
@@ -43,8 +55,25 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	var direction := test_direction if testing else _input_direction()
-	velocity.x = direction.x * SPEED
-	velocity.z = direction.z * SPEED
+	_dodge_cooldown = maxf(0.0, _dodge_cooldown - delta)
+	_damage_grace_timer = maxf(0.0, _damage_grace_timer - delta)
+	if direction.length() > 0.1:
+		_last_direction = direction.normalized()
+	if _dodge_requested and _dodge_cooldown <= 0.0:
+		_dodge_requested = false
+		_dodge_timer = DODGE_DURATION
+		_dodge_cooldown = DODGE_COOLDOWN
+		_damage_grace_timer = DODGE_DURATION + 0.12
+		_dodge_direction = _last_direction
+	if _dodge_timer > 0.0:
+		_dodge_timer = maxf(0.0, _dodge_timer - delta)
+		is_dodging = _dodge_timer > 0.0
+		velocity.x = _dodge_direction.x * DODGE_SPEED
+		velocity.z = _dodge_direction.z * DODGE_SPEED
+	else:
+		is_dodging = false
+		velocity.x = direction.x * SPEED
+		velocity.z = direction.z * SPEED
 	if not is_on_floor():
 		velocity.y -= 18.0 * delta
 	if (jump_requested or (not testing and Input.is_physical_key_pressed(KEY_SPACE))) and is_on_floor():
@@ -53,6 +82,28 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if absf(direction.x) > 0.1:
 		hero_sprite.flip_h = direction.x < 0
+
+func request_dodge() -> bool:
+	if _dodge_cooldown > 0.0 or _dodge_requested:
+		return false
+	_dodge_requested = true
+	return true
+
+func receive_damage(amount: int) -> bool:
+	if amount <= 0 or is_dodging or _damage_grace_timer > 0.0:
+		return false
+	health = maxi(0, health - amount)
+	_damage_grace_timer = 0.45
+	if health == 0:
+		health = MAX_HEALTH
+		global_position = Vector3(0.0, 0.1, 4.0)
+		velocity = Vector3.ZERO
+		_damage_grace_timer = 1.0
+	return true
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SHIFT:
+		request_dodge()
 
 func _input_direction() -> Vector3:
 	var stick := touch_direction

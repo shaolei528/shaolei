@@ -27,7 +27,7 @@ func _ready() -> void:
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.add_child(title)
 	var hint := Label.new()
-	hint.text = "WASD / arrows: move  ·  Space: jump  ·  E: collect  ·  C: build at camp"
+	hint.text = "WASD: move · Space: jump · E: collect · C: build · F: attack · Shift: dodge"
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 14)
 	text.add_child(hint)
@@ -50,7 +50,7 @@ func _ready() -> void:
 	root.add_child(actions)
 	actions.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	actions.offset_left = -144
-	actions.offset_top = -240
+	actions.offset_top = -360
 	actions.offset_right = -12
 	actions.offset_bottom = -24
 	var collect := Button.new()
@@ -71,6 +71,18 @@ func _ready() -> void:
 	build.pressed.connect(func(): world.craft_campfire(player.global_position))
 	actions.add_child(build)
 	buttons["build"] = build
+	var attack := Button.new()
+	attack.text = "Attack [F]"
+	attack.custom_minimum_size = Vector2(132,56)
+	attack.pressed.connect(func(): world.attack(player.global_position))
+	actions.add_child(attack)
+	buttons["attack"] = attack
+	var dodge := Button.new()
+	dodge.text = "Dodge [Shift]"
+	dodge.custom_minimum_size = Vector2(132,56)
+	dodge.pressed.connect(func(): player.request_dodge())
+	actions.add_child(dodge)
+	buttons["dodge"] = dodge
 
 func _direction_button(parent: Control, title: String, at: Vector2, direction: Vector2) -> void:
 	var button := Button.new()
@@ -95,10 +107,12 @@ func _process(_delta: float) -> void:
 	for direction in directions.values():
 		movement += direction
 	player.touch_direction = movement.limit_length()
-	message.text = "%s   |   Ember %d   |   Height %.2f m" % [world.status, world.crafting.count("ember"), player.position.y]
+	message.text = "%s   |   Ember %d · Ashen Shard %d   |   HP %d   |   Height %.2f m" % [world.status, world.crafting.count("ember"), world.crafting.count("ashen_shard"), player.health, player.position.y]
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_E:
 		world.interact(player.global_position)
 	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_C:
 		world.craft_campfire(player.global_position)
+	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F:
+		world.attack(player.global_position)
