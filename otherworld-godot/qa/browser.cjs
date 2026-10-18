@@ -8,32 +8,37 @@ const fs=require('fs'),{spawn}=require('child_process'),{chromium}=require('play
  const errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
  await page.goto('http://127.0.0.1:8765/game/build/web/index.html');
  await page.waitForFunction(()=>window.__otherworldQA,{},{timeout:60000});
- const start=await page.evaluate(()=>window.__otherworldQA);
- await page.locator('canvas').focus();await page.keyboard.down('ArrowRight');await page.waitForTimeout(800);await page.keyboard.up('ArrowRight');await page.waitForTimeout(300);
- const after=await page.evaluate(()=>window.__otherworldQA);
- const distance=Math.hypot(after.player.x-start.player.x,after.player.z-start.player.z);
- if(distance<0.1)throw Error('Keyboard movement failed');
- await page.keyboard.press('e');await page.waitForTimeout(300);
- const gathered=await page.evaluate(()=>window.__otherworldQA);
- if(!gathered.collected||gathered.ember_count!==1)throw Error('Ember pickup/inventory flow failed');
- const camp={x:-4.6,z:1.2};
  const moves=[
   {keys:['a','w'],x:-0.985,z:-0.174},{keys:['a'],x:-0.819,z:0.574},
   {keys:['w'],x:-0.574,z:-0.819},{keys:['d','w'],x:0.174,z:-0.985},
   {keys:['a','s'],x:-0.174,z:0.985},{keys:['d'],x:0.819,z:-0.574},
   {keys:['s'],x:0.574,z:0.819},{keys:['d','s'],x:0.985,z:0.174}
  ];
- for(let i=0;i<24;i++){
-  const state=await page.evaluate(()=>window.__otherworldQA);
-  const dx=camp.x-state.player.x,dz=camp.z-state.player.z,remaining=Math.hypot(dx,dz);
-  if(remaining<2.25)break;
-  const move=moves.reduce((best,candidate)=>(candidate.x*dx+candidate.z*dz)>(best.x*dx+best.z*dz)?candidate:best);
-  for(const key of move.keys)await page.keyboard.down(key);
-  await page.waitForTimeout(Math.min(400,Math.max(120,(remaining-2.0)/4.5*1000)));
-  for(const key of move.keys)await page.keyboard.up(key);
-  await page.waitForTimeout(100);
- }
- const atCamp=await page.evaluate(()=>window.__otherworldQA);
+ const walkToward=async(target,stopDistance,maxSteps=24)=>{
+  for(let i=0;i<maxSteps;i++){
+   const state=await page.evaluate(()=>window.__otherworldQA);
+   const dx=target.x-state.player.x,dz=target.z-state.player.z,remaining=Math.hypot(dx,dz);
+   if(remaining<=stopDistance)return state;
+   const move=moves.reduce((best,candidate)=>(candidate.x*dx+candidate.z*dz)>(best.x*dx+best.z*dz)?candidate:best);
+   for(const key of move.keys)await page.keyboard.down(key);
+   await page.waitForTimeout(Math.min(400,Math.max(120,(remaining-stopDistance)/4.5*1000)));
+   for(const key of move.keys)await page.keyboard.up(key);
+   await page.waitForTimeout(100);
+  }
+  return await page.evaluate(()=>window.__otherworldQA);
+ };
+ const start=await page.evaluate(()=>window.__otherworldQA);
+ await page.locator('canvas').focus();await page.keyboard.down('ArrowRight');await page.waitForTimeout(800);await page.keyboard.up('ArrowRight');await page.waitForTimeout(300);
+ const after=await page.evaluate(()=>window.__otherworldQA);
+ const distance=Math.hypot(after.player.x-start.player.x,after.player.z-start.player.z);
+ if(distance<0.1)throw Error('Keyboard movement failed');
+ const byEmber=await walkToward({x:2.8,z:3.1},1.4);
+ if(Math.hypot(byEmber.player.x-2.8,byEmber.player.z-3.1)>1.85)throw Error('Could not reach Ember: '+JSON.stringify(byEmber));
+ await page.keyboard.press('e');await page.waitForTimeout(300);
+ const gathered=await page.evaluate(()=>window.__otherworldQA);
+ if(!gathered.collected||gathered.ember_count!==1)throw Error('Ember pickup/inventory flow failed: '+JSON.stringify({byEmber,gathered}));
+ const camp={x:-4.6,z:1.2};
+ const atCamp=await walkToward(camp,2.25);
  if(Math.hypot(atCamp.player.x-camp.x,atCamp.player.z-camp.z)>3.0)throw Error('Could not return to camp: '+JSON.stringify(atCamp));
  await page.keyboard.press('c');await page.waitForTimeout(300);
  const crafted=await page.evaluate(()=>window.__otherworldQA);
