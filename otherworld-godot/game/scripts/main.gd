@@ -40,6 +40,9 @@ func _process(delta: float) -> void:
 		"collected": world.collected,
 		"ember_count": world.crafting.count("ember"),
 		"campfire_crafted": world.campfire_crafted,
+		"campfire_upgraded": world.campfire_upgraded,
+		"campfire_light_range": world.campfire_light.omni_range,
+		"campfire_light_energy": world.campfire_light.light_energy,
 		"enemy": {
 			"x": world.enemy.global_position.x,
 			"z": world.enemy.global_position.z,
