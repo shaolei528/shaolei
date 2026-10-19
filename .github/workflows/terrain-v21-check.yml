@@ -25,6 +25,7 @@ on:
       - 'tests/mob-cooldown-authority-handoff-v1.test.mjs'
       - 'tests/awakening-expedition-loop-v1.test.mjs'
       - 'tests/awakening-home-workbench-upgrade-v1.test.mjs'
+      - 'tests/building-creature-defense-v1.test.mjs'
       - 'tests/awakening-assets-validator.test.mjs'
       - 'tests/awakening-production-manifest-gate-hardening-v1.test.mjs'
       - 'tests/awakening-art-mapping-v1.test.mjs'
@@ -64,6 +65,7 @@ on:
       - 'tests/mob-cooldown-authority-handoff-v1.test.mjs'
       - 'tests/awakening-expedition-loop-v1.test.mjs'
       - 'tests/awakening-home-workbench-upgrade-v1.test.mjs'
+      - 'tests/building-creature-defense-v1.test.mjs'
       - 'tests/awakening-assets-validator.test.mjs'
       - 'tests/awakening-production-manifest-gate-hardening-v1.test.mjs'
       - 'tests/awakening-art-mapping-v1.test.mjs'
@@ -131,6 +133,8 @@ jobs:
         run: node tests/awakening-expedition-loop-v1.test.mjs
       - name: HOME workbench expedition payoff
         run: node tests/awakening-home-workbench-upgrade-v1.test.mjs
+      - name: Creature barricade defense integration
+        run: node tests/building-creature-defense-v1.test.mjs
       - name: V21 boot retry idempotency
         run: node tests/v21-loader-retry-idempotency-v1.test.mjs
       - name: Relay subscription acknowledgement timeout
