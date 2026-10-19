@@ -14,6 +14,7 @@
   if (!definition) throw new Error('HOME & Building has no starter structure.');
   const structures = new Map();
   const busy = new Set();
+  const creatureHitAt = new Map();
   let nextId = 1;
   let buildMode = false;
   let dismantleMode = false;
@@ -170,8 +171,54 @@
     refresh();
     return { ok: true, refund: { ...definition.refund } };
   }
-  function emit(type, structure) {
-    const event = { type, playerId: typeof SESSION_ID === 'string' ? SESSION_ID : '', zone: structure.zone, structureId: structure.id, kind: structure.kind, x: structure.x, y: structure.y };
+  function movementTouchesStructure(item, movement) {
+    const box = footprint(item), radius = Math.max(0, Math.min(24, number(movement.radius, 10))) + 8;
+    const left = box.x - radius, top = box.y - radius, right = box.x + box.w + radius, bottom = box.y + box.h + radius;
+    const fromX = Number(movement.fromX), fromY = Number(movement.fromY), toX = Number(movement.toX), toY = Number(movement.toY);
+    if (![fromX, fromY, toX, toY].every(Number.isFinite)) return false;
+    const steps = Math.max(1, Math.min(256, Math.ceil(Math.hypot(toX - fromX, toY - fromY) / 4)));
+    for (let index = 0; index <= steps; index++) {
+      const t = index / steps, x = fromX + (toX - fromX) * t, y = fromY + (toY - fromY) * t;
+      if (x >= left && y >= top && x <= right && y <= bottom) return true;
+    }
+    return false;
+  }
+  function damageFromBlockedCreature(movement = {}) {
+    if (zoneLeader !== true || movement.playerId !== SESSION_ID) return { ok: false, reason: 'not-authority' };
+    const zone = String(movement.zone || ''), mobId = String(movement.mobId || ''), mobKind = String(movement.mobKind || '');
+    if (!validZone(zone) || zone !== currentZoneKey() || !/^[a-zA-Z0-9:._-]{1,96}$/.test(mobId) || !/^[a-zA-Z0-9_-]{1,40}$/.test(mobKind)) return { ok: false, reason: 'invalid-source' };
+    const item = [...structures.values()].find(candidate => candidate.zone === zone && movementTouchesStructure(candidate, movement));
+    if (!item || busy.has(item.id)) return { ok: false, reason: 'no-defense-hit' };
+    const now = Date.now(), hitKey = `${item.id}:${mobId}`, interval = Math.max(250, Math.min(4000, Math.floor(number(data.creatureHitIntervalMs, 850))));
+    const lastHitAt = creatureHitAt.get(hitKey);
+    if (lastHitAt !== undefined && now - lastHitAt < interval) return { ok: false, reason: 'cooldown' };
+    creatureHitAt.set(hitKey, now);
+    if (creatureHitAt.size > 256) creatureHitAt.delete(creatureHitAt.keys().next().value);
+    const before = { ...item }, damageByKind = data.creatureDamage || {}, damage = Math.max(1, Math.min(40, Math.floor(number(damageByKind[mobKind], damageByKind.default || 8))));
+    item.health = Math.max(0, item.health - damage);
+    const destroyed = item.health === 0;
+    if (destroyed) { structures.delete(item.id); spatial.unregisterGeometry(geometryId(item.id)); }
+    let saved = false;
+    try { saved = typeof saveLocal === 'function' && saveLocal() === true; } catch {}
+    if (!saved) {
+      structures.set(before.id, before);
+      registerStructure(before);
+      return { ok: false, reason: 'save-failed' };
+    }
+    const detail = { health: item.health, maxHealth: definition.health, damage, mobId, mobKind, destroyed };
+    emit('abyssal:building-damaged', item, detail);
+    if (destroyed) {
+      for (const key of creatureHitAt.keys()) if (key.startsWith(`${item.id}:`)) creatureHitAt.delete(key);
+      emit('abyssal:building-destroyed', item, detail);
+      toastMessage('木制路障被怪物摧毁了。');
+    } else if (item.health <= Math.ceil(definition.health / 2) && before.health > Math.ceil(definition.health / 2)) {
+      toastMessage(`木制路障受损 · 耐久 ${item.health}/${definition.health}`);
+    }
+    refresh();
+    return { ok: true, structure: { ...item }, destroyed };
+  }
+  function emit(type, structure, extra = {}) {
+    const event = { ...extra, type, playerId: typeof SESSION_ID === 'string' ? SESSION_ID : '', zone: structure.zone, structureId: structure.id, kind: structure.kind, x: structure.x, y: structure.y };
     try { window.dispatchEvent(new CustomEvent(type, { detail: event })); } catch {}
   }
   function toastMessage(message) { try { if (typeof toast === 'function') toast(message); } catch {} }
@@ -255,6 +302,7 @@
   window.addEventListener('keydown', onKeyDown, true);
   const interactionButton = document.getElementById('interactV12');
   interactionButton?.addEventListener('pointerdown', doInteraction, true);
+  window.addEventListener('abyssal:mob-movement-blocked', event => damageFromBlockedCreature(event?.detail || {}));
   mountHud();
   setInterval(() => { if (!hud && started) mountHud(); refresh(); }, 500);
 
@@ -265,6 +313,7 @@
     snapshot,
     snapshotForZone,
     applyRemoteZoneSnapshot,
+    damageFromBlockedCreature,
     canPlace,
     placeAt,
     nearest,

@@ -7,7 +7,7 @@
   const publisherEpoch=(()=>{try{return crypto.randomUUID()}catch{return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}})();
   const farmEvents=['abyssal:crop-planted','abyssal:crop-harvested'];
   const livestockEvents=['abyssal:livestock-fed','abyssal:livestock-product-collected','abyssal:livestock-bred','abyssal:livestock-grown'];
-  const buildingEvents=['abyssal:building-placed','abyssal:building-dismantled'];
+  const buildingEvents=['abyssal:building-placed','abyssal:building-dismantled','abyssal:building-damaged'];
 
   function sessionId(){return typeof SESSION_ID==='string'?SESSION_ID:'';}
   function zoneKey(){return typeof currentZone==='string'?currentZone:'1:1';}
