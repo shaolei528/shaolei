@@ -465,3 +465,11 @@
 - **VERIFIED（定向回归）：**新增断言实际执行最终 V21 `sendMove` 覆盖层，确认 `move` 消息包含宠物/饥饿/背包且保留原 `v9.ready` 准备状态；入站校验拒绝越界饥饿和畸形背包并保留最后有效值。队友同步、准备状态文案、模块重建/加载顺序、网络质量、Relay 重连、频道订阅超时、农场/建造同步和完整首次远征模拟均通过。
 - **VERIFIED（包形状）：**Cloudflare 静态包生成 100 个公开文件（0.67 MiB）；Wrangler dry-run 读取 140 个资产并识别 `WORLD` Durable Object。dry-run 不是部署。当前 Wrangler 未认证；没有新的 Cloudflare 部署。
 - **UNKNOWN：**本机浏览器仍未通过普通输入复验；需要两名真实客户端确认队友列表及时更新以及移动/宠物/物资展示。当前改动尚待提交/合并到公开主线。
+
+## 2026-10-19：队友状态同步合入主线与 Cloudflare 临时试玩
+
+- **VERIFIED（主线）：**PR [#8](https://github.com/shaolei528/shaolei/pull/8) 已合并，主线提交 `1a22fc8349e65848c5acb06dc5e3289c4fcd1519`。
+- **VERIFIED（临时部署）：**Wrangler `--temporary` 成功上传统一 3/4 页面包（100 个静态文件）和 `WORLD` Durable Object；临时 Worker 为 `https://abyssal-wake-relay.bittersweet-havarti.workers.dev`，版本 `284c26ee-52e2-477b-a724-7b23e0d26dff`。此预览有时限，不能等同于永久账号部署。
+- **发现并修复中的接线问题：**首个临时包的客户端仍默认连接既有 `zuoranzhang.workers.dev`。当前 PR #9 改为 Workers 域名下走同源 `/ws`，Githack 保持既有 Relay 地址；未完成后续重部署前，不宣称新临时 Worker 已接通客户端。
+- **UNKNOWN（线上验收）：**用户浏览器权限拒绝打开临时 Worker，本轮未通过浏览器检查游戏画面、`/health` 或实际联机；本机旧 QA 地址 `127.0.0.1:8876` 连接被拒。
+- **下一步：**合并 PR #9 后更新临时 Cloudflare 包；公网 UI 与双客户端验证仍须单独通过，临时环境需在有效期内认领才能长期保留。
