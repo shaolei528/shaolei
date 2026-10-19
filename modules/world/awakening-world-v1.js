@@ -35,7 +35,10 @@ const PROPS=[
 const INTERACTIONS=[
 {id:'poi:store:shelf-food-a',type:'food',x:2350,y:850,r:18,source:'shelf'},{id:'poi:store:shelf-food-b',type:'food',x:2518,y:850,r:18,source:'shelf'},{id:'poi:store:fridge-food',type:'food',x:2638,y:770,r:18,source:'fridge'},
 {id:'poi:store:debris-wood',type:'wood',x:2538,y:1012,r:18,source:'debris'},{id:'poi:store:residue-shard-a',type:'shard',x:2630,y:1008,r:18,source:'residue'},{id:'poi:store:residue-shard-b',type:'shard',x:2690,y:1008,r:18,source:'residue'}];
-const ENTITIES=[{id:'poi:store:crawler-a',kind:'crawler',x:2304,y:1248,hp:58,phase:.8,index:6},{id:'poi:store:crawler-b',kind:'crawler',x:2576,y:1288,hp:58,phase:2.6,index:7}];
+// Keep the first-trip crawlers farther apart than their combined 180px aggro
+// radius, with room for their small idle patrol loops. The player can read and
+// approach one fight at a time instead of drawing both into the same brawl.
+const ENTITIES=[{id:'poi:store:crawler-a',kind:'crawler',x:2304,y:1248,hp:58,phase:.8,index:6},{id:'poi:store:crawler-b',kind:'crawler',x:2752,y:1248,hp:58,phase:2.6,index:7}];
 const FX=[{id:'store-failing-light',kind:'flicker',x:2640,y:720,w:72,h:18},{id:'store-residue',kind:'anomaly',x:2664,y:976,w:96,h:72,intensity:.08}];
 const SIGN_VISUAL={id:'store-sign',kind:'sign',x:STORE.x+STORE.w/2-64,y:STORE.y+STORE.h,w:128,h:32};
 const LAYERS={terrain:{region:REGION,store:STORE,tileSize:TILE_SIZE},decals:DECALS,props:PROPS,collision:COLLISION,interactions:INTERACTIONS,entities:ENTITIES,fx:FX};

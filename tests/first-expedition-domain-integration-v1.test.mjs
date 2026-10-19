@@ -116,7 +116,7 @@ sandbox.updateQuest();
 assert.match(sandbox.questText.textContent,/^抵达 MIRE MART/);
 sandbox.mobs=[
   {id:'poi:store:crawler-a',kind:'crawler',x:2304,y:1248,hp:58,phase:0,hitCd:0,respawnAt:0},
-  {id:'poi:store:crawler-b',kind:'crawler',x:2576,y:1288,hp:58,phase:0,hitCd:0,respawnAt:0}
+  {id:'poi:store:crawler-b',kind:'crawler',x:2752,y:1248,hp:58,phase:0,hitCd:0,respawnAt:0}
 ];
 sandbox.me.x=2264;sandbox.me.y=1248;
 sandbox.updateQuest();
@@ -131,7 +131,7 @@ function killNearestCrawler(x,y){
 killNearestCrawler(2264,1248);
 assert.equal(sandbox.mobs[0].hp,0,'three bone-knife hits defeat the first authored crawler');
 assert.equal(sandbox.inventory.shard,1,'the first kill reward reaches the player inventory');
-killNearestCrawler(2536,1288);
+killNearestCrawler(2712,1248);
 assert.equal(sandbox.mobs[1].hp,0,'the second authored crawler can be defeated');
 assert.equal(sandbox.inventory.shard,2,'the second unique kill reward completes the salvage requirement');
 assert.equal(relayEvents.filter(message=>message.event==='attack').length,6,'combat keeps using the established attack relay event');

@@ -44,6 +44,11 @@ assert.equal(api.stage.stage,0,'slice must begin in normal-reality Stage 0');ass
 const layerNames=Object.keys(api.layers).sort();
 assert.deepEqual(layerNames,['collision','decals','entities','fx','interactions','props','terrain'],'world slice must expose seven separate authored layers');
 assert.equal(api.layers.terrain.tileSize,64,'Awakening terrain must keep the V21 64x64 art grid');assert.ok(api.layers.decals.length>=8,'transition road/POI must have authored decal density');assert.ok(api.layers.props.length>=10,'POI must have composed prop density');assert.ok(api.layers.collision.length>=10,'POI collision must be explicit gameplay data');assert.ok(api.layers.interactions.length>=5,'POI must contain real search/loot locations');assert.ok(api.layers.entities.length>=2,'POI must contain a deliberate enemy encounter');assert.ok(api.layers.fx.some(v=>v.kind==='anomaly'),'POI must contain a restrained early anomaly');
+const encounterCrawlers=api.layers.entities.filter(entity=>entity.kind==='crawler');
+assert.equal(encounterCrawlers.length,2,'MIRE MART must keep its two authored reward-bearing crawlers');
+const approachGap=Math.hypot(encounterCrawlers[0].x-encounterCrawlers[1].x,encounterCrawlers[0].y-encounterCrawlers[1].y);
+assert.ok(approachGap>400,'first-trip crawlers must stay apart beyond their combined 180px aggro radius and idle patrol drift');
+assert.ok(encounterCrawlers.every(entity=>entity.x>=api.poi.parking.x&&entity.x<api.poi.parking.x+api.poi.parking.w&&entity.y>=api.poi.parking.y&&entity.y<api.poi.parking.y+api.poi.parking.h),'both fights must remain reachable inside the MIRE MART parking area');
 
 const store=api.poi;
 assert.deepEqual([...sandbox.ABYSSAL_WORLD_SPATIAL_V1.geometryIds('1:0')],[store.id],'MIRE MART must register its authored geometry exactly once');
