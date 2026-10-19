@@ -121,6 +121,16 @@ sandbox.currentZone='1:2';sandbox.me={id:'local',x:1800,y:3500,r:14,hp:100};sand
 sandbox.currentZone='1:1';sandbox.me={id:'local',x:2100,y:1900,r:14,hp:100};sandbox.remotes=new Map();sandbox.mobs=[{id:'starter-crawler',kind:'crawler',x:1780,y:1900,hp:58,phase:0,hitCd:0,respawnAt:0}];sandbox.updateMobs(1);assert.ok(Math.abs(sandbox.mobs[0].x-1830.16)<.01,'starter crawler keeps its 0.88 movement multiplier within 330px aggro');
 sandbox.me={id:'local',x:1000,y:1000,r:14,hp:100};sandbox.remotes=new Map([['warded',{id:'warded',x:1780,y:1900,hp:100,ward:true}]]);sandbox.mobs=[{id:'ward-check',kind:'crawler',x:1700,y:1900,hp:58,phase:0,hitCd:0,respawnAt:0}];sandbox.updateMobs(1);assert.ok(sandbox.mobs[0].x<1710,'monsters must ignore a remote player under the departure ward');
 
+// The first MIRE MART pair must create a readable one-at-a-time approach.
+sandbox.currentZone='1:0';sandbox.me={id:'local',x:2600,y:1248,r:14,hp:100};sandbox.remotes=new Map();sandbox.mobs=[];sandbox.spawnMobs('1:0');
+const firstTripCrawlers=sandbox.mobs.filter(m=>String(m.id).startsWith('poi:store:crawler-'));
+assert.equal(firstTripCrawlers.length,2,'MIRE MART must spawn its authored pair');
+sandbox.updateMobs(.5);
+const approaching=firstTripCrawlers.filter(m=>Math.hypot(m.x-sandbox.me.x,m.y-sandbox.me.y)<180);
+assert.equal(approaching.length,1,'only the nearest first-trip crawler can enter the 180px approach radius');
+assert.ok(firstTripCrawlers[1].x<2752-10,'the east crawler should visibly approach when the player crosses to its side');
+assert.ok(Math.abs(firstTripCrawlers[0].x-2304)<10,'the west crawler should remain outside the encounter while the east one approaches');
+
 // Terrain rendering keeps viewport culling and nearest-neighbor behavior.
 sandbox.currentZone='1:0';sandbox.camera.x=2400;sandbox.camera.y=1500;sandbox.canvas.width=360;sandbox.canvas.height=300;const bounds=api.visibleTileBounds(360,300);assert.ok(bounds.cols*bounds.rows>0&&bounds.cols*bounds.rows<100);fillCalls.length=0;sandbox.drawGround(360,300);assert.equal(fillCalls.some(([, ,w,h])=>w===store.w&&h===store.h),false);assert.equal(sandbox.ctx.imageSmoothingEnabled,false);
 sandbox.camera.x=2400;sandbox.camera.y=850;fillCalls.length=0;sandbox.drawGround(360,300);assert.equal(fillCalls.some(([, ,w,h])=>w===store.w&&h===store.h),true);
