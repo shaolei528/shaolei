@@ -18,6 +18,8 @@ const interact=block('function interact(){','function triggerContextInteraction(
 const trigger=block('function triggerContextInteraction(){','function replaceInteractionButton(){');
 const bindButton=block('function replaceInteractionButton(){','function replaceChatControls(){');
 const guide=block('function openGuideDialog(){','function closeGuideDialog(){');
+const breedButtonSource=block('function makeBreedButton(){','function makeCookingButton(){');
+const refreshPromptSource=block('function refreshInteractionPrompt(){','  makeDialog();');
 
 function resolveWorldTarget({resourceDistance=Infinity,farmDistance=Infinity,guideDistance=Infinity}={}){
   const point=(distance)=>({x:distance,y:0});
@@ -134,6 +136,40 @@ function exerciseTarget(target){
   assert.ok(calls.toasts.some(message=>message.includes('鸡蛋')),'collected animal products receive a player-facing toast');
   assert.equal(calls.updates,1,'livestock interaction refreshes the HUD');
   assert.equal(calls.prompt,1,'livestock interaction immediately refreshes its next prompt');
+}
+
+{
+  const calls={breed:null,updates:0,prompt:0,toasts:[],listeners:new Map(),appended:null};
+  const button={style:{},setAttribute(){},addEventListener(type,handler){calls.listeners.set(type,handler);}};
+  const target={type:'livestock',animalId:'hen-a',label:'【互动】喂养鸡 · 口粮 ×1',breedPair:{maleId:'hen-b',femaleId:'hen-a',speciesName:'鸡'}};
+  const sandbox={
+    document:{getElementById:()=>null,createElement:()=>button},game:{appendChild(element){calls.appended=element;}},
+    interactionTarget:()=>calls.breed?{...target,breedPair:null,label:'【互动】喂养鸡 · 口粮 ×1'}:target,inventory:{food:1},toast(message){calls.toasts.push(message);},
+    updateUI(){calls.updates++;},refreshInteractionPrompt(){calls.prompt++;},
+    window:{ABYSSAL_LIVESTOCK_V1:{breedAnimal(maleId,femaleId){calls.breed={maleId,femaleId};return{ok:true};}}}
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(`${breedButtonSource}\nglobalThis.testBreedButton=makeBreedButton();`,sandbox,{filename:'livestock-breed-button-test.js'});
+  assert.equal(calls.appended,button,'the explicit breeding action is added to the normal game UI');
+  assert.equal(button.textContent,'繁育','the separate button distinguishes breeding from the E-key feed action');
+
+  const prompt={style:{},classList:{toggle(){}}},cookingButton={style:{}},petButton={style:{}};
+  Object.assign(sandbox,{dialogOpen:false,prompt,breedButton:button,cookingButton,petButton,lastFishingPrompt:'',inventory:{food:1},
+    window:{...sandbox.window,ABYSSAL_FISHING_V1:{},ABYSSAL_COOKING_PANEL_V1:{visible:()=>false},ABYSSAL_PET_PANEL_V1:{visible:()=>false}}});
+  vm.runInContext(`${refreshPromptSource}\nrefreshInteractionPrompt();`,sandbox,{filename:'livestock-breed-prompt-test.js'});
+  assert.equal(button.style.display,'block','the breeding button appears only for a nearby eligible pair with feed available');
+  assert.ok(prompt.textContent.includes('喂养鸡'),'the E prompt remains the separate feed action');
+
+  calls.listeners.get('pointerdown')({preventDefault(){}});
+  assert.deepEqual(calls.breed,{maleId:'hen-b',femaleId:'hen-a'},'touching the breeding button calls the livestock owner with the eligible pair');
+  assert.equal(calls.updates,1,'successful breeding refreshes the shared inventory HUD');
+  assert.equal(button.style.display,'none','successful breeding refresh hides the button when the pair is no longer eligible');
+  assert.ok(calls.toasts.some(message=>message.includes('新的幼崽')),'breeding produces immediate player-facing feedback');
+
+  calls.breed=null;
+  sandbox.inventory.food=0;
+  vm.runInContext('refreshInteractionPrompt();',sandbox,{filename:'livestock-breed-prompt-empty-feed-test.js'});
+  assert.equal(button.style.display,'none','the breeding button hides when the shared inventory has no feed');
 }
 
 {

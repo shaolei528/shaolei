@@ -1,0 +1,36 @@
+name: livestock-v1-check
+
+on:
+  push:
+    paths:
+      - 'data/farming/livestock-v1.json'
+      - 'modules/core/save-extensions-v1.js'
+      - 'modules/items/inventory-transactions-v1.js'
+      - 'modules/farming/livestock-v1.js'
+      - 'tests/livestock-v1.test.mjs'
+      - 'tests/livestock-breeding-cycles-v1.test.mjs'
+      - '.github/workflows/livestock-v1-check.yml'
+  pull_request:
+    paths:
+      - 'data/farming/livestock-v1.json'
+      - 'modules/core/save-extensions-v1.js'
+      - 'modules/items/inventory-transactions-v1.js'
+      - 'modules/farming/livestock-v1.js'
+      - 'tests/livestock-v1.test.mjs'
+      - 'tests/livestock-breeding-cycles-v1.test.mjs'
+      - '.github/workflows/livestock-v1-check.yml'
+
+jobs:
+  livestock-loop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check livestock module syntax
+        run: node --check modules/farming/livestock-v1.js
+      - name: Verify breeding, care, maturity, production and V5 persistence
+        run: node tests/livestock-v1.test.mjs
+      - name: Verify complete multi-species breeding cycles
+        run: node tests/livestock-breeding-cycles-v1.test.mjs

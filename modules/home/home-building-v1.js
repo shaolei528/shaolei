@@ -224,7 +224,7 @@
   function toastMessage(message) { try { if (typeof toast === 'function') toast(message); } catch {} }
   function statusText() {
     const inv = typeof inventory !== 'undefined' ? inventory : {};
-    if (!buildMode) return `建造路障 · 木材 ${number(inv.wood)}/2 · 石料 ${number(inv.stone)}/1 · 点按或 V 开始`;
+    if (!buildMode) return '建造 · V';
     return dismantleMode ? '拆除模式 · 点按或 E 拆除 · B 退出' : `建造模式 · 点按或 E 放置 · 木材 ${number(inv.wood)}/2 · 石料 ${number(inv.stone)}/1 · Q 拆除`;
   }
   function refresh() {

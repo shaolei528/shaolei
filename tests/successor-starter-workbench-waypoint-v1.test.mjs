@@ -34,7 +34,7 @@ assert.ok(guidance.includes('ctx.setTransform(Number(state.dpr)')&&guidance.incl
 assert.ok(!guidance.includes('viewportPoint('), 'starter guidance must not call the removed projection helper');
 assert.ok(guidance.includes('goal.edge ? Math.min')&&guidance.includes('ctx.rotate(Math.atan2(dy, dx))'),
   'off-screen objectives must clamp to a viewport edge and point toward their world anchors');
-for(const label of ['木材','石料','工作台 · E 使用','→ MIRE MART','搜索 MIRE MART','异质碎片','→ 返回安全营地','篝火 · 安全营地','任务 / 队友','收起信息']){
+for(const label of ['木材','石料','前往工作台','→ MIRE MART','搜索 MIRE MART','异质碎片','→ 返回安全营地','篝火 · 安全营地','任务 / 队友','收起信息']){
   assert.ok(renderer.includes(label)||guidance.includes(label),`the visible 3/4 route guidance must use readable Chinese labels: ${label}`);
 }
 for(const mojibake of ['鏈ㄦ潗','鐭虫枡','宸ヤ綔鍙','鈫?MIRE MART','璋冩煡 MIRE MART','寮傝川娈嬬暀','杩斿洖瀹夊叏','绡濈伀','浠诲姟 / 闃熷弸','鏀惰捣淇℃伅']){
@@ -51,7 +51,7 @@ assert.ok(preview.indexOf("modules/ui/route-guidance-v1.js")<preview.indexOf("pr
 assert.ok(build.includes("'modules/ui/route-guidance-v1.js'"),
   'the canonical Cloudflare package must include the route UI module');
 
-const labelsFor=({zone,phase,player,inventory,resources=[],inCamp=false,bossCleared=false,boss=null,width=800,height=600,projection}={})=>{
+const labelsFor=({zone,phase,player,inventory,resources=[],interactionTarget=null,inCamp=false,bossCleared=false,boss=null,width=800,height=600,projection}={})=>{
   const labels=[],points=[],ctx={
     save(){},restore(){},setTransform(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},stroke(){},fill(){},fillRect(){},strokeRect(){},
     translate(x,y){points.push({x,y})},rotate(){},measureText(text){return{width:String(text).length*6}},
@@ -62,7 +62,7 @@ const labelsFor=({zone,phase,player,inventory,resources=[],inCamp=false,bossClea
   const frozenResources=Object.freeze(resources.map(resource=>Object.freeze({...resource})));
   const state=Object.freeze({
     zone,phase,player:Object.freeze({...player}),inventory:Object.freeze({...inventory}),availableResources:frozenResources,
-    interactionTarget:null,camp:Object.freeze({x:2400,y:2400}),worldZone:1600,bossCleared,boss,
+    interactionTarget,camp:Object.freeze({x:2400,y:2400}),worldZone:1600,bossCleared,boss,
     parking:Object.freeze({x:2200,y:900,w:300,h:200}),inCamp,workbench:Object.freeze({x:2195,y:2535}),
     projectViewport:projection||((x,y)=>({x:400+(x-player.x)*.5,y:300+(y-player.y)*.25})),
     width,height,dpr:1,now:1200,worldNow:1200,
@@ -71,13 +71,20 @@ const labelsFor=({zone,phase,player,inventory,resources=[],inCamp=false,bossClea
   return {labels,points};
 };
 
-assert.ok(labelsFor({zone:'1:0',phase:'SEARCH_FIGHT',player:{x:2400,y:1300},inventory:{knife:true},resources:[{id:'poi:store:shard-a',type:'shard',x:2400,y:1300}]}).labels.includes('异质碎片 · 按 E 采集'),
-  'MIRE MART search phase must visibly guide the player to a shard and its interaction');
+const shardTarget={type:'resource',d:0,label:'【互动】采集异质碎片',resource:{id:'poi:store:shard-a',type:'shard',x:2400,y:1300}};
+const shardLabels=labelsFor({zone:'1:0',phase:'SEARCH_FIGHT',player:{x:2400,y:1300},inventory:{knife:true},resources:[shardTarget.resource],interactionTarget:shardTarget}).labels;
+assert.ok(shardLabels.includes('异质碎片')&&shardLabels.includes('E / 互动  采集异质碎片'),
+  'MIRE MART must show the real selected shard action separately from its route marker');
+const farmWinsNearbyWood=labelsFor({zone:'1:1',phase:'',player:{x:2400,y:2400},inventory:{wood:0,stone:0},resources:[{id:'camp:wood-nearby',type:'wood',x:2410,y:2400}],interactionTarget:{type:'farm',d:20,label:'【互动】播种盐风叶菜',plotId:'plot-a'},inCamp:true}).labels;
+assert.ok(farmWinsNearbyWood.includes('木材')&&farmWinsNearbyWood.includes('E / 互动  播种盐风叶菜'),
+  'when a nearby farm wins interaction selection, the visible E prompt must say planting and the wood marker must stay non-actionable');
+assert.ok(!farmWinsNearbyWood.includes('木材 · 按 E 采集'),
+  'an unselected resource must never claim that E will collect it');
 assert.ok(labelsFor({zone:'1:0',phase:'SECURE_REQUIRED_SALVAGE',player:{x:2400,y:1500},inventory:{knife:true,shard:2}}).labels.includes('→ 返回安全营地'),
   'after securing salvage the MIRE MART scene must show the return route');
 assert.ok(labelsFor({zone:'1:1',phase:'RETURN_HOME',player:{x:2400,y:1900},inventory:{knife:true,shard:2},inCamp:false}).labels.includes('篝火 · 安全营地'),
   'the last stretch back inside HOME must keep a visible camp destination');
-assert.ok(labelsFor({zone:'1:1',phase:'LEAVE_HOME',player:{x:Number(workbench[1]),y:Number(workbench[2])},inventory:{wood:4,stone:3},inCamp:true}).labels.includes('工作台 · E 使用'),
+assert.ok(labelsFor({zone:'1:1',phase:'LEAVE_HOME',player:{x:Number(workbench[1]),y:Number(workbench[2])},inventory:{wood:4,stone:3},inCamp:true}).labels.includes('前往工作台'),
   'the SafeCamp workbench cue must use the V21 anchor after gathering supplies');
 assert.ok(labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true,lantern:true},inCamp:true,bossCleared:false}).labels.includes('→ 挑战沼心守望者'),
   'after making the lantern, the camp should point north to the boss expedition');
@@ -87,8 +94,10 @@ assert.ok(labelsFor({zone:'1:0',phase:'COMPLETE',player:{x:2400,y:1272},inventor
   'a boss victory should guide the player back through camp toward the unlocked south');
 assert.ok(labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true},inCamp:true,bossCleared:true}).labels.includes('→ 南侧探索区'),
   'the returned player should get a visible route to the newly opened southern region');
-assert.ok(labelsFor({zone:'1:2',phase:'COMPLETE',player:{x:2400,y:4810},inventory:{knife:true},bossCleared:true,resources:[{id:'south:shard',type:'shard',x:2460,y:4810}]}).labels.includes('新区异质遗物 · 按 E 采集'),
-  'the new zone should turn its first nearby shard into a playable next objective');
+const southShard={id:'south:shard',type:'shard',x:2460,y:4810};
+const southShardLabels=labelsFor({zone:'1:2',phase:'COMPLETE',player:{x:2400,y:4810},inventory:{knife:true},bossCleared:true,resources:[southShard],interactionTarget:{type:'resource',d:60,label:'【互动】采集新区异质遗物',resource:southShard}}).labels;
+assert.ok(southShardLabels.includes('新区异质遗物')&&southShardLabels.includes('E / 互动  采集新区异质遗物'),
+  'the new zone must separate its shard route marker from the currently selected interaction');
 
 const mobileWidth=390,mobileHeight=844,rawExit={x:635,y:202},center={x:mobileWidth/2,y:mobileHeight/2};
 const edgeLabels=labelsFor({zone:'1:1',phase:'LEAVE_HOME',player:{x:2400,y:1000},inventory:{knife:true},width:mobileWidth,height:mobileHeight,inCamp:false,projection:()=>rawExit});
