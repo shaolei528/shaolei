@@ -275,6 +275,7 @@ assert.equal(sandbox.ABYSSAL_BOSS_PROGRESSION_V1.isCleared('fen-warden'),true,'t
 assert.equal(sandbox.inventory.shard,3,'the boss reward grants three shards after the lantern cost');
 assert.equal(sandbox.inventory.food,4,'the boss reward grants two food exactly once');
 assert.ok(sandbox.ABYSSAL_BOSS_PROGRESSION_V1.getState().unlockedZones.includes('1:2'),'the boss reward opens the southern exploration zone');
+assert.match(sandbox.ABYSSAL_EXPEDITION_LOOP_V1.objectiveText(sandbox.ABYSSAL_EXPEDITION_LOOP_V1.state,sandbox.ABYSSAL_EXPEDITION_LOOP_V1.runtimeObservation()),/南侧探索区开放/,'after the boss dies, the active objective must stop pointing back to the boss and explain the next region');
 const bossSave=JSON.parse(savedRecord||'null');
 assert.deepEqual(bossSave?.extensions?.owners?.['world.boss-progression.v1']?.cleared,['fen-warden'],'boss progress is stored in the existing V5 save extension');
 

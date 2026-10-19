@@ -113,6 +113,7 @@ function runtimeObservation(){
   return{
     started:typeof started!=='undefined'&&!!started,
     dead:typeof dead!=='undefined'&&!!dead,
+    zone:typeof currentZone==='string'?currentZone:'1:1',
     inCamp:typeof inCamp==='function'&&player?!!inCamp(player):false,
     atMart:atMireMart(player),
     hasKnife:!!inv.knife,
@@ -142,6 +143,7 @@ function objectiveText(snapshot,observation={}){
     case PHASES.COMPLETE:{
       const home=globalThis.ABYSSAL_HOME_WORKBENCH_V1?.getState?.();
       if(home?.returnClearance&&home?.returnClearancePersisted===false)return '返营完成 · 解锁未能写入存档；重进后需要重新完成远征。';
+      if(globalThis.ABYSSAL_BOSS_PROGRESSION_V1?.isCleared?.())return observation.zone==='1:2'?'南侧探索区已开放 · 搜寻异质遗物并带回营地。':'沼心守望者已击败 · 南侧探索区开放；回营后沿南路出发。';
       const next=observation.lantern?'北上挑战沼心守望者':'制作提灯后挑战沼心守望者';
       if(home?.tier>=2)return`Field Rig ONLINE · ${next}`;
       return observation.lantern?`远征完成 · ${next}`:`远征完成 · 前往工作台升级野外装备架；${next}`;
