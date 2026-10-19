@@ -120,11 +120,14 @@
         y:Math.round(me.y),
         dir:me.dir,
         hp:Math.round(me.hp),
+        hunger:Math.round(me.hunger),
         sanity:Math.round(me.sanity),
         zone:currentZone,
         seq:me.seq,
         attack:attackFlash,
         ward:Date.now() < fieldGraceUntil,
+        inventory:inventoryMoveSnapshot(),
+        pet:companionMoveSnapshot(),
         v9:{...v9, ready:CONTENT.ready}
       }
     });
@@ -160,7 +163,14 @@
         const meta = CONTENT.remoteReady.get(remote.id);
         const row = document.createElement('div');
         const status = meta?.expedition ? ' · 野外' : (meta?.ready ? ' · 已准备 ✓' : ' · 营地');
-        row.textContent = '• ' + clean(remote.name) + status;
+        const name = document.createElement('span');
+        name.textContent = '• ' + clean(remote.name) + status;
+        const bag = remote.inventory;
+        const details = document.createElement('small');
+        details.textContent = `生命 ${Math.round(remote.hp ?? 100)} · 饥饿 ${Math.round(remote.hunger ?? 100)}${bag ? ` · 木 ${bag.wood} 石 ${bag.stone} 食 ${bag.food} 碎 ${bag.shard}` : ' · 背包同步中'}${remote.pet ? ` · 伙伴 ${clean(remote.pet.name)}` : ''}`;
+        details.style.cssText = 'display:block;opacity:.72;font:10px/1.35 ui-monospace,monospace;white-space:normal;overflow-wrap:anywhere';
+        row.append(name, details);
+        row.style.padding = '3px 0';
         if(meta?.ready) row.style.color = '#bfe8c8';
         playerList.appendChild(row);
       }
