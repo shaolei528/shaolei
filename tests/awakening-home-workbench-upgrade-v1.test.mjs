@@ -28,13 +28,15 @@ function createRuntime(store=memoryStorage()){
     console,window:null,globalThis:null,Date,
     started:true,dead:false,CAMP,
     me:{x:CAMP.x,y:CAMP.y},
+    SESSION_ID:'test-player',
     inventory:{wood:4,stone:3,food:2,shard:0,knife:true,lantern:false},
     questText:{textContent:'legacy'},
     localStorage:store,
     toast(text){toasts.push(String(text));},
     updateUI(){uiCalls++;},
     updateQuest(){oldQuestCalls++;},
-    ABYSSAL_AWAKENING_WORLD_V1:{poi}
+    ABYSSAL_AWAKENING_WORLD_V1:{poi},
+    ABYSSAL_CREATURE_REWARDS_CONFIG_V1:{creatures:{crawler:{}}}
   };
   sandbox.saveLocal=()=>{saveCalls++;try{store.setItem('abyssal_wake_save_v5',JSON.stringify({v:5,inventory:{...sandbox.inventory}}));return true;}catch{return false;}};
   sandbox.window=sandbox;
@@ -51,6 +53,11 @@ function reachMart(runtime){
   s.updateQuest();
   s.me.x=2400;s.me.y=1800;s.updateQuest();
   s.me.x=2400;s.me.y=1200;s.updateQuest();
+}
+
+function confirmCreatureLoot(runtime){
+  const s=runtime.sandbox;
+  return s.ABYSSAL_EXPEDITION_LOOP_V1.recordConfirmedMobLoot({playerId:s.SESSION_ID,mobId:'test-crawler',mobKind:'crawler',rewardKey:'companion-egg:test-crawler:1',grants:{shard:1}});
 }
 
 // Fresh HOME state must keep the legacy 15s departure ward and refuse material-only upgrades.
@@ -106,7 +113,9 @@ function reachMart(runtime){
   const s=runtime.sandbox;
   const api=s.ABYSSAL_HOME_WORKBENCH_V1;
   reachMart(runtime);
-  s.inventory.shard=2;s.updateQuest();
+  s.inventory.shard=2;
+  assert.equal(confirmCreatureLoot(runtime),true,'a confirmed creature reward is required before the expedition can grant a return unlock');
+  s.updateQuest();
   s.me.y=1500;s.updateQuest();
   s.me.x=CAMP.x;s.me.y=CAMP.y;s.updateQuest();
   assert.equal(api.getState().returnClearance,true,'the current session should retain its successful-return unlock');
@@ -158,7 +167,9 @@ let persistentSeed;
   const api=s.ABYSSAL_HOME_WORKBENCH_V1;
   reachMart(runtime);
   assert.equal(api.getState().returnClearance,false,'reaching MIRE MART is not enough');
-  s.inventory.shard=2;s.updateQuest();
+  s.inventory.shard=2;
+  assert.equal(confirmCreatureLoot(runtime),true,'a confirmed creature reward is required before returning with salvage');
+  s.updateQuest();
   s.me.y=1500;s.updateQuest();
   assert.equal(api.getState().returnClearance,false,'leaving MIRE MART with salvage is not enough until HOME');
   s.me.x=CAMP.x;s.me.y=CAMP.y;s.updateQuest();

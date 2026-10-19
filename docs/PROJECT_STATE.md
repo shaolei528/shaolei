@@ -1,5 +1,12 @@
 # 《深渊苏醒》当前状态
 
+## 2026-10-19：让 MIRE MART 首战分段接敌
+
+- **改动：**将首战两只爬行者分置于便利店停车区两侧，初始距离由 275 调整为 448 世界单位。现有追击半径为 180；敌人小范围巡逻时也保留了间距，玩家能先处理一路再转向另一侧。
+- **VERIFIED（定向回归）：**世界生成断言两只遭遇点相距超过 400 且都在可达停车区；实际怪物 AI 模拟确认玩家靠近一侧时只有该侧进入 180 单位追击范围；世界几何、首远征域结算、普通键盘输入模拟（采集/制作/双爬行者/返营/Boss）和世界碰撞回归均通过。
+- **范围限制：**键盘路线是 V21 模拟驱动的自动化，不是浏览器人工试玩；本轮没有验证公网 Worker、真实双人联机或普通手机输入。旧记录中的临时部署版本号不一致，不能据此确认当前 Worker 内容。
+- **工作区：**基于 `main` 最新内容开出 `fix/mire-mart-first-fight-pacing-v1`；保留原有未跟踪文件。尚未提交、推送或部署。
+
 ## 2026-10-12：普通怪物奖励接入 Loot & Rewards
 
 - **改动：**新增数据驱动的爬行者、邪教徒、窥视者奖励定义与 `modules/loot/creature-rewards-v1.js`。Combat 只请求奖励；Loot 按稳定怪物击杀键生成并领取奖励；Items 用库存事务写入；V5 owner extension 保存该怪物最新一次已领取击杀时间。沿用既有 `loot` Relay 事件及已存在的 `mobRewardKey` 字段，没有改 Relay 消息结构。
@@ -473,3 +480,25 @@
 - **发现并修复中的接线问题：**首个临时包的客户端仍默认连接既有 `zuoranzhang.workers.dev`。当前 PR #9 改为 Workers 域名下走同源 `/ws`，Githack 保持既有 Relay 地址；未完成后续重部署前，不宣称新临时 Worker 已接通客户端。
 - **UNKNOWN（线上验收）：**用户浏览器权限拒绝打开临时 Worker，本轮未通过浏览器检查游戏画面、`/health` 或实际联机；本机旧 QA 地址 `127.0.0.1:8876` 连接被拒。
 - **下一步：**合并 PR #9 后更新临时 Cloudflare 包；公网 UI 与双客户端验证仍须单独通过，临时环境需在有效期内认领才能长期保留。
+
+## 2026-10-19：首次远征战利品门槛与营地路障防御 PR 检查
+
+- **PR #10：**首次 MIRE MART 返营现在要求已领取一次当地怪物战利品及 2 枚碎片，并将已确认击杀凭证写入现有 V5 扩展。`06f39f6` 对应的四项 GitHub Actions 全部通过；公开 PR 页面仍标记 Cloudflare Workers Builds 部署失败，详情链接要求 Cloudflare 登录，因此不能推断具体根因。
+- **PR #11：**怪物被路障阻挡时发出移动受阻事件；HOME & Building 根据数据配置扣耐久、保存变更、销毁后移除碰撞，并经现有营地快照 Relay 广播。同步修复旧 `game-play.js` 汇总镜像，并补齐日夜拆分模块末尾换行。提交 `c421517` 已推送到 PR #11。
+- **VERIFIED（当前分支）：**全仓 101 个 `tests/*.test.mjs` 串行通过；其中模块重组、路障耐久/存档回滚/碰撞移除的专项回归均通过。PR #11 的 `terrain-v21-check` 与 `cloudflare-check` GitHub Actions 均成功。
+- **未验收：**当前浏览器对本机 `127.0.0.1:8883` 页面的观察权限被保存策略拒绝，本轮没有尝试绕过；普通浏览器实玩与双客户端防御同步仍为 UNKNOWN。用户报告 Cloudflare 登录页提示 “You are unable to sign in”；本机 Wrangler 仍未认证。PR #10/#11 均未合并；公开页面与永久 Cloudflare Worker 均未由本轮更新。
+- **下一步：**恢复 Cloudflare 账号访问后读取 Workers Builds 失败日志，再分别处理构建与部署；同时安排在可观察且获准的浏览器环境中实走采集、制作、战斗、战利品返营和路障防守路线。
+
+## 2026-10-19：当前开发分支补齐首次远征战利品门槛
+
+- **改动：**把已确认怪物掉落事件接入当前灰盒开发分支的远征流程；MIRE MART 首次返营必须同时满足碎片数量与本次远征的有效击杀凭证。新增存档扩展凭证、死亡重试清除凭证，并把首场两只爬行者拉开距离，降低同时受击的混乱感。未修改 Relay 协议或已有战斗奖励结算。
+- **VERIFIED（测试）：**远征状态机、V5 重载、Loot 事件整合、工作台升级、WASD/E/Space 全路线等 8 个定向测试通过；发现并更新了一个仍允许“只带碎片返营”的旧测试。随后 101/101 个 `tests/*.test.mjs` 串行通过。
+- **VERIFIED（本地包）：**`npm run check:worker` 构建出 `.cloudflare-site-d5819ffaab75`，含 101 个公开文件（0.67 MiB）；Wrangler dry-run 读取 141 个资源并识别 `WORLD` Durable Object。dry-run 不是部署。
+- **提交：**当前分支 `feat/barricade-defense-v1`，代码提交 `48701d4`、`bd6017f`、`0f65ab6`；工作区既有未跟踪 QA/工具文件仍保留。
+- **未验收：**这仍是 VM/自动化与本地包证据；当前浏览器普通实玩、双客户端同步、公开入口更新和 Cloudflare 部署仍未确认。
+
+## 2026-10-19：远征门槛推送与灰盒预览入口
+
+- **VERIFIED（GitHub）：**`feat/barricade-defense-v1` 已推送到 `fb90504989f645208c593fcca6203ebbcc6d3c84`，对应 PR #11。该提交的 `terrain-v21-check`、`cloudflare-check`、`relay-check`、`playable-feel-audio-v1-check` 四项 GitHub Actions 均成功；其中 Cloudflare 检查是本地包 dry-run 流程，不代表远端 Worker 已部署。
+- **VERIFIED（静态取回）：**分支开发页 `https://raw.githack.com/shaolei528/shaolei/feat/barricade-defense-v1/prototypes/successor-3-4/live-candidate.html` 与固定 SHA 页 `https://rawcdn.githack.com/shaolei528/shaolei/fb90504989f645208c593fcca6203ebbcc6d3c84/prototypes/successor-3-4/live-candidate.html` 均返回 HTTP 200。只证明入口 HTML 可取回，不证明浏览器游玩、Relay 双人流程或 Worker 新部署。
+- **待验收：**浏览器人工试玩、朋友异地实联机与当前 PR 外部 Cloudflare Workers Builds 发布状态仍需单独确认；PR #10/#11 仍未合入 `main`。

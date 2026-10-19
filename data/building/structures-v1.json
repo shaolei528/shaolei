@@ -3,6 +3,8 @@
   "gridSize": 24,
   "placeDistance": 88,
   "maxPlacedPerZone": 24,
+  "creatureHitIntervalMs": 850,
+  "creatureDamage": { "default": 8, "crawler": 10, "cultist": 12, "watcher": 15 },
   "structures": {
     "wood-barricade": {
       "name": "木制路障",

@@ -2,7 +2,7 @@ const AW_MOB_TARGET_ATTACK_RECOVERY_MS=350;
 const awMobTargetAttackRecoveryUntil=new Map();
 const awMobAttackHistory=new Map();
 function applyMobDamage(target,kind,mob){const damage=kind==='watcher'?8:(kind==='crawler'?4:5),sanity=kind==='watcher'?7:(kind==='cultist'?3:1),mobState=mob?.id?{mobId:String(mob.id),hitCd:finite(mob.hitCd,0),hitCdUntil:finite(mob.hitCdUntil,0)}:{},payload={target,damage,sanity,kind,...mobState};if(target===SESSION_ID)onMobHit(payload);zoneCh?.send({type:'broadcast',event:'mob_hit',payload})}
-function commitMobMovement(m,nx,ny){const spatial=globalThis.ABYSSAL_WORLD_SPATIAL_V1;if(spatial?.resolveMovement){const r=spatial.resolveMovement(currentZone,m.x,m.y,nx,ny,10);m.x=r.x;m.y=r.y;return;}m.x=nx;m.y=ny}
+function commitMobMovement(m,nx,ny){const fromX=m.x,fromY=m.y,spatial=globalThis.ABYSSAL_WORLD_SPATIAL_V1;if(spatial?.resolveMovement){const r=spatial.resolveMovement(currentZone,fromX,fromY,nx,ny,10);m.x=r.x;m.y=r.y;if(r.blocked)try{window.dispatchEvent(new CustomEvent('abyssal:mob-movement-blocked',{detail:{playerId:SESSION_ID,zone:currentZone,mobId:String(m.id||''),mobKind:String(m.kind||''),fromX,fromY,toX:r.x,toY:r.y,attemptX:nx,attemptY:ny,radius:10}}))}catch{}return;}m.x=nx;m.y=ny}
 function mobMeleeHasLOS(m,t){const spatial=globalThis.ABYSSAL_WORLD_SPATIAL_V1;return spatial?.hasMeleeLineOfSight?spatial.hasMeleeLineOfSight(currentZone,m.x,m.y,t.x,t.y):true}
 function mobWindupSeconds(kind){return kind==='watcher'?1.1:(kind==='cultist'?.95:.8)}
 function mobAttackCooldownSeconds(kind){return kind==='crawler'?.9:1.15}
