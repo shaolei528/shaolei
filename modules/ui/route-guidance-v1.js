@@ -4,7 +4,7 @@
 
   function draw(ctx, state) {
     if (!ctx || !state || !['1:1', '1:0', '1:2'].includes(String(state.zone || ''))) return false;
-    const { zone, player, inventory = {}, availableResources = [], interactionTarget = null } = state;
+    const { zone, player, inventory = {}, availableResources = [], interactionTarget = null, homeUpgrade = null } = state;
     const phase = String(state.phase || ''), camp = state.camp || {}, worldZone = Number(state.worldZone) || 0;
     const projectViewport = state.projectViewport;
     if (typeof projectViewport !== 'function' || !Number.isFinite(Number(player?.x)) || !Number.isFinite(Number(player?.y))) return false;
@@ -52,6 +52,27 @@
         const distance = Math.hypot(Number(workbench.x) - player.x, Number(workbench.y) - player.y);
         if (distance <= 350) goals.push({ x: Number(workbench.x), y: Number(workbench.y), type: 'workbench', label: '前往工作台', color: '#efd399', edge: true });
       }
+
+      if (inventory.knife && phase === 'COMPLETE' && !state.bossCleared && !inventory.lantern && homeUpgrade?.returnClearance && Number(homeUpgrade.tier) < 2) {
+        const cost = homeUpgrade.cost || {}, missingStone = Math.max(0, Number(cost.stone || 3) - (Number(inventory.stone) || 0)), missingShard = Math.max(0, Number(cost.shard || 2) - (Number(inventory.shard) || 0));
+        if (missingStone > 0) {
+          let nearest = null, best = Infinity;
+          for (const resource of availableResources) {
+            if (resource?.type !== 'stone') continue;
+            const distance = Math.hypot(resource.x - player.x, resource.y - player.y);
+            if (distance <= 1250 && distance < best) { best = distance; nearest = resource; }
+          }
+          if (nearest) goals.push({ ...nearest, label: '装备架石料', color: '#b9d0d4', edge: true });
+        }
+        if (missingShard > 0) {
+          const exit = { x: Number(camp.x), y: worldZone - 10 }, distance = Math.hypot(exit.x - player.x, exit.y - player.y);
+          if (distance <= 1600) goals.push({ ...exit, type: 'exit', label: '→ MIRE MART · 碎片', color: '#a8e6df', edge: true });
+        }
+        if (missingStone <= 0 && missingShard <= 0) {
+          const distance = Math.hypot(Number(workbench.x) - player.x, Number(workbench.y) - player.y);
+          if (distance <= 1000) goals.push({ x: Number(workbench.x), y: Number(workbench.y), type: 'workbench', label: '强化野外装备架', color: '#efd399', edge: true });
+        }
+      }
     }
 
     if (inventory.knife) {
@@ -76,6 +97,18 @@
           target = { x: Number(camp.x), y: worldZone + 10 };
           label = '→ 返回安全营地';
           type = 'home';
+        } else if (phase === 'COMPLETE' && !state.bossCleared && !inventory.lantern && homeUpgrade?.returnClearance && Number(homeUpgrade.tier) < 2) {
+          const requiredShards = Math.max(1, Number(homeUpgrade.cost?.shard) || 2);
+          if ((Number(inventory.shard) || 0) < requiredShards) {
+            target = availableResources.filter(resource => resource?.type === 'shard' && String(resource.id).startsWith('poi:store:'))
+              .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
+            if (target) { label = '装备架碎片'; color = '#a8e6df'; type = 'shard'; }
+          } else {
+            target = { x: Number(camp.x), y: worldZone + 10 };
+            label = '→ 返营强化装备架';
+            type = 'home';
+            maxDistance = 1600;
+          }
         } else if (phase === 'COMPLETE' && state.bossCleared) {
           target = { x: Number(camp.x), y: worldZone + 10 };
           label = '返营 · 南侧新区已开放';

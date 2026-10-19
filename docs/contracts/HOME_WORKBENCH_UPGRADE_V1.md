@@ -18,7 +18,8 @@ A Field Rig upgrade clearance is recorded only when that loop reaches `COMPLETE`
 
 - the player to leave Safe Camp
 - physically reach MIRE MART
-- secure at least 2 existing `shard` inventory items
+- defeat one local MIRE MART creature and claim its confirmed reward
+- secure at least 1 existing `shard` inventory item
 - leave MIRE MART with the required salvage
 - return alive to Safe Camp
 
@@ -34,6 +35,8 @@ Field Rig cost:
 
 - `stone: 3`
 - `shard: 2`
+
+A one-shard first return unlocks the upgrade opportunity but does not grant materials. The workbench and expedition guidance must show the live stone/shard deficit and point back to the relevant gathering area until the cost is met.
 
 Upgrade rules:
 

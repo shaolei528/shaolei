@@ -72,8 +72,9 @@ function refreshWorkbenchRow(){
     if(label)label.textContent='Field Rig ONLINE · 出营护佑 25 秒';
     if(button){button.textContent='ONLINE ✓';button.disabled=true;}
   }else if(state.returnClearance){
-    if(label)label.textContent='Field Rig · 3 石头 + 2 异质碎片';
-    if(button){button.textContent='UPGRADE';button.disabled=false;}
+    const inv=inventoryRef()||{},stone=Math.max(0,Math.floor(finite(inv.stone))),shard=Math.max(0,Math.floor(finite(inv.shard))),ready=stone>=COST.stone&&shard>=COST.shard;
+    if(label)label.textContent=`野外装备架 · 石料 ${Math.min(stone,COST.stone)}/${COST.stone} · 碎片 ${Math.min(shard,COST.shard)}/${COST.shard}`;
+    if(button){button.textContent=ready?'UPGRADE':'材料不足';button.disabled=!ready;}
   }else{
     if(label)label.textContent='Field Rig · 完成 MIRE MART 返程后解锁';
     if(button){button.textContent='LOCKED';button.disabled=false;}
@@ -95,7 +96,7 @@ function upgrade(){
       if(gate.reason==='already-upgraded')toast('Field Rig 已上线。');
       else if(gate.reason==='expedition-return-required')toast('先完成 MIRE MART 远征并把物资带回营地。');
       else if(gate.reason==='home-required')toast('只能在 Safe Camp 工作台升级 Field Rig。');
-      else if(gate.reason==='materials-required')toast('Field Rig 需要 3 石头 + 2 异质碎片。');
+      else if(gate.reason==='materials-required'){const inv=inventoryRef()||{};toast(`材料不足：石料 ${COST.stone}、异质碎片 ${COST.shard}；当前 ${Math.max(0,Math.floor(finite(inv.stone)))}/${COST.stone}、${Math.max(0,Math.floor(finite(inv.shard)))}/${COST.shard}。`);}
       else toast('Field Rig 暂时无法升级。');
     }catch{}
     refreshWorkbenchRow();
@@ -133,6 +134,9 @@ function upgrade(){
 
 load();
 refreshWorkbenchRow();
+
+const baseUpdateUI=typeof updateUI==='function'?updateUI:null;
+if(baseUpdateUI)updateUI=function(){const result=baseUpdateUI.apply(this,arguments);refreshWorkbenchRow();return result;};
 
 globalThis.ABYSSAL_HOME_WORKBENCH_V1={
   version:1,
