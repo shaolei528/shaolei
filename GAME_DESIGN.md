@@ -2,7 +2,7 @@
 
 ## Product identity
 
-**ABYSSAL WAKE / 深渊苏醒** is a top-down pixel-art co-op survival sandbox RPG set in a modern post-apocalyptic world touched by cosmic horror. It is about preparing a home, risking expeditions into changed places, surviving what lives there, bringing value back, and gradually making a small human foothold feel real.
+**ABYSSAL WAKE / 深渊苏醒** is a 3/4 oblique-view pixel-art co-op survival sandbox RPG set in a recognizable modern coastal city touched by cosmic horror. It is about preparing a home, risking expeditions into changed places, surviving what lives there, bringing value back, and gradually making a small human foothold feel real. The camera is not a strict isometric grid; the user-approved concept direction is a readable diagonal 3/4 view.
 
 The reference set is experiential, not material to copy:
 
@@ -11,6 +11,10 @@ The reference set is experiential, not material to copy:
 - **Minecraft**: player expression through building and a base that matters.
 - **Don't Starve**: legible survival pressure and a hostile world beyond safety.
 - **Stardew Valley**: warmth, routine, growth, farming/life value and community.
+
+The integrated design is not five separate feature lists. ABYSSAL WAKE combines readable creature combat, discovery-led expeditions, a useful player-shaped home, legible survival preparation, and warm NPC routines inside one HOME → OUTSIDE → return loop. The detailed reference mapping, concept-image analysis, modular ownership boundaries and recommended build order are in [`docs/GAMEPLAY_VISION_AND_REFERENCE_ANALYSIS_V1.md`](docs/GAMEPLAY_VISION_AND_REFERENCE_ANALYSIS_V1.md).
+
+The user-provided concept image (2026-10-04) is approved as the main gameplay-composition and mood reference: bright coastal safe harbor, named people, survival/inventory/map information, co-op presence, and a darker night expedition. It is a concept sheet rather than runtime evidence. The desired camera is 3/4 oblique. Current V21 drawing still uses direct world-X/world-Y screen placement, so a small visual prototype must validate readability before a separately approved renderer migration.
 
 ## Four pillars
 
@@ -49,7 +53,7 @@ Combat is the primary moment-to-moment anchor. Attacks need a clear wind-up, hit
 
 ### World, POIs and underground discovery
 
-The first useful world scale is a handful of memorable, authored POIs around a home area, not an enormous empty map. Surface exploration uses roads, landmarks, hazards and salvage. Underground spaces use top-down rooms, mine/utility routes, resource pockets and escalating risk. Each POI should answer: why go there, what danger changes the route, what comes home, and what it unlocks.
+The first useful world scale is a handful of memorable, authored POIs around a home area, not an enormous empty map. Surface exploration uses roads, landmarks, hazards and salvage. Underground spaces use readable 3/4-view rooms, mine/utility routes, resource pockets and escalating risk. Each POI should answer: why go there, what danger changes the route, what comes home, and what it unlocks.
 
 ### Home, building and settlement
 

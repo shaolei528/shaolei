@@ -1,29 +1,21 @@
-# Legacy and Compatibility Code Register
+# 游戏入口与兼容文件
 
-Classification means only what current evidence proves. `DEAD` is used narrowly: not a working V21 route under the documented Relay configuration. It does **not** automatically authorize deletion.
+本清单只保留当前真正影响启动、运行、发布的边界。历史说明保存在 `docs/handoffs/`，不代表还有多个可玩版本。
 
-| Area | Classification | Evidence | Why it remains | Deletion risk / required validation |
-|---|---|---|---|---|
-| Supabase mechanics in `modules/network/network-v9.js` | `COMPATIBILITY`; Supabase fallback is `DEAD` for V21 | V21 loads it before `network-relay-v16.js`; Relay disables its lifecycle and V21 no longer installs a shim or fallback | Relay adapter still references `ABYSSAL_NET_V9` lifecycle state to prevent old reconnect handling | High. Prove Relay-only boot, reconnect, UI diagnostics, and all V21 network tests without it before removal. |
-| `game-core.js`, `game-play.js`, `game-render.js` | `COMPATIBILITY` | V21 does not load them; `tests/module-sort.test.mjs` rebuilds and compares normalized text so CRLF/LF cannot hide or fabricate content drift | Regression contract / compatibility aggregates | High. Replace or intentionally retire the reconstruction contract first. |
-| `modules/core/game-core.js`, `modules/combat/game-play.js`, `modules/render/game-render.js` | `LEGACY candidate` | V21 explicitly asserts it does not load these paths; this pass found no active-V21 reference | Historical split/aggregate transition artifacts | Medium. Search old page and external usage, then load V21 and historical pages chosen for support before deciding. |
-| Root V9/V16 helper copies such as `network-v9.js`, `network-relay-v16.js`, `gameplay-v9.js`, `render-v9.js` | `COMPATIBILITY` / `LEGACY candidate` | V21 loads `modules/...` paths; module-sort test byte-compares several root/module pairs | Test contract and older page support may depend on root copies | Medium/high. Preserve byte-pair tests or migrate old entrypoints in a dedicated branch. |
-| `boot-v8.js`, `boot-v9.js`, `survival-v3.html` through `survival-v17c.html`, `index-v7-direct-backup.html`, `index.html`, `world-v2.html` | `LEGACY` | They are not V21's active page; however `index.html` still links `survival-v17.html`, and current CI workflows read V17 files | Historical recovery and current legacy-entrypoint/CI compatibility | High. Do not archive or remove until the public entry route and V17 CI coverage are deliberately retired. |
-| `backups/**` | `LEGACY snapshot` | Named snapshots of terrain, module-sort, art, and combat work | Manual recovery evidence | Low for moving after archive verification; never bulk-delete without confirming Git history and user recovery needs. |
-| `node_modules/` in the local worktree | `GENERATED / LOCAL` | Untracked on audit start | Local dependency installation, not repository source | Do not commit or delete as part of a code cleanup pass. |
-| `.wrangler-dist/` or similar dry-run output, if created locally | `GENERATED / LOCAL` | Produced by Worker dry-run tooling, not V21 source | Build/dry-run artifact | Confirm ignore rules; do not commit. |
+## 唯一玩家入口
 
-## Cleanup candidates
+- `index.html`：唯一玩家入口，转到 3/4 统一灰盒。
+- `prototypes/successor-3-4/live-candidate.html`：实际灰盒页面。
 
-These are proposals only. None was changed in this branch.
+旧的独立游戏入口 `survival-v3.html`、`survival-v8.html`–`survival-v17.html`、`survival-v17c.html`、`world-v2.html`、`index-v7-direct-backup.html` 和旧启动脚本已从活动工作树移除。两个平行相机原型目录和两张可直接打开的美术场景页也已移除。
 
-1. **`chore/document-relay-only-runtime`** — keep the Relay-only V21 requirement explicit next to the compatibility adapter. Evidence: V21 now has a narrow boot regression that rejects a Supabase fallback. Risk: comments/docs can drift unless the test remains.
-2. **`fix/retire-v21-supabase-fallback`** — completed by this branch for V21 boot/runtime fallback paths. The retained V9 compatibility layer remains a separate retirement decision.
-3. **`chore/archive-historical-entrypoints`** — move old V3–V17 pages and boot files into a documented archive after checking host routes and bookmarks. Risk: high if any deployment still exposes them.
-4. **`chore/define-aggregate-generation`** — declare one mechanical owner for the three root aggregate compatibility files, or retire the byte-reconstruction test in a separate approved change. Risk: medium; a manual edit can desynchronize active split modules and aggregates.
-5. **`chore/archive-snapshots-policy`** — inventory `backups/**`, define which snapshots Git already preserves, and move only confirmed redundant snapshots to an archive. Risk: medium; backups are explicitly useful recovery points.
+## 仍保留的运行底层
 
-## Do not treat as cleanup candidates in this pass
+- `survival-v21.html`：当前模拟入口，承载现有玩法、存档与 Relay 初始化；3/4 页面借用它的状态和运行模块。它不是另一个供玩家选择的游戏。
+- `ui-shell.html`：V21 加载的 DOM/CSS 模板。保留此文件是为了不破坏启动流程。
+- `modules/`：V21 的领域与网络运行模块；按 `docs/SUCCESSOR_MODULE_MAP.md` 的唯一 owner 管理。
+- 根目录部分旧聚合脚本：仍被模块排序/兼容检查读取；未迁移完之前不删除。
 
-- The frozen `fix/pvp-input-hardening` branch and `feat/monster-attack-telegraph` branch are not files in this branch and must not be altered here.
-- CRLF/LF module-sort failures are a separate baseline/tooling issue, not permission to rewrite files during hygiene mapping.
+## 清理边界
+
+旧历史记录和备份用于追溯，不会出现在玩家入口或发布清单中。只有确认没有运行时、发布、CI 或恢复依赖后，才继续删除它们。不要把候选图、QA 页或历史文档当成正式版本。

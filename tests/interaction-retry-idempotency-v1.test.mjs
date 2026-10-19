@@ -19,11 +19,11 @@ function emitter(extra={}){
 }
 function classList(initial=[]){
   const values=new Set(initial);
-  return{add(...n){n.forEach(v=>values.add(v));},remove(...n){n.forEach(v=>values.delete(v));},contains(v){return values.has(v);}};
+  return{add(...n){n.forEach(v=>values.add(v));},remove(...n){n.forEach(v=>values.delete(v));},contains(v){return values.has(v);},toggle(v,force){const enabled=force===undefined?!values.has(v):!!force;if(enabled)values.add(v);else values.delete(v);return enabled;}};
 }
 function makeHarness(){
   let intervals=0,saveCalls=0,uiCalls=0,toastCalls=0;
-  const prompt={style:{display:'none'},textContent:''};
+  const prompt={style:{display:'none'},textContent:'',classList:classList()};
   const dialog=emitter({classList:classList(),querySelector(){return null;}});
   const interact=emitter({id:'interactV12',textContent:'互动'});
   const chatInput=emitter({id:'chatInputV12',value:'',placeholder:'输入消息…'});
@@ -53,7 +53,7 @@ function makeHarness(){
   sandbox.window=sandbox;sandbox.globalThis=sandbox;
   vm.createContext(sandbox);
   return{
-    sandbox,dialog,interact,chatInput,chatSend,
+    sandbox,dialog,interact,chatInput,chatSend,prompt,
     run(){vm.runInContext(moduleSource,sandbox,{filename:'modules/input/interaction-v12.js'});},
     stats:()=>({intervals,saveCalls,uiCalls,toastCalls})
   };
@@ -76,11 +76,15 @@ assert.equal(h.dialog.count('pointerdown'),1,'50 retries must not duplicate dial
 
 // Canonical interaction authority is unchanged: one public action harvests exactly one local resource.
 assert.equal(h.sandbox.inventory.wood,0);
+h.sandbox.interval.fn();
+assert.equal(h.prompt.style.display,'block','polling must initially expose the available resource prompt');
+assert.equal(h.prompt.textContent,'【互动】采集木材');
 api.triggerContextInteraction();
 assert.equal(h.sandbox.inventory.wood,1,'one canonical context action must harvest exactly one resource');
 assert.equal(h.stats().saveCalls,1,'one harvest must save once');
 assert.equal(h.stats().uiCalls,1,'one harvest must update UI once');
 assert.equal(h.stats().toastCalls,1,'one harvest must toast once');
+assert.equal(h.prompt.style.display,'none','successful harvest must hide the stale prompt immediately without waiting for the polling interval');
 assert.ok(h.sandbox.harvested.get('camp:retry-test')>Date.now(),'harvest cooldown semantics must remain intact');
 
 console.log(JSON.stringify({ok:true,retries:50,intervals:1,dialogPointerListeners:1,canonicalHarvestDelta:1,saveCalls:1,uiCalls:1,rootModuleByteEquivalent:true}));

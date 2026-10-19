@@ -62,10 +62,6 @@ This is a virtual split: the original atlas remains intact, while runtime/previe
 
 The production asset pack should change presentation bindings only. Collision, interaction/loot, mobs, save, Relay, combat and world coordinates remain owned by gameplay code.
 
-## Preview
+## Player route
 
-Serve the repo with any static HTTP server and open:
-
-`awakening-assets-preview.html`
-
-It renders every manifest asset with nearest-neighbor sampling on an alpha checkerboard. Terrain entries additionally render as a 3×3 repeat to inspect seams. Use the page to visually catch blurry scaling, transparency halos, bad source rectangles and inconsistent pixel density before touching the live game.
+The former standalone art catalog page has been retired. Art intake data and validation helpers are not a playable game route and are not included in the current player package. The active game remains the single root `index.html` 3/4 graybox entry.

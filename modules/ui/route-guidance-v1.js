@@ -1,0 +1,101 @@
+(() => {
+  'use strict';
+  if (globalThis.ABYSSAL_ROUTE_GUIDANCE_V1?.version === 1) return;
+
+  function draw(ctx, state) {
+    if (!ctx || !state || !['1:1', '1:0'].includes(String(state.zone || ''))) return false;
+    const { zone, player, inventory = {}, availableResources = [], interactionTarget = null } = state;
+    const phase = String(state.phase || ''), camp = state.camp || {}, worldZone = Number(state.worldZone) || 0;
+    const projectViewport = state.projectViewport;
+    if (typeof projectViewport !== 'function' || !Number.isFinite(Number(player?.x)) || !Number.isFinite(Number(player?.y))) return false;
+
+    const goals = [], worldNow = Number(state.worldNow) || 0, insideCamp = state.inCamp === true;
+    if (zone === '1:1') {
+      for (const [type, need, label, color] of [['wood', 4, '木材', '#f0c77c'], ['stone', 3, '石料', '#b9d0d4']]) {
+        if (!insideCamp || (Number(inventory[type]) || 0) >= need) continue;
+        let nearest = null, best = Infinity;
+        for (const resource of availableResources) {
+          if (resource?.type !== type) continue;
+          const distance = Math.hypot(resource.x - player.x, resource.y - player.y);
+          if (distance <= 1250 && distance < best) { best = distance; nearest = resource; }
+        }
+        if (nearest) {
+          const target = interactionTarget;
+          if (target?.type === 'resource' && target.resource?.type === type) nearest = target.resource;
+          goals.push({ ...nearest, label, color, edge: true });
+        }
+      }
+
+      const workbench = state.workbench || {};
+      if (insideCamp && (Number(inventory.wood) || 0) >= 4 && (Number(inventory.stone) || 0) >= 3 && !inventory.knife && interactionTarget?.type !== 'workbench') {
+        const distance = Math.hypot(Number(workbench.x) - player.x, Number(workbench.y) - player.y);
+        if (distance <= 350) goals.push({ x: Number(workbench.x), y: Number(workbench.y), type: 'workbench', label: '工作台 · E 使用', color: '#efd399', edge: true });
+      }
+    }
+
+    if (inventory.knife) {
+      if (zone === '1:1' && (!phase || phase === 'LEAVE_HOME' || phase === 'REACH_MIRE_MART')) {
+        const exit = { x: Number(camp.x), y: worldZone - 10 }, distance = Math.hypot(exit.x - player.x, exit.y - player.y);
+        if (distance <= 1000) goals.push({ ...exit, type: 'exit', label: '→ MIRE MART', color: '#8edbd3', edge: true });
+      } else if (zone === '1:0') {
+        let target = null, label = '', color = '#8edbd3';
+        if (phase === 'REACH_MIRE_MART' && state.parking) {
+          const area = state.parking;
+          target = { x: area.x + area.w / 2, y: area.y + area.h / 2 };
+          label = '搜索 MIRE MART';
+        } else if (phase === 'SEARCH_FIGHT') {
+          target = availableResources.filter(resource => resource?.type === 'shard' && String(resource.id).startsWith('poi:store:'))
+            .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
+          if (target) { label = '异质碎片'; color = '#a8e6df'; }
+        } else if (phase === 'SECURE_REQUIRED_SALVAGE' || phase === 'RETURN_HOME') {
+          target = { x: Number(camp.x), y: worldZone + 10 };
+          label = '→ 返回安全营地';
+        }
+        if (target) {
+          const distance = Math.hypot(target.x - player.x, target.y - player.y);
+          if (distance <= 1100) goals.push({ ...target, type: phase === 'SEARCH_FIGHT' ? 'shard' : 'poi', label, color, edge: true });
+        }
+      }
+    }
+
+    if (inventory.knife && zone === '1:1' && phase === 'RETURN_HOME' && !insideCamp) {
+      const target = { x: Number(camp.x), y: Number(camp.y) }, distance = Math.hypot(target.x - player.x, target.y - player.y);
+      if (distance <= 700) goals.push({ ...target, type: 'home', label: '篝火 · 安全营地', color: '#f0c77c', edge: true });
+    }
+
+    ctx.save();
+    ctx.setTransform(Number(state.dpr) || 1, 0, 0, Number(state.dpr) || 1, 0, 0);
+    const width = Number(state.width) || 0, height = Number(state.height) || 0, now = Number(state.now) || 0;
+    for (let index = 0; index < goals.length; index++) {
+      const goal = goals[index], raw = projectViewport(goal.x, goal.y);
+      if (!raw || !Number.isFinite(raw.x) || !Number.isFinite(raw.y)) continue;
+      const cx = width / 2, cy = height / 2, dx = raw.x - cx, dy = raw.y - cy, pad = 24;
+      const scale = goal.edge ? Math.min(Math.abs(dx) > cx - pad ? (cx - pad) / Math.abs(dx) : 1, Math.abs(dy) > cy - pad ? (cy - pad) / Math.abs(dy) : 1) : 1;
+      const point = { x: Math.round(cx + dx * scale), y: Math.round(cy + dy * scale) }, offscreen = goal.edge && scale < .999;
+      const pulse = .5 + .5 * Math.sin(now / 260 + (goal.type === 'stone' ? 1.2 : 0));
+      const nearTarget = Math.hypot(goal.x - player.x, goal.y - player.y) <= 82;
+      const canGather = ['wood', 'stone', 'shard'].includes(goal.type);
+      const rx = nearTarget ? 10 : 18 + Math.round(pulse * 4), ry = nearTarget ? 5 : 9 + Math.round(pulse * 2);
+      ctx.save(); ctx.lineWidth = 2; ctx.strokeStyle = goal.color; ctx.globalAlpha = .5 + pulse * .35;
+      ctx.beginPath(); ctx.moveTo(point.x, point.y - ry); ctx.lineTo(point.x + rx, point.y); ctx.lineTo(point.x, point.y + ry); ctx.lineTo(point.x - rx, point.y); ctx.closePath(); ctx.stroke();
+      ctx.globalAlpha = .82; ctx.fillStyle = goal.color; ctx.fillRect(Math.round(point.x) - 2, Math.round(point.y) - 2, 4, 4);
+      if (offscreen) {
+        ctx.save(); ctx.translate(point.x, point.y); ctx.rotate(Math.atan2(dy, dx)); ctx.fillStyle = goal.color;
+        ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-4, -5); ctx.lineTo(-2, 0); ctx.lineTo(-4, 5); ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      const caption = canGather && nearTarget ? `${goal.label} · 按 E 采集` : goal.label;
+      ctx.font = 'bold 9px ui-monospace,monospace'; ctx.textAlign = offscreen ? (point.x > cx ? 'right' : 'left') : 'center';
+      const labelX = Math.round(point.x) + (offscreen ? (point.x > cx ? -13 : 13) : 0);
+      const labelWidth = Math.ceil(ctx.measureText(caption).width) + 10;
+      const top = Math.max(4, Math.min(height - 18, Math.round(point.y) - 34 - index * 14));
+      const left = ctx.textAlign === 'right' ? labelX - labelWidth : ctx.textAlign === 'left' ? labelX : labelX - labelWidth / 2;
+      ctx.globalAlpha = .9; ctx.fillStyle = '#101a16e8'; ctx.fillRect(left, top, labelWidth, 14);
+      ctx.strokeStyle = goal.color; ctx.lineWidth = 1; ctx.strokeRect(left + .5, top + .5, labelWidth - 1, 13);
+      ctx.fillStyle = '#f6f0dc'; ctx.fillText(caption, labelX, top + 10); ctx.restore();
+    }
+    ctx.restore();
+    return goals.length > 0;
+  }
+
+  globalThis.ABYSSAL_ROUTE_GUIDANCE_V1 = Object.freeze({ version: 1, draw });
+})();

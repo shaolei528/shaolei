@@ -23,11 +23,11 @@ const ORDER=Object.freeze([
 ]);
 const CONTRACT=Object.freeze({
   id:'mire-mart-expedition-v1',
-  scope:'session-local-slice',
+  scope:'character-save-slice',
   requiredSalvage:Object.freeze({shard:2}),
   phases:ORDER,
   authority:'local-objective-state-only',
-  persistence:'none-v1'
+  persistence:'v5-save-extension-v1'
 });
 
 function finite(value,fallback=0){const n=Number(value);return Number.isFinite(n)?n:fallback;}
@@ -36,17 +36,32 @@ function hasRequiredSalvage(observation){return finite(observation?.shard,0)>=CO
 
 function createMachine(){
   const state={phase:PHASES.PREPARE,attempt:1,history:[PHASES.PREPARE],deathPending:false,completionAnnounced:false};
+  function persist(){try{return typeof saveLocal==='function'&&saveLocal()===true}catch{return false}}
   function transition(next){
     if(!next||state.phase===next)return false;
     state.phase=next;
     state.history.push(next);
+    if(state.history.length>64)state.history.shift();
+    persist();
     return true;
   }
-  function snapshot(){return{phase:state.phase,attempt:state.attempt,history:[...state.history],deathPending:state.deathPending,completionAnnounced:state.completionAnnounced};}
+  function snapshot(){return{version:1,phase:state.phase,attempt:state.attempt,history:[...state.history],deathPending:state.deathPending,completionAnnounced:state.completionAnnounced};}
+  function restore(raw){
+    if(raw?.version!==1)return false;
+    state.phase=ORDER.includes(raw.phase)?raw.phase:PHASES.PREPARE;
+    state.attempt=Math.max(1,Math.min(999,Math.floor(finite(raw.attempt,1))));
+    const history=Array.isArray(raw.history)?raw.history.filter(phase=>ORDER.includes(phase)).slice(-64):[];
+    state.history=history.length?history:[state.phase];
+    if(state.history.at(-1)!==state.phase)state.history.push(state.phase);
+    if(state.history.length>64)state.history=state.history.slice(-64);
+    state.deathPending=state.phase!==PHASES.COMPLETE&&!!raw.deathPending;
+    state.completionAnnounced=state.phase===PHASES.COMPLETE||!!raw.completionAnnounced;
+    return true;
+  }
   function step(observation={}){
     if(!observation.started)return snapshot();
     if(observation.dead){
-      if(state.phase!==PHASES.PREPARE&&state.phase!==PHASES.COMPLETE)state.deathPending=true;
+      if(state.phase!==PHASES.PREPARE&&state.phase!==PHASES.COMPLETE&&!state.deathPending){state.deathPending=true;persist();}
       return snapshot();
     }
     if(state.deathPending&&observation.inCamp&&state.phase!==PHASES.COMPLETE){
@@ -82,7 +97,7 @@ function createMachine(){
     }
     return snapshot();
   }
-  return{state,step,snapshot,transition};
+  return{state,step,snapshot,restore,transition};
 }
 
 function atMireMart(player){
@@ -110,38 +125,47 @@ function objectiveText(snapshot,observation={}){
   const shard=`${Math.min(CONTRACT.requiredSalvage.shard,Math.max(0,finite(observation.shard)))}/${CONTRACT.requiredSalvage.shard}`;
   switch(snapshot.phase){
     case PHASES.PREPARE:
-      if(finite(observation.wood)<4||finite(observation.stone)<3)return`PREPARE · MIRE MART 停电后留下异常残留。先准备骨刃：木材 ${finite(observation.wood)}/4 · 石头 ${finite(observation.stone)}/3。`;
-      return 'PREPARE · 前往营地西南侧工作台制作骨刃。远征目标：调查 MIRE MART，并带回 2 个异质碎片。';
+      if(!observation.inCamp&&(!observation.hasKnife||finite(observation.wood)<4||finite(observation.stone)<3))return`返营整备 · 木 ${finite(observation.wood)}/4 · 石 ${finite(observation.stone)}/3`;
+      if(!observation.inCamp)return '返营制作骨刀 · 工作台在营地西南';
+      if(finite(observation.wood)<4||finite(observation.stone)<3)return`整备骨刀 · 木 ${finite(observation.wood)}/4 · 石 ${finite(observation.stone)}/3`;
+      return '工作台制作骨刀 → 北路 MIRE MART';
     case PHASES.LEAVE_HOME:
-      return snapshot.attempt>1?'LEAVE HOME · 上次远征因死亡中断。重新整备后沿北门公路前往 MIRE MART。':'LEAVE HOME · 沿北门公路离开 Safe Camp → MIRE MART。目标物资：异质碎片 2。';
+      return snapshot.attempt>1?'再出发 · 北路 MIRE MART · 碎片 0/2':'北路前往 MIRE MART · 碎片 0/2';
     case PHASES.REACH_MIRE_MART:
-      return observation.inCamp?'REACH MIRE MART · 远征尚未完成。重新沿北路前往 MIRE MART。':'REACH MIRE MART · 沿破损北路继续北上，找到 MIRE MART / NO POWER。';
+      return observation.inCamp?'前往 MIRE MART · 沿北路':'抵达 MIRE MART · 沿北路继续';
     case PHASES.SEARCH_FIGHT:
-      return observation.inCamp?`SEARCH / FIGHT · 提前返回不会完成远征。回到 MIRE MART 取得异质碎片 ${shard}。`:`SEARCH / FIGHT · 搜索货架、冰柜、碎屑与异常残留；必要时清理爬行者。异质碎片 ${shard}。`;
+      return observation.inCamp?`缺少碎片 · 前往 MIRE MART ${shard}`:`搜寻/击退爬行者 · 碎片 ${shard}`;
     case PHASES.SECURE_REQUIRED_SALVAGE:
-      return`SECURE SALVAGE · 目标物资已取得 ${shard}。离开 MIRE MART，开始返程。`;
+      return`带碎片回营 · ${shard}`;
     case PHASES.RETURN_HOME:
-      return`RETURN HOME · 异质碎片 ${shard} 已取得。沿北路返回 Safe Camp。`;
+      return`沿北路返营 · 碎片 ${shard}`;
     case PHASES.COMPLETE:{
       const home=globalThis.ABYSSAL_HOME_WORKBENCH_V1?.getState?.();
-      if(home?.tier>=2)return 'COMPLETE · MIRE MART 物资已安全带回。Field Rig 已上线：下一次离营护佑延长至 25 秒。';
-      return 'COMPLETE · MIRE MART 物资已安全带回。下一步：前往工作台，用 2 异质碎片 + 3 石头升级 Field Rig。';
+      if(home?.returnClearance&&home?.returnClearancePersisted===false)return '返营完成 · 解锁未能写入存档；重进后需要重新完成远征。';
+      const next=observation.lantern?'北上挑战沼心守望者':'制作提灯后挑战沼心守望者';
+      if(home?.tier>=2)return`Field Rig ONLINE · ${next}`;
+      return observation.lantern?`远征完成 · ${next}`:`远征完成 · 前往工作台升级野外装备架；${next}`;
     }
     default:return null;
   }
 }
-
 const machine=createMachine();
+globalThis.ABYSSAL_SAVE_EXTENSIONS_V1?.register('world.expedition-loop.v1',{snapshot:machine.snapshot,restore:machine.restore});
 function updateRuntime(){
   const observation=runtimeObservation();
   const before=machine.state.phase;
   const snapshot=machine.step(observation);
   if(before!==PHASES.COMPLETE&&snapshot.phase===PHASES.COMPLETE&&!machine.state.completionAnnounced){
     machine.state.completionAnnounced=true;
-    try{globalThis.ABYSSAL_HOME_WORKBENCH_V1?.recordExpeditionReturn?.({expeditionId:CONTRACT.id,attempt:snapshot.attempt,at:Date.now()});}catch{}
-    try{toast('远征完成 · MIRE MART 物资已带回 Safe Camp。');}catch{}
+    try{if(typeof saveLocal==='function')saveLocal()}catch{}
+    let clearance;
+    try{clearance=globalThis.ABYSSAL_HOME_WORKBENCH_V1?.recordExpeditionReturn?.({expeditionId:CONTRACT.id,attempt:snapshot.attempt,at:Date.now()});}catch{}
+    try{toast(clearance?.returnClearancePersisted===false?'已安全返回，但升级解锁未写入存档；重新加载后可能丢失。请先升级野外装备架再离开游戏。':'远征完成 · MIRE MART 物资已带回安全营地。');}catch{}
   }
-  const text=objectiveText(snapshot,observation);
+  const objective=objectiveText(snapshot,observation);
+  const wardUntil=typeof fieldGraceUntil!=='undefined'?finite(fieldGraceUntil,0):0;
+  const wardSeconds=!observation.inCamp&&wardUntil>Date.now()?Math.ceil((wardUntil-Date.now())/1000):0;
+  const text=objective&&wardSeconds>0?`${objective} · 临时护网剩余 ${wardSeconds} 秒`:objective;
   if(text&&typeof questText!=='undefined'&&questText)questText.textContent=text;
   return{snapshot:machine.snapshot(),observation,text};
 }

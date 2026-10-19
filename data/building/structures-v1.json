@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "gridSize": 24,
+  "placeDistance": 88,
+  "maxPlacedPerZone": 24,
+  "structures": {
+    "wood-barricade": {
+      "name": "木制路障",
+      "width": 64,
+      "depth": 20,
+      "height": 13,
+      "health": 90,
+      "cost": { "wood": 2, "stone": 1 },
+      "refund": { "wood": 1 }
+    }
+  }
+}

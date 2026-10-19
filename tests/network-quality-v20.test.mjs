@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
-const source=fs.readFileSync(new URL('../network-quality-v20.js',import.meta.url),'utf8');
-const boot=fs.readFileSync(new URL('../survival-v17.html',import.meta.url),'utf8');
+const source=fs.readFileSync(new URL('../modules/network/network-quality-v20.js',import.meta.url),'utf8');
+const boot=fs.readFileSync(new URL('../survival-v21.html',import.meta.url),'utf8');
 
 const sandbox={console,window:null};
 sandbox.window=sandbox;
@@ -42,12 +42,12 @@ assert.equal(api.intervalFor(api.summarize([120,125],[])),.20,'insufficient samp
 assert.ok(Math.abs(api.hzForInterval(.14)-7.142857)<.001,'fastest interval must remain about 7.1Hz');
 assert.ok(Math.abs(api.hzForInterval(.32)-3.125)<.001,'slow interval must remain about 3.1Hz');
 
-const relayIndex=boot.indexOf("'network-relay-v16.js'");
-const qualityIndex=boot.indexOf("'network-quality-v20.js'");
-const motionIndex=boot.indexOf("'smooth-motion-v18.js'");
+const relayIndex=boot.indexOf("'modules/network/network-relay-v16.js'");
+const qualityIndex=boot.indexOf("'modules/network/network-quality-v20.js'");
+const motionIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");
 assert.ok(relayIndex>=0&&qualityIndex>relayIndex,'V20 must load after the relay it observes');
 assert.ok(motionIndex>qualityIndex,'V20 quality policy must be installed before motion wraps the update loop');
-assert.ok(boot.includes("const VER='17h'"),'V17h cache key must be present');
+assert.ok(boot.includes("const VER='21f'"),'V21f cache key must be present');
 
 for(const forbidden of[
   'new WebSocket(',

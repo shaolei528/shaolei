@@ -7,13 +7,13 @@ const STORAGE_KEY='abyssal_home_workbench_v1';
 const BASE_WARD_MS=15000;
 const UPGRADED_WARD_MS=25000;
 const COST=Object.freeze({stone:3,shard:2});
-const state={tier:1,returnClearance:false,lastReturnAt:0};
+const state={tier:1,returnClearance:false,lastReturnAt:0,returnClearancePersisted:true};
 
 function finite(value,fallback=0){const n=Number(value);return Number.isFinite(n)?n:fallback;}
 function storage(){try{return typeof localStorage!=='undefined'?localStorage:null;}catch{return null;}}
 function inventoryRef(){try{return typeof inventory!=='undefined'&&inventory?inventory:null;}catch{return null;}}
 function isHome(){try{return typeof inCamp==='function'&&!!inCamp();}catch{return false;}}
-function snapshot(){return{tier:state.tier,returnClearance:state.returnClearance,lastReturnAt:state.lastReturnAt,wardMs:departureWardMs(),cost:{...COST}};}
+function snapshot(){return{tier:state.tier,returnClearance:state.returnClearance,returnClearancePersisted:state.returnClearancePersisted,lastReturnAt:state.lastReturnAt,wardMs:departureWardMs(),cost:{...COST}};}
 function persist(){
   const target=storage();
   if(!target)return false;
@@ -31,6 +31,7 @@ function load(){
       state.tier=saved.tier===2?2:1;
       state.returnClearance=state.tier<2&&!!saved.returnClearance;
       state.lastReturnAt=Math.max(0,Math.floor(finite(saved.lastReturnAt,0)));
+      state.returnClearancePersisted=true;
     }
   }catch{}
   return snapshot();
@@ -83,7 +84,7 @@ function recordExpeditionReturn(meta={}){
   if(state.tier>=2)return snapshot();
   state.returnClearance=true;
   state.lastReturnAt=Math.max(state.lastReturnAt,Math.floor(finite(meta.at,Date.now())));
-  persist();
+  state.returnClearancePersisted=persist();
   refreshWorkbenchRow();
   return snapshot();
 }
@@ -101,12 +102,29 @@ function upgrade(){
     return{ok:false,reason:gate.reason,state:snapshot()};
   }
   const inv=inventoryRef();
+  const previous={tier:state.tier,returnClearance:state.returnClearance,returnClearancePersisted:state.returnClearancePersisted,stone:inv.stone,shard:inv.shard};
+  const restorePrevious=()=>{state.tier=previous.tier;state.returnClearance=previous.returnClearance;state.returnClearancePersisted=previous.returnClearancePersisted;inv.stone=previous.stone;inv.shard=previous.shard;};
   inv.stone=Math.max(0,finite(inv.stone)-COST.stone);
   inv.shard=Math.max(0,finite(inv.shard)-COST.shard);
   state.tier=2;
   state.returnClearance=false;
-  persist();
-  try{if(typeof saveLocal==='function')saveLocal();}catch{}
+  state.returnClearancePersisted=true;
+  if(!persist()){
+    restorePrevious();
+    try{toast('Field Rig 无法保存，材料已保留。');}catch{}
+    refreshWorkbenchRow();
+    return{ok:false,reason:'persistence-failed',state:snapshot()};
+  }
+  let playerSaveSucceeded=false;
+  try{playerSaveSucceeded=typeof saveLocal==='function'&&saveLocal()===true;}catch{}
+  if(!playerSaveSucceeded){
+    restorePrevious();
+    const rollbackSaved=persist();
+    try{if(typeof updateUI==='function')updateUI();}catch{}
+    try{toast(rollbackSaved?'Field Rig 保存失败，材料已返还。':'Field Rig 回滚保存失败，请重新进入检查升级状态。');}catch{}
+    refreshWorkbenchRow();
+    return{ok:false,reason:rollbackSaved?'player-save-failed':'rollback-persistence-failed',state:snapshot()};
+  }
   try{if(typeof updateUI==='function')updateUI();}catch{}
   try{toast('Workbench Field Rig 已上线 · 下一次离营护佑延长至 25 秒。');}catch{}
   refreshWorkbenchRow();

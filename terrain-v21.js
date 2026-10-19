@@ -11,7 +11,9 @@
 
 const TILE_SIZE=64;
 const SHEET_COLS=5;
-const SHEET_PATH='assets/art-v21/terrain-v21.png';
+const TERRAIN_ART_PREVIEW_PATH='assets/awakening-v1/intake/whole-game-art-candidate-v1/safe-camp-terrain-atlas-dev-preview.png';
+const TERRAIN_ART_PREVIEW=typeof location!=='undefined'&&typeof URLSearchParams!=='undefined'&&new URLSearchParams(location.search||'').get('awTerrainArtPreview')==='1';
+const SHEET_PATH=TERRAIN_ART_PREVIEW?TERRAIN_ART_PREVIEW_PATH:'assets/art-v21/terrain-v21.png';
 const SLICE_COLS=24;
 const SLICE_ROWS=20;
 const FALLBACK_CAMP_X=2400;
@@ -30,7 +32,6 @@ const TILE={
 };
 const TILE_NAMES=Object.fromEntries(Object.entries(TILE).map(([name,id])=>[id,name]));
 const WATER_TILES=new Set([TILE.water_a,TILE.water_b]);
-
 const COLLISION={
   walkable:0,water:1,shore_n:2,shore_s:3,shore_e:4,shore_w:5,
   shore_ne:6,shore_nw:7,shore_se:8,shore_sw:9
@@ -146,9 +147,27 @@ function collisionAtWorld(x,y){
   if(!cell)return'legacy';
   return isWaterPart(collisionShapeAtCell(cell.col,cell.row),cell.lx,cell.ly)?'water':'walkable';
 }
-function isBlockedPoint(x,y){return collisionAtWorld(x,y)==='water';}
+function isBlockedPoint(x,y){
+  // The seamless graybox repaints the old V21 coastline as continuous land.
+  // Ignore only those hidden source-water cells; registered visible water
+  // bodies and spatial obstacles still block below.
+  if(globalThis.AW_SUCCESSOR_GRAYBOX_CONTINUITY!==true&&collisionAtWorld(x,y)==='water')return true;
+  // Prefer the water owner's shore collider so this visible body does not
+  // depend on its convenience entry in the shared spatial index.
+    const water=globalThis.ABYSSAL_WATER_BODIES_V1;
+    if((typeof water?.isBlockedWorldCircle==='function'&&water.isBlockedWorldCircle(x,y,0)===true)||water?.isBlockedCircle?.(currentZone,x,y,0)===true)return true;
+  // Keep the semantic water check for earlier World Water V1 implementations.
+  if(globalThis.ABYSSAL_WATER_BODIES_V1?.isInWater?.(currentZone,x,y)===true)return true;
+  // HOME movement also needs the shared spatial layer: ponds are authored as
+  // world geometry, not as V21 terrain tiles. Without this check the visible
+  // fishing pond could be crossed even though its water body had a collider.
+  return globalThis.ABYSSAL_WORLD_SPATIAL_V1?.isBlockedPoint?.(currentZone,x,y)===true;
+}
 function isBlockedCircle(x,y,radius=10){
   const r=Math.max(0,Math.min(18,Number(radius)||0));
+  const water=globalThis.ABYSSAL_WATER_BODIES_V1;
+  if((typeof water?.isBlockedWorldCircle==='function'&&water.isBlockedWorldCircle(x,y,r)===true)||water?.isBlockedCircle?.(currentZone,x,y,r)===true)return true;
+  if(globalThis.ABYSSAL_WORLD_SPATIAL_V1?.isBlockedCircle?.(currentZone,x,y,r)===true)return true;
   if(isBlockedPoint(x,y))return true;
   if(r<=0)return false;
   for(let i=0;i<8;i++){
@@ -233,7 +252,7 @@ function setDebug(value){debug=!!value;return debug;}
 function isDebug(){return debug;}
 
 const API={
-  version:21,tileSize:TILE_SIZE,sheetPath:SHEET_PATH,tile:TILE,tileNames:TILE_NAMES,
+  version:21,tileSize:TILE_SIZE,sheetPath:SHEET_PATH,artPreview:TERRAIN_ART_PREVIEW,tile:TILE,tileNames:TILE_NAMES,
   collision:COLLISION,collisionNames:COLLISION_NAMES,
   slice:{originX:ORIGIN_X,originY:ORIGIN_Y,cols:SLICE_COLS,rows:SLICE_ROWS,width:SLICE_COLS*TILE_SIZE,height:SLICE_ROWS*TILE_SIZE},
   rawMaterial,tileAtCell,collisionShapeAtCell,worldToCell,isWaterPart,collisionAtWorld,isBlockedPoint,isBlockedCircle,resolveMovement,
@@ -241,6 +260,14 @@ const API={
   terrainMap:TERRAIN_MAP,collisionMap:COLLISION_MAP
 };
 window.ABYSSAL_TERRAIN_V21=API;
+
+if(TERRAIN_ART_PREVIEW&&typeof document!=='undefined'&&document.body&&!document.getElementById('aw-terrain-art-preview-badge')){
+  const badge=document.createElement('div');badge.id='aw-terrain-art-preview-badge';
+  badge.textContent='DEV ART PREVIEW — NOT PRODUCTION';
+  badge.setAttribute('role','status');
+  badge.style.cssText='position:fixed;z-index:2147483647;top:8px;left:50%;transform:translateX(-50%);padding:7px 10px;border:1px solid #e9bb55;background:rgba(25,23,18,.94);color:#ffe4a0;font:700 11px/1.35 monospace;letter-spacing:.03em;text-align:center;pointer-events:none;max-width:calc(100vw - 24px);box-shadow:0 2px 10px #0008';
+  document.body.appendChild(badge);
+}
 
 /* Preserve the legacy ground first, then overlay only authored V21 cells. */
 const legacyDrawGround=(typeof window.drawGround==='function')?window.drawGround:null;

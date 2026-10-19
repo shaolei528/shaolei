@@ -1,0 +1,11 @@
+{
+  "id": "chest:1:1:main",
+  "x": 2590,
+  "y": 2540,
+  "cooldownMs": 90000,
+  "always": { "item": "food", "count": 1 },
+  "rolls": [
+    { "chance": 0.55, "item": "shard", "count": 1 },
+    { "chance": 1, "item": "stone", "count": 1 }
+  ]
+}

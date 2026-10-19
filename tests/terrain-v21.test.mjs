@@ -33,6 +33,7 @@ assert.ok(api,'V21 terrain API must be exposed');
 assert.equal(api.version,21);
 assert.equal(api.tileSize,64,'terrain art grid must remain 64x64');
 assert.equal(api.sheetPath,'assets/art-v21/terrain-v21.png');
+assert.equal(api.artPreview,false,'the production/default path must not enable a dev art candidate');
 assert.equal(api.terrainMap.length,24*20,'terrain map must cover the authored slice');
 assert.equal(api.collisionMap.length,24*20,'collision map must be an independent authored layer');
 
@@ -62,6 +63,37 @@ const dash=api.resolveMovement(startX,midY,east,midY,10);
 assert.equal(dash.blocked,true,'high-speed movement crossing water must collide');
 assert.ok(dash.x<east-8,'segment sampling must prevent dash tunneling into water');
 assert.equal(api.isBlockedCircle(dash.x,dash.y,10),false,'resolved position must remain walkable');
+
+const grayboxSandbox={...sandbox,window:null,AW_SUCCESSOR_GRAYBOX_CONTINUITY:true};
+grayboxSandbox.window=grayboxSandbox;
+vm.createContext(grayboxSandbox);
+vm.runInContext(source,grayboxSandbox,{filename:'terrain-v21-graybox.js'});
+const grayboxTerrain=grayboxSandbox.ABYSSAL_TERRAIN_V21;
+const waterIndex=Array.from(grayboxTerrain.terrainMap).findIndex(tile=>tile===grayboxTerrain.tile.water_a||tile===grayboxTerrain.tile.water_b);
+assert.ok(waterIndex>=0,'the authored V21 map must still include its source water cells');
+const waterCol=waterIndex%24,waterRow=Math.floor(waterIndex/24),waterX=grayboxTerrain.slice.originX+(waterCol+.5)*64,waterY=grayboxTerrain.slice.originY+(waterRow+.5)*64;
+assert.equal(grayboxTerrain.collisionAtWorld(waterX,waterY),'water','the legacy terrain grid keeps its authored water data');
+assert.equal(grayboxTerrain.isBlockedCircle(waterX,waterY,10),false,'graybox ground repaints hidden legacy coastline cells as land, so they cannot remain invisible walls');
+const shorelineSamples=[
+  [grayboxTerrain.tile.shore_n,32,8],[grayboxTerrain.tile.shore_s,32,56],
+  [grayboxTerrain.tile.shore_e,56,32],[grayboxTerrain.tile.shore_w,8,32],
+  [grayboxTerrain.tile.shore_ne,56,8],[grayboxTerrain.tile.shore_nw,8,8],
+  [grayboxTerrain.tile.shore_se,56,56],[grayboxTerrain.tile.shore_sw,8,56]
+];
+let shoreWater=null;
+for(let index=0;index<grayboxTerrain.terrainMap.length&&!shoreWater;index++){
+  const tile=grayboxTerrain.terrainMap[index],col=index%24,row=Math.floor(index/24),shape=grayboxTerrain.collisionShapeAtCell(col,row);
+  for(const [shoreTile,lx,ly] of shorelineSamples){
+    if(tile!==shoreTile||!grayboxTerrain.isWaterPart(shape,lx,ly))continue;
+    shoreWater={x:grayboxTerrain.slice.originX+col*64+lx,y:grayboxTerrain.slice.originY+row*64+ly};break;
+  }
+}
+assert.ok(shoreWater,'the authored coast must expose a shoreline water sample');
+assert.equal(grayboxTerrain.collisionAtWorld(shoreWater.x,shoreWater.y),'water','graybox shoreline source cells retain their V21 collision metadata');
+assert.equal(grayboxTerrain.isBlockedCircle(shoreWater.x,shoreWater.y,0),false,'graybox shoreline source pixels are repainted as land and must remain traversable');
+const formerCoast={x:2865,y:2835},formerCoastMove=grayboxTerrain.resolveMovement(2685,2835,formerCoast.x,formerCoast.y,10);
+assert.deepEqual({x:formerCoastMove.x,y:formerCoastMove.y,blocked:formerCoastMove.blocked},{x:formerCoast.x,y:formerCoast.y,blocked:false},'the old STONE 3 graybox route must cross its repainted dry ground instead of stopping on a hidden water collider');
+assert.equal(api.isBlockedPoint(east,midY),true,'the regular V21 route must keep its authored shoreline collision');
 
 assert.equal(png.readUInt32BE(16),320,'tilesheet width must be 5x64');
 assert.equal(png.readUInt32BE(20),256,'tilesheet height must be 4x64');
@@ -99,6 +131,18 @@ const motionIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");
 assert.ok(terrainIndex>=0&&terrainIndex<renderV9Index,'V21 terrain must load before the extended render loop');
 assert.ok(terrainIndex<motionIndex,'terrain collision must be present before smooth-motion wraps update');
 assert.ok(preview.includes('terrain-v21.js')&&preview.includes('Collision: OFF'),'static terrain preview must load V21 and expose collision debug');
+assert.ok(preview.includes('DEV ART PREVIEW — NOT PRODUCTION'),'the static preview must clearly label candidate art');
+
+const artPreviewSandbox={
+  console,window:null,location:{search:'?awTerrainArtPreview=1'},URLSearchParams,performance:{now:()=>0},Image:FakeImage,queueMicrotask,
+  camera:{x:2400,y:2400},currentZone:'1:1',ctx:fakeCtx,drawGround(){},update(){},sendMove(){},me:{x:2400,y:2400,r:14},addEventListener(){},
+};
+artPreviewSandbox.window=artPreviewSandbox;
+vm.createContext(artPreviewSandbox);
+vm.runInContext(source,artPreviewSandbox,{filename:'terrain-v21-art-preview.js'});
+await Promise.resolve();
+assert.equal(artPreviewSandbox.ABYSSAL_TERRAIN_V21.artPreview,true,'the explicit query must opt into the art preview');
+assert.equal(artPreviewSandbox.ABYSSAL_TERRAIN_V21.sheetPath,'assets/awakening-v1/intake/whole-game-art-candidate-v1/safe-camp-terrain-atlas-dev-preview.png','the art preview must use the isolated candidate atlas');
 
 for(const forbidden of ['new WebSocket(',"event:'move'","event:'attack'",'zoneCh.send(','RELAY_URL']){
   assert.equal(source.includes(forbidden),false,`terrain slice must not alter multiplayer transport/payload semantics: ${forbidden}`);

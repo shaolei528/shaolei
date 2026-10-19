@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "residents": {
+    "camp-guide": {
+      "title": "营地向导",
+      "giftItems": [
+        { "itemId": "food", "favor": 1, "response": "热乎的口粮总能让人安心。" },
+        { "itemId": "egg", "favor": 1, "response": "这枚蛋收得真好，围栏里的家伙有在认真生活。" },
+        { "itemId": "milk", "favor": 2, "response": "这奶香让我想起停电前的早餐。" },
+        { "itemId": "wool", "favor": 1, "response": "我会把它收好，夜里给守火的人添一层暖意。" },
+        { "itemId": "fish_reedcarp", "favor": 2, "response": "回水池的鱼汤能让人稳住呼吸。" },
+        { "itemId": "fish_glassminnow", "favor": 2, "response": "这种鱼的鳞片在灯下像一小片晴天。" },
+        { "itemId": "fish_holloweye", "favor": 3, "response": "谢谢你……不过今晚别独自去水边。" }
+      ],
+      "relationshipLevels": [
+        { "atFavor": 0, "label": "刚认识" },
+        { "atFavor": 2, "label": "熟络" },
+        { "atFavor": 5, "label": "信任" }
+      ],
+      "unlocks": [
+        { "id": "guide-trail-stew", "atFavor": 2, "label": "向导的巡路炖汤", "message": "向导想起一份能暖身的巡路炖汤，并把做法记给了你。" }
+      ]
+    }
+  }
+}

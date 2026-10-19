@@ -8,17 +8,12 @@
   if(!canvas||!wrap)return;
 
   function fitPixelCanvas(){
-    const r=wrap.getBoundingClientRect();
-    if(r.width<20||r.height<20)return;
-    const w=360;
-    const h=Math.max(520,Math.min(820,Math.round(w*r.height/r.width)));
-    if(canvas.width!==w||canvas.height!==h){
-      canvas.width=w;canvas.height=h;
-      const c=canvas.getContext('2d');if(c)c.imageSmoothingEnabled=false;
-    }
-  }
+     const r=wrap.getBoundingClientRect();
+     if(r.width<20||r.height<20)return;
+     resizeCanvas();
+   }
 
-  fitPixelCanvas();
+   fitPixelCanvas();
   addEventListener('resize',fitPixelCanvas,{passive:true});
   addEventListener('pageshow',fitPixelCanvas,{passive:true});
   addEventListener('orientationchange',()=>setTimeout(fitPixelCanvas,180),{passive:true});

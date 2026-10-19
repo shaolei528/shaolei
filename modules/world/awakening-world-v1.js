@@ -11,6 +11,7 @@ const STARTING_SHARDS=Math.max(0,Number(inventory?.shard)||0);
 const terrainApi=window.ABYSSAL_TERRAIN_V21||null;
 const artApi=window.ABYSSAL_AWAKENING_ART_V1||null;
 const spatialApi=window.ABYSSAL_WORLD_SPATIAL_V1||null;
+const waterApi=window.ABYSSAL_WATER_BODIES_V1||null;
 if(!spatialApi)throw new Error('Awakening World requires World Spatial V1');
 const TILE=terrainApi?.tile||{grass_a:0,grass_b:1,grass_flowers:2,sand_a:3,sand_b:4,road_a:5,road_b:6,water_a:7,water_b:8};
 const SHEET_COLS=5,SHEET_PATH=terrainApi?.sheetPath||'assets/art-v21/terrain-v21.png';
@@ -22,7 +23,7 @@ const COLLISION=[
 {id:'store-fridges',x:2584,y:688,w:112,h:48,kind:'fridge'},{id:'store-debris',x:2504,y:936,w:80,h:56,kind:'debris'},
 {id:'road-barrier-left',x:2080,y:1392,w:96,h:24,kind:'barrier'},{id:'road-barrier-right',x:2688,y:1456,w:96,h:24,kind:'barrier'},{id:'fence-west-a',x:2024,y:1192,w:16,h:176,kind:'fence'},{id:'fence-east-a',x:2824,y:1208,w:16,h:160,kind:'fence'}];
 const DECALS=[
-{id:'puddle-1',kind:'puddle',x:2336,y:1744,w:72,h:26},{id:'puddle-2',kind:'puddle',x:2472,y:1572,w:52,h:20},{id:'puddle-3',kind:'puddle',x:2232,y:1324,w:68,h:24},
+{id:'puddle-1',kind:'puddle',waterBodyId:'mire-puddle-1'},{id:'puddle-2',kind:'puddle',waterBodyId:'mire-puddle-2'},{id:'puddle-3',kind:'puddle',waterBodyId:'mire-puddle-3'},
 {id:'crack-1',kind:'crack',x:2412,y:1816,w:72,h:40},{id:'crack-2',kind:'crack',x:2356,y:1492,w:84,h:44},{id:'crack-3',kind:'crack',x:2488,y:1250,w:62,h:34},
 {id:'tire-1',kind:'tire',x:2384,y:1650,w:10,h:96},{id:'tire-2',kind:'tire',x:2472,y:1650,w:10,h:96},{id:'store-glass',kind:'glass',x:2440,y:1128,w:76,h:38},{id:'residue-1',kind:'residue',x:2624,y:950,w:84,h:54}];
 const PROPS=[
@@ -66,7 +67,7 @@ function drawStoreFloor(W,H){
 function drawTerrainLayer(W,H){if(!rectIntersectsView(REGION,W,H))return;const bounds=visibleTileBounds(W,H);if(!bounds.cols||!bounds.rows)return;ctx.save();ctx.imageSmoothingEnabled=false;for(let wy=bounds.startY;wy<bounds.endY;wy+=TILE_SIZE)for(let wx=bounds.startX;wx<bounds.endX;wx+=TILE_SIZE){const material=regionMaterial(wx,wy);if(material==='store_floor')continue;const seed=Math.floor(hash2(wx/TILE_SIZE,wy/TILE_SIZE,913)*1e6);if(!artApi?.drawTerrain?.(material,wx,wy,seed))drawAtlasTile(tileForMaterial(material,wx,wy),wx,wy);const cold=clamp01((1900-(wy+32))/1050);if(cold>0){ctx.fillStyle=`rgba(38,55,65,${(.08+cold*.16).toFixed(3)})`;ctx.fillRect(sx(wx),sy(wy),TILE_SIZE,TILE_SIZE);}}drawStoreFloor(W,H);ctx.restore();}
 function drawCrack(d){const x=sx(d.x),y=sy(d.y);ctx.fillStyle='#263034';ctx.fillRect(x,y+8,22,3);ctx.fillRect(x+18,y+10,3,12);ctx.fillRect(x+20,y+19,28,3);ctx.fillRect(x+44,y+20,3,12);ctx.fillRect(x+46,y+29,20,3);}
 function drawPuddle(d){const x=sx(d.x),y=sy(d.y);ctx.fillStyle='rgba(77,101,110,.45)';ctx.fillRect(x+8,y,d.w-16,d.h);ctx.fillRect(x,y+6,d.w,d.h-12);ctx.fillStyle='rgba(148,169,173,.18)';ctx.fillRect(x+14,y+5,Math.max(8,d.w-34),3);}
-function drawDecalLayer(W,H){ctx.save();ctx.imageSmoothingEnabled=false;for(const d of DECALS){if(Math.abs(sx(d.x))>W+180||Math.abs(sy(d.y))>H+180)continue;if(artApi?.drawDecal?.(d))continue;if(d.kind==='puddle')drawPuddle(d);else if(d.kind==='crack')drawCrack(d);else if(d.kind==='tire'){ctx.fillStyle='rgba(29,36,39,.30)';ctx.fillRect(sx(d.x),sy(d.y),d.w,d.h);}else if(d.kind==='glass'){const x=sx(d.x),y=sy(d.y);ctx.fillStyle='rgba(146,170,176,.35)';for(let i=0;i<7;i++)ctx.fillRect(x+(i*11)%d.w,y+(i*7)%d.h,3,2);}else if(d.kind==='residue'){const x=sx(d.x),y=sy(d.y);ctx.fillStyle='rgba(98,133,127,.26)';ctx.fillRect(x+10,y+18,56,8);ctx.fillRect(x+24,y+9,30,24);ctx.fillStyle='rgba(153,185,176,.18)';ctx.fillRect(x+34,y+2,12,42);}}ctx.restore();}
+function drawDecalLayer(W,H){ctx.save();ctx.imageSmoothingEnabled=false;for(const source of DECALS){const body=source.kind==='puddle'?waterApi?.getBody?.(source.waterBodyId):null;if(source.kind==='puddle'&&!body)continue;const d=body?{...source,x:body.cx-body.halfWidth,y:body.cy-body.halfHeight,w:body.halfWidth*2,h:body.halfHeight*2}:source;if(Math.abs(sx(d.x))>W+180||Math.abs(sy(d.y))>H+180)continue;if(artApi?.drawDecal?.(d))continue;if(d.kind==='puddle')drawPuddle(d);else if(d.kind==='crack')drawCrack(d);else if(d.kind==='tire'){ctx.fillStyle='rgba(29,36,39,.30)';ctx.fillRect(sx(d.x),sy(d.y),d.w,d.h);}else if(d.kind==='glass'){const x=sx(d.x),y=sy(d.y);ctx.fillStyle='rgba(146,170,176,.35)';for(let i=0;i<7;i++)ctx.fillRect(x+(i*11)%d.w,y+(i*7)%d.h,3,2);}else if(d.kind==='residue'){const x=sx(d.x),y=sy(d.y);ctx.fillStyle='rgba(98,133,127,.26)';ctx.fillRect(x+10,y+18,56,8);ctx.fillRect(x+24,y+9,30,24);ctx.fillStyle='rgba(153,185,176,.18)';ctx.fillRect(x+34,y+2,12,42);}}ctx.restore();}
 function drawWall(p){const r=screenRect(p);ctx.fillStyle='#1c2528';ctx.fillRect(r.x,r.y,r.w,r.h);ctx.fillStyle='#667076';if(r.w>r.h)ctx.fillRect(r.x+2,r.y+2,r.w-4,5);else ctx.fillRect(r.x+2,r.y+2,5,r.h-4);}
 function drawShelf(p){const r=screenRect(p);ctx.fillStyle='#242c2f';ctx.fillRect(r.x,r.y,r.w,r.h);ctx.fillStyle='#778087';ctx.fillRect(r.x+4,r.y+5,r.w-8,5);ctx.fillRect(r.x+4,r.y+r.h-9,r.w-8,4);for(let i=0;i<5;i++){ctx.fillStyle=i%2?'#7a6f56':'#596b64';ctx.fillRect(r.x+10+i*22,r.y+12,10,10);}}
 function drawFridge(p){const r=screenRect(p);ctx.fillStyle='#20282b';ctx.fillRect(r.x,r.y,r.w,r.h);ctx.fillStyle='#708086';ctx.fillRect(r.x+4,r.y+4,r.w-8,r.h-8);ctx.fillStyle='#35464c';for(let i=0;i<3;i++){const w=Math.floor((r.w-16)/3);ctx.fillRect(r.x+8+i*w,r.y+8,w-3,r.h-16);}ctx.fillStyle='#9ab1b2';ctx.fillRect(r.x+9,r.y+10,r.w-18,3);}
@@ -77,10 +78,30 @@ function drawBarrier(p){const r=screenRect(p);ctx.fillStyle='#3a4143';ctx.fillRe
 function drawPropLayer(W,H){ctx.save();ctx.imageSmoothingEnabled=false;for(const p of PROPS){const r=screenRect(p);if(r.x>W+80||r.y>H+80||r.x+r.w<-80||r.y+r.h<-80)continue;if(!artApi?.previewMode&&artApi?.drawProp?.(p))continue;if(p.kind==='wall')drawWall(p);else if(p.kind==='shelf')drawShelf(p);else if(p.kind==='fridge')drawFridge(p);else if(p.kind==='counter')drawCounter(p);else if(p.kind==='debris')drawDebris(p);else if(p.kind==='fence')drawFence(p);else if(p.kind==='barrier')drawBarrier(p);if(artApi?.previewMode)artApi.drawProp?.(p);}if(rectIntersectsView(STORE,W,H)){if(!artApi?.drawProp?.(SIGN_VISUAL)){ctx.fillStyle='#d3c8aa';ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.fillText('MIRE MART',sx(STORE.x+STORE.w/2),sy(STORE.y+STORE.h+20));ctx.fillStyle='#829098';ctx.font='bold 6px monospace';ctx.fillText('NO POWER',sx(STORE.x+STORE.w/2),sy(STORE.y+STORE.h+31));}}ctx.restore();}
 function drawFxLayer(W,H){if(!rectIntersectsView(STORE,W,H))return;const t=typeof performance!=='undefined'?performance.now():0,pulse=.16+(Math.sin(t/173)+1)*.05;ctx.save();ctx.imageSmoothingEnabled=false;for(const f of FX){if(artApi?.drawFx?.(f,t))continue;if(f.kind==='anomaly'){ctx.fillStyle=`rgba(143,181,174,${pulse.toFixed(3)})`;ctx.fillRect(sx(2624),sy(950),84,5);ctx.fillRect(sx(2650),sy(934),28,28);}else if(f.kind==='flicker'&&(Math.floor(t/380)&3)!==1){ctx.fillStyle='rgba(189,207,199,.22)';ctx.fillRect(sx(2610),sy(676),96,4);}}ctx.restore();}
 
-function isBlockedPoint(x,y){return spatialApi.isBlockedPoint(currentZone,x,y);}
-function isBlockedCircle(x,y,radius=10){return spatialApi.isBlockedCircle(currentZone,x,y,radius);}
-function resolveMovement(fromX,fromY,toX,toY,radius=10){return spatialApi.resolveMovement(currentZone,fromX,fromY,toX,toY,radius);}
-function hasLineOfSight(fromX,fromY,toX,toY){return spatialApi.hasMeleeLineOfSight(currentZone,fromX,fromY,toX,toY);}
+function waterBlocks(x,y,radius=10){return typeof waterApi?.isBlockedWorldCircle==='function'?waterApi.isBlockedWorldCircle(x,y,radius)===true:waterApi?.isBlockedCircle?.(currentZone,x,y,radius)===true;}
+function isBlockedPoint(x,y){return waterBlocks(x,y,0)||spatialApi.isBlockedPoint(currentZone,x,y)||!!terrainApi?.isBlockedPoint?.(x,y);}
+function isBlockedCircle(x,y,radius=10){return waterBlocks(x,y,radius)||spatialApi.isBlockedCircle(currentZone,x,y,radius)||!!terrainApi?.isBlockedCircle?.(x,y,radius);}
+function resolveMovement(fromX,fromY,toX,toY,radius=10){
+  let x=Number(fromX),y=Number(fromY);const fx=x,fy=y,tx=Number(toX),ty=Number(toY);
+  if(![fx,fy,tx,ty].every(Number.isFinite))return{x:Number.isFinite(fx)?fx:0,y:Number.isFinite(fy)?fy:0,blocked:true};
+  const dist=Math.hypot(tx-fx,ty-fy),steps=Math.max(1,Math.ceil(dist/8)),stepX=(tx-fx)/steps,stepY=(ty-fy)/steps;let blocked=false;
+  for(let index=0;index<steps;index++){
+    const wantX=x+stepX,wantY=y+stepY;
+    if(!isBlockedCircle(wantX,wantY,radius)){x=wantX;y=wantY;continue;}
+    blocked=true;let moved=false;
+    if(Math.abs(stepX)>.0001&&!isBlockedCircle(wantX,y,radius)){x=wantX;moved=true;}
+    if(Math.abs(stepY)>.0001&&!isBlockedCircle(x,wantY,radius)){y=wantY;moved=true;}
+    if(!moved)break;
+  }
+  return{x,y,blocked};
+}
+function hasLineOfSight(fromX,fromY,toX,toY){
+  if(!spatialApi.hasMeleeLineOfSight(currentZone,fromX,fromY,toX,toY))return false;
+  if(!terrainApi?.isBlockedPoint&&!waterApi?.isBlockedCircle)return true;
+  const distance=Math.hypot(toX-fromX,toY-fromY),steps=Math.max(1,Math.ceil(distance/4));
+  for(let index=1;index<steps;index++){const t=index/steps,x=fromX+(toX-fromX)*t,y=fromY+(toY-fromY)*t;if(waterBlocks(x,y,0)||terrainApi?.isBlockedPoint?.(x,y))return false;}
+  return true;
+}
 function inStore(p=me){return !!p&&inRect(Number(p.x),Number(p.y),STORE);}
 
 function addPoiResources(zone){

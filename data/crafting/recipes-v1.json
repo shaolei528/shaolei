@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "recipes": {
+    "knife": {
+      "station": "workbench",
+      "costs": { "wood": 4, "stone": 3 },
+      "unlocks": { "knife": true },
+      "gathering": { "woodHits": 2 },
+      "messages": {
+        "success": "制作成功：骨刃已装备。",
+        "alreadyOwned": "你已经有骨刃。",
+        "materialsRequired": "需要 4 木材 + 3 石头。"
+      }
+    },
+    "lantern": {
+      "station": "workbench",
+      "costs": { "wood": 3, "shard": 2 },
+      "unlocks": { "lantern": true },
+      "messages": {
+        "success": "制作成功：提灯已准备好。",
+        "alreadyOwned": "你已经有提灯。",
+        "materialsRequired": "需要 3 木材 + 2 异质碎片。"
+      }
+    },
+    "meal": {
+      "station": "workbench",
+      "costs": { "food": 2 },
+      "effects": { "hunger": 48, "hp": 10 },
+      "messages": {
+        "success": "野外口粮已食用",
+        "materialsRequired": "需要 2 份食物。",
+        "noNeed": "状态良好，不需要消耗口粮。",
+        "saveFailed": "进食未保存，食物和状态已恢复。",
+        "unavailable": "现在无法食用。"
+      }
+    }
+  }
+}

@@ -17,9 +17,9 @@ assert.ok(failureIndex>0,'failure target must be after successful prefix modules
 assert.ok(modules.slice(0,failureIndex).includes('modules/main-loop/legacy-scheduler.js'),'failure injection must occur after scheduler startup');
 assert.ok(modules.slice(0,failureIndex).includes('modules/input/joystick.js'),'failure injection must occur after input listener startup');
 
-const endMarker='mountUI();\n})();';
-assert.ok(original.includes(endMarker),'boot test hook marker must exist');
-const source=original.replace(endMarker,`window.__V21_BOOT_TEST__={BOOT,loadModules,requestEntry,handoff,setEntry(value){enter=value;},setName(value){nameInput=value;}};\n})();`);
+const endMarker=/mountUI\(\);\r?\n\}\)\(\);/;
+assert.ok(endMarker.test(original),'boot test hook marker must exist');
+const source=original.replace(endMarker,`mountUI();\nwindow.__V21_BOOT_TEST__={BOOT,loadModules,requestEntry,handoff,setEntry(value){enter=value;},setName(value){nameInput=value;}};\n})();`);
 
 const attempts=new Map(),executions=new Map();
 let schedulerRoots=0,joystickBinds=0,combatInputBinds=0,handoffClicks=0;
@@ -48,7 +48,16 @@ const document={
 
 const sandbox={
   window:null,document,console:{log(){},warn(){},error(){}},queueMicrotask,setTimeout,clearTimeout,
-  performance:{now:()=>1000},ABYSSAL_CONFIG:{RELAY_URL:'wss://fixture.invalid/ws'}
+  performance:{now:()=>1000},ABYSSAL_CONFIG:{RELAY_URL:'wss://fixture.invalid/ws'},
+  fetch:async url=>String(url).includes('shared-chest-v1.json')
+    ?{ok:true,json:async()=>({version:1})}
+    :String(url).includes('recipes-v1.json')
+      ?{ok:true,json:async()=>({version:1,recipes:{}})}
+      :String(url).includes('boss-encounters-v1.json')
+        ?{ok:true,json:async()=>({version:1,encounters:{fen_warden:{id:'fen-warden'}}})}
+        :String(url).includes('crops-v1.json')
+          ?{ok:true,json:async()=>({version:1,plots:[],crops:{},starterCrop:''})}
+          :{ok:true,json:async()=>({version:1})}
 };
 sandbox.window=sandbox;
 vm.createContext(sandbox);

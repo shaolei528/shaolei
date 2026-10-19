@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "eggItem": "companion_egg",
+  "incubator": { "id": "camp-incubator", "offset": { "x": -90, "y": 190 }, "radius": 82 },
+  "incubationSeconds": 20,
+  "companion": {
+    "id": "tidemark-runner",
+    "name": "潮痕幼兽",
+    "evolvedName": "潮痕巡游者",
+    "evolutionXp": 3,
+    "attackBonus": 3,
+    "harvestXp": 1,
+    "combatXp": 1
+  },
+  "eggDrops": {
+    "guaranteedAfterKills": 3,
+    "chanceByKind": { "crawler": 0.12, "cultist": 0.18, "watcher": 0.24 }
+  }
+}

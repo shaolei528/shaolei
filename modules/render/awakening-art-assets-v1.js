@@ -2,7 +2,7 @@
 'use strict';
 
 const ROOT='assets/awakening-v1/';
-const PREVIEW_MODE=typeof window!=='undefined'&&typeof URLSearchParams!=='undefined'&&new URLSearchParams(window.location?.search||'').get('awArtPreview')==='1';
+const PREVIEW_MODE=typeof window!=='undefined'&&(window.AW_ART_PREVIEW===true||(typeof URLSearchParams!=='undefined'&&new URLSearchParams(window.location?.search||'').get('awArtPreview')==='1'));
 const MANIFEST_URL=ROOT+(PREVIEW_MODE?'manifest.preview.json':'manifest.json');
 const DEFAULT_BINDINGS={
   terrain:{
@@ -69,9 +69,9 @@ function drawEntry(context,entry,worldX,worldY,opts={}){
 }
 function hasBinding(section,key){return !!pick(section,key,0);}
 function drawTerrain(material,wx,wy,seed=0){const entry=pick('terrain',material,seed);return drawEntry(ctx,entry,wx,wy,{width:64,height:64,anchor:{x:0,y:0}});}
-function drawDecal(placement){const entry=pick('decal',placement?.kind,hashString(placement?.id));if(!entry)return false;const w=entry.width||entry.sourceRect?.w,h=entry.height||entry.sourceRect?.h;return drawEntry(ctx,entry,Number(placement.x)+Number(placement.w||w)/2,Number(placement.y)+Number(placement.h||h)/2,{width:w,height:h,anchor:entry.anchor||{x:.5,y:.5}});}
+function drawDecal(placement){const entry=pick('decal',placement?.kind,hashString(placement?.id));if(!entry)return false;const assetWidth=entry.width||entry.sourceRect?.w,assetHeight=entry.height||entry.sourceRect?.h,placementWidth=Number(placement?.w),placementHeight=Number(placement?.h),w=Number.isFinite(placementWidth)&&placementWidth>0?placementWidth:assetWidth,h=Number.isFinite(placementHeight)&&placementHeight>0?placementHeight:assetHeight;return drawEntry(ctx,entry,Number(placement.x)+w/2,Number(placement.y)+h/2,{width:w,height:h,anchor:entry.anchor||{x:.5,y:.5}});}
 function drawProp(placement){const entry=pick('prop',placement?.kind,hashString(placement?.id));if(!entry)return false;return drawEntry(ctx,entry,Number(placement.x)+Number(placement.w)/2,Number(placement.y)+Number(placement.h),{anchor:entry.anchor||{x:.5,y:1}});}
-function drawFx(placement,time=0){const entry=pick('fx',placement?.kind,hashString(placement?.id));if(!entry)return false;let source=entry.sourceRect;if(entry.frames>1&&source){const frame=Math.floor(Number(time||0)/Math.max(1,Number(entry.frameDurationMs)||120))%entry.frames;source={...source,x:source.x+source.w*frame};entry={...entry,sourceRect:source};}return drawEntry(ctx,entry,Number(placement.x)+Number(placement.w)/2,Number(placement.y)+Number(placement.h)/2,{anchor:entry.anchor||{x:.5,y:.5}});}
+function drawFx(placement,time=0){const entry=pick('fx',placement?.kind,hashString(placement?.id));if(!entry)return false;let drawEntryData=entry,source=entry.sourceRect;if(entry.frames>1&&source){const frame=Math.floor(Number(time||0)/Math.max(1,Number(entry.frameDurationMs)||120))%entry.frames;source={...source,x:source.x+source.w*frame};drawEntryData={...entry,sourceRect:source};}return drawEntry(ctx,drawEntryData,Number(placement.x)+Number(placement.w)/2,Number(placement.y)+Number(placement.h)/2,{anchor:drawEntryData.anchor||{x:.5,y:.5}});}
 
 async function load(){
   if(state.loadPromise)return state.loadPromise;

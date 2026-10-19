@@ -7,12 +7,13 @@
     return;
   }
 
-  const GUIDE={x:2325,y:2370};
   const FIRE={x:2400,y:2400};
   const WORKBENCH={x:2195,y:2535};
   const CHEST={id:'chest:1:1:main',x:2590,y:2540,cooldown:90000};
-  const ITEM_ZH={wood:'木材',stone:'石头',food:'食物',shard:'异质碎片'};
+  const ITEM_ZH={wood:'木材',stone:'石头',food:'口粮',shard:'异质碎片',egg:'鸡蛋',milk:'牛奶',wool:'羊毛',fish_reedcarp:'芦影鲫',fish_glassminnow:'玻璃银鱼',fish_holloweye:'空眼鱼'};
   const CHAT_QUEUE=[];
+
+  function emitGameplayEvent(name,detail){try{window.dispatchEvent(new CustomEvent(name,{detail}))}catch{}}
 
   let fireCooldownUntil=0;
   let dialogOpen=false;
@@ -27,6 +28,9 @@
   function hideOtherPanels(){
     try{ craftPanel.classList.add('hidden'); }catch{}
     try{ chatPanel.classList.add('hidden'); }catch{}
+    try{ window.ABYSSAL_COOKING_PANEL_V1?.close?.(); }catch{}
+    try{ window.ABYSSAL_PET_PANEL_V1?.close?.(); }catch{}
+    try{ window.ABYSSAL_NPC_SOCIAL_PANEL_V1?.close?.(); }catch{}
     document.getElementById('mapPanel')?.classList.add('hidden');
     document.getElementById('mapPanelV11')?.classList.add('hidden');
   }
@@ -37,6 +41,7 @@
     style.id='v12InteractionStyle';
     style.textContent=`
       #interactionPromptV11{display:none!important}
+      #interactionPromptV12.fishing-bite{border:2px solid #f0d88b;background:#2e2918f5;color:#ffeaa8;font-size:12px;box-shadow:0 0 16px #e5c36566}
       #interactionPromptV12{position:absolute;left:50%;bottom:calc(155px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:44;display:none;max-width:82%;padding:8px 11px;border:1px solid #a9c6b6;border-radius:5px;background:#091714f2;color:#f4f8f5;font:800 9px ui-monospace,monospace;text-align:center;pointer-events:none;box-shadow:0 5px 18px #0009}
       #guideDialogV12{position:absolute;inset:118px 10px auto 10px;z-index:80;display:none;border:2px solid #9bb9a8;background:#091512f8;box-shadow:0 16px 45px #000c;padding:0;max-height:64%;overflow:auto}
       #guideDialogV12.open{display:block}
@@ -63,6 +68,45 @@
     return el;
   }
 
+  function makeBreedButton(){
+    let button=document.getElementById('breedAnimalV1');
+    if(button)return button;
+    button=document.createElement('button');button.id='breedAnimalV1';button.type='button';button.textContent='繁育';button.setAttribute('aria-label','喂养一份口粮，让这对农场动物繁育');
+    button.style.cssText='display:none;position:absolute;left:50%;bottom:calc(54px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:45;width:72px;height:32px;border:1px solid #d4c48d;border-radius:5px;background:#273b2eef;color:#fff3ca;font:900 9px ui-monospace,monospace;touch-action:manipulation;box-shadow:0 3px 12px #0008';
+    game.appendChild(button);
+    button.addEventListener('pointerdown',event=>{
+      event.preventDefault();const target=interactionTarget(),pair=target?.type==='livestock'?target.breedPair:null;
+      if(!pair){toast('附近没有可以繁育的成年动物。');return;}
+      const result=window.ABYSSAL_LIVESTOCK_V1?.breedAnimal?.(pair.maleId,pair.femaleId);
+      if(result?.ok){toast(`${pair.speciesName}有了新的幼崽！口粮 −1`);updateUI();refreshInteractionPrompt();}
+      else if(result?.reason==='materials-required')toast('繁育需要 1 份口粮。');
+      else if(result?.reason==='pen-full')toast('围栏已经满了。');
+      else if(result?.reason==='cooldown')toast('这对动物还需要休息一会儿。');
+      else if(result?.reason==='save-failed')toast('繁育状态未能保存，操作已恢复。');
+      else toast('这对动物现在无法繁育。');
+    },{passive:false});
+    button.addEventListener('click',event=>event.preventDefault());
+    return button;
+  }
+
+  function makeCookingButton(){
+    let button=document.getElementById('openCookingV1');
+    if(button)return button;
+    button=document.createElement('button');button.id='openCookingV1';button.type='button';button.textContent='烹饪';button.setAttribute('aria-label','打开营地篝火料理');
+    button.style.cssText='display:none;position:absolute;left:50%;bottom:calc(54px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:45;width:72px;height:32px;border:1px solid #d4c48d;border-radius:5px;background:#273b2eef;color:#fff3ca;font:900 9px ui-monospace,monospace;touch-action:manipulation;box-shadow:0 3px 12px #0008';
+    game.appendChild(button);
+    button.addEventListener('pointerdown',event=>{event.preventDefault();safeStop();hideOtherPanels();window.ABYSSAL_COOKING_PANEL_V1?.open?.();},{passive:false});
+    button.addEventListener('click',event=>event.preventDefault());
+    return button;
+  }
+
+  function makePetButton(){
+    let button=document.getElementById('openPetPanelV1');if(button)return button;
+    button=document.createElement('button');button.id='openPetPanelV1';button.type='button';button.textContent='伙伴';button.setAttribute('aria-label','打开营地伙伴孵化与命令面板');
+    button.style.cssText='display:none;position:absolute;left:50%;bottom:calc(54px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:45;width:72px;height:32px;border:1px solid #a7d2c0;border-radius:5px;background:#273b2eef;color:#e0fff2;font:900 9px ui-monospace,monospace;touch-action:manipulation;box-shadow:0 3px 12px #0008';game.appendChild(button);
+    button.addEventListener('pointerdown',event=>{event.preventDefault();safeStop();hideOtherPanels();window.ABYSSAL_PET_PANEL_V1?.open?.();},{passive:false});button.addEventListener('click',event=>event.preventDefault());return button;
+  }
+
   function makeDialog(){
     let panel=document.getElementById('guideDialogV12');
     if(panel)return panel;
@@ -76,10 +120,12 @@
       </div>
       <div id="guideDialogBodyV12" class="v12-dialog-body"></div>
       <div id="guideDialogOptionsV12" class="v12-dialog-options"></div>
+      <div class="v12-dialog-options"><button id="guideGiftOpenV1" type="button">送一份礼物 · 查看好感</button></div>
       <div id="guideDialogTaskV12" class="v12-dialog-task"></div>
     `;
     game.appendChild(panel);
     panel.querySelector('#guideDialogCloseV12').addEventListener('click',closeGuideDialog);
+    panel.querySelector('#guideGiftOpenV1').addEventListener('click',()=>{closeGuideDialog();window.ABYSSAL_NPC_SOCIAL_PANEL_V1?.open?.();});
     panel.addEventListener('click',event=>{
       const button=event.target.closest('[data-dialog-page]');
       if(!button)return;
@@ -111,7 +157,35 @@
     }
   };
 
+  function currentTaskAdvice(){
+    const wood=Math.max(0,Number(inventory.wood)||0),stone=Math.max(0,Number(inventory.stone)||0),food=Math.max(0,Number(inventory.food)||0);
+    const phase=window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.phase,shard=Math.max(0,Number(inventory.shard)||0);
+    if(phase==='LEAVE_HOME')return `骨刃已装备，${food?`背包有食物 ×${food}`:'当前没有食物，建议先在营地补给'}。沿北门公路前往 MIRE MART。`;
+    if(phase==='REACH_MIRE_MART')return '沿破损北路继续向北。先找到停电的 MIRE MART，再决定是搜寻还是撤回。';
+    if(phase==='SEARCH_FIGHT')return `MIRE MART 的货架、冰柜和异常残留都值得检查。保持距离，收集异质碎片；当前 ${Math.min(2,shard)}/2。`;
+    if(phase==='SECURE_REQUIRED_SALVAGE')return '碎片已经够了。别贪心，离开 MIRE MART，沿北路把这批东西带回营地。';
+    if(phase==='RETURN_HOME')return '沿来时的北路返回篝火。把异质碎片带进安全营地，工作台才能强化野外装备架。';
+    if(phase==='COMPLETE'){
+      const home=window.ABYSSAL_HOME_WORKBENCH_V1?.getState?.();
+      return home?.tier>=2?'你把 MIRE MART 的发现带回来了，野外装备架也已经升级。先休息一下，再和大家商量下一次往哪边走。':'你把 MIRE MART 的发现带回来了。先在工作台安顿好装备，再和大家商量下一次往哪边走。';
+    }
+    if(inventory.knife){
+      const supplies=food?`背包有食物 ×${food}`:'当前没有食物，建议先在营地补给';
+      return `骨刃已装备，${supplies}。沿北门公路再次前往 MIRE MART，并带回 2 个异质碎片。`;
+    }
+    if(wood<4||stone<3)return `先在营地周围收集 4 份木材和 3 块石头（当前：木材 ${wood}/4 · 石头 ${stone}/3）。靠近材料时，屏幕会出现【互动】提示。`;
+    return '材料已齐，去营地西南侧工作台制作骨刃。做好骨刃、带上食物，再决定什么时候离开营地。';
+  }
+
   function currentTaskText(){
+    const phase=window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.phase,shard=Math.max(0,Number(inventory.shard)||0);
+    if(phase==='LEAVE_HOME')return '当前目标：整备完成 · 沿北门公路前往 MIRE MART。';
+    if(phase==='REACH_MIRE_MART')return '当前目标：沿北路找到停电的 MIRE MART。';
+    if(phase==='SEARCH_FIGHT')return `当前目标：搜索 MIRE MART · 异质碎片 ${Math.min(2,shard)}/2。`;
+    if(phase==='SECURE_REQUIRED_SALVAGE')return '当前目标：离开 MIRE MART，把异质碎片带回营地。';
+    if(phase==='RETURN_HOME')return '当前目标：沿北路返回安全营地 · 携带异质碎片。';
+    if(phase==='COMPLETE')return window.ABYSSAL_HOME_WORKBENCH_V1?.getState?.()?.tier>=2?'当前状态：远征完成 · 野外装备架已强化。':'当前状态：远征发现已带回 · 前往工作台强化野外装备架。';
+    if(inventory.knife)return '当前目标：骨刃已装备 · 前往 MIRE MART，带回 2 个异质碎片。';
     if(inventory.wood<4||inventory.stone<3)return `当前目标：木材 ${inventory.wood}/4 · 石头 ${inventory.stone}/3`;
     if(!inventory.knife)return '当前目标：前往西南侧工作台制作【骨刃】。';
     if(!hasLeftCamp)return '当前目标：等待队友准备好，然后一起离开安全营地。';
@@ -122,7 +196,7 @@
     if(page==='leave'){ closeGuideDialog(); return; }
     const data=DIALOG[page]||DIALOG.intro;
     const panel=makeDialog();
-    panel.querySelector('#guideDialogBodyV12').textContent=data.text;
+    panel.querySelector('#guideDialogBodyV12').textContent=page==='task'?currentTaskAdvice():data.text;
     const options=panel.querySelector('#guideDialogOptionsV12');
     options.replaceChildren();
     for(const [target,label] of data.options){
@@ -138,17 +212,21 @@
   function openGuideDialog(){
     safeStop();
     hideOtherPanels();
-    try{localStorage.setItem('abyssal_guide_v7','1');}catch{}
+    const guideState=window.ABYSSAL_CAMP_GUIDE_V1;
+    if(typeof guideState?.markTalked==='function')guideState.markTalked();
+    else try{localStorage.setItem('abyssal_guide_v7','1');}catch{}
     dialogOpen=true;
     const panel=makeDialog();
     panel.classList.add('open');
     showDialogPage('intro');
+    if(typeof refreshInteractionPrompt==='function')refreshInteractionPrompt();
     try{updateQuest();updateUI();}catch{}
   }
 
   function closeGuideDialog(){
     dialogOpen=false;
     document.getElementById('guideDialogV12')?.classList.remove('open');
+    refreshInteractionPrompt();
   }
 
   function nearestResource(){
@@ -163,28 +241,44 @@
 
   function interactionTarget(){
     if(!started||dead||dialogOpen)return null;
+    let best=null;
+    const consider=target=>{
+      const d=Number(target?.d);
+      if(!target||!Number.isFinite(d)||d<0)return;
+      if(!best||d<best.d)best=target;
+    };
     if(inCamp()){
-      const guideD=Math.hypot(me.x-GUIDE.x,me.y-GUIDE.y);
-      if(guideD<=92)return{type:'guide',d:guideD,label:'【互动】与营地向导交谈'};
+      const guide=window.ABYSSAL_CAMP_GUIDE_V1?.getSnapshot?.();
+      const guideD=guide?Math.hypot(me.x-guide.x,me.y-guide.y):Infinity;
+      if(guideD<=92)consider({type:'guide',d:guideD,label:'【互动】与营地向导交谈'});
       const workbenchD=Math.hypot(me.x-WORKBENCH.x,me.y-WORKBENCH.y);
-      if(workbenchD<=92)return{type:'workbench',d:workbenchD,label:'【互动】使用工作台'};
+      if(workbenchD<=92)consider({type:'workbench',d:workbenchD,label:'【互动】使用工作台'});
       const chestD=Math.hypot(me.x-CHEST.x,me.y-CHEST.y);
       if(chestD<=92){
         const left=(harvested.get(CHEST.id)||0)-Date.now();
-        return{type:'chest',d:chestD,label:left>0?`共享宝箱刷新中 · ${Math.ceil(left/1000)}秒`:'【互动】打开共享宝箱'};
+        consider({type:'chest',d:chestD,label:left>0?`共享宝箱刷新中 · ${Math.ceil(left/1000)}秒`:'【互动】打开共享宝箱'});
       }
       const fireD=Math.hypot(me.x-FIRE.x,me.y-FIRE.y);
-      if(fireD<=78)return{type:'fire',d:fireD,label:'【互动】在篝火旁休息'};
+      if(fireD<=78)consider({type:'fire',d:fireD,label:'【互动】在篝火旁休息 · 也可烹饪'});
+      consider(window.ABYSSAL_LIVESTOCK_V1?.getTarget?.(me));
+      consider(window.ABYSSAL_FARMING_V1?.getTarget?.(me));
+      consider(window.ABYSSAL_FISHING_V1?.getTarget?.(me));
+      consider(window.ABYSSAL_PETS_V1?.getTarget?.(me));
     }
     const nr=nearestResource();
-    if(nr&&nr.d<=82)return{type:'resource',d:nr.d,label:`【互动】采集${ITEM_ZH[nr.resource.type]||'资源'}`,resource:nr.resource};
-    return null;
+    if(nr&&nr.d<=82)consider({type:'resource',d:nr.d,label:`【互动】采集${ITEM_ZH[nr.resource.type]||'资源'}`,resource:nr.resource});
+    return best;
   }
 
   function harvestResource(r){
     if(!r)return;
     if((harvested.get(r.id)||0)>Date.now())return;
+    if(typeof CustomEvent==='function'&&typeof window.dispatchEvent==='function'){
+      const intent=new CustomEvent('abyssal:resource-work-intent',{cancelable:true,detail:{id:String(r.id),type:r.type,x:Number(r.x)||0,y:Number(r.y)||0}});
+      if(!window.dispatchEvent(intent))return;
+    }
     inventory[r.type]=(inventory[r.type]||0)+1;
+    emitGameplayEvent('abyssal:resource-collected',{kind:r.type,x:Number(r.x)||0,y:Number(r.y)||0,amount:1});
     const localCamp=String(r.id).startsWith('camp:');
     const until=Date.now()+(localCamp?12000:60000);
     harvested.set(r.id,until);
@@ -193,6 +287,7 @@
     }
     saveLocal();
     updateUI();
+    if(typeof refreshInteractionPrompt==='function')refreshInteractionPrompt();
     toast(`获得${ITEM_ZH[r.type]||'资源'} ×1`);
   }
 
@@ -205,6 +300,7 @@
     fireCooldownUntil=now+12000;
     me.hp=clamp(me.hp+24,0,100);
     me.sanity=clamp(me.sanity+34,0,100);
+    emitGameplayEvent('abyssal:camp-rested',{x:FIRE.x,y:FIRE.y,hp:me.hp,sanity:me.sanity});
     saveLocal();
     updateUI();
     toast('你坐在篝火旁休息，生命 +24，理智 +34。');
@@ -230,8 +326,10 @@
       return;
     }
     inventory.food+=1;
-    if(Math.random()<0.55){inventory.shard+=1;toast('打开共享宝箱：食物 ×1，异质碎片 ×1。');}
+    let bonus='stone';
+    if(Math.random()<0.55){inventory.shard+=1;bonus='shard';toast('打开共享宝箱：食物 ×1，异质碎片 ×1。');}
     else{inventory.stone+=1;toast('打开共享宝箱：食物 ×1，石头 ×1。');}
+    emitGameplayEvent('abyssal:chest-opened',{x:CHEST.x,y:CHEST.y,items:{food:1,[bonus]:1}});
     saveLocal();updateUI();
   }
 
@@ -248,6 +346,40 @@
     }
     if(target.type==='chest'){openChest();return;}
     if(target.type==='resource'){harvestResource(target.resource);return;}
+    if(target.type==='livestock'){
+      const result=window.ABYSSAL_LIVESTOCK_V1?.interact?.(target.animalId);
+      if(result?.ok&&result.item)toast(`收取${ITEM_ZH[result.item]||'农场产物'} ×${result.amount||1}`);
+      else if(result?.ok&&result.stage==='producing')toast('已喂食。动物正在准备产物。');
+      else if(result?.ok&&result.stage==='cared')toast('幼崽得到照料，继续长大后就能产出。');
+      else if(result?.reason==='materials-required')toast('需要 1 份口粮才能喂养或照料。');
+      else if(result?.reason==='producing')toast(`产物还要 ${result.secondsLeft} 秒。`);
+      else if(result?.reason==='already-cared')toast('这只幼崽今天已经照料过了。');
+      else if(result?.reason==='already-fed')toast('这只动物已经喂过，正在等待产物。');
+      else if(result?.reason==='save-failed')toast('农场状态没有保存成功，操作已恢复。');
+      else toast('这只动物暂时无法互动。');
+      updateUI();refreshInteractionPrompt();return;
+    }
+    if(target.type==='fishing'){
+      const result=window.ABYSSAL_FISHING_V1?.interact?.();
+      if(result?.ok&&result.fishId)toast(`钓到${result.name} ×1`);
+      else if(result?.ok&&result.phase==='waiting')toast('鱼线落进回水池，留意咬钩提示。');
+      else if(result?.reason==='waiting')toast(`鱼线还要 ${result.secondsLeft} 秒才会咬钩。`);
+      else if(result?.reason==='escaped')toast('咬钩慢了一步，鱼已经游走。');
+      else if(result?.reason==='save-failed')toast('钓鱼状态没有保存成功，操作已恢复。');
+      else toast('这里暂时钓不到鱼。');
+      updateUI();refreshInteractionPrompt();return;
+    }
+    if(target.type==='pet-station'){window.ABYSSAL_JOYSTICK_V1?.stop?.();dashQueued=false;hideOtherPanels();window.ABYSSAL_PET_PANEL_V1?.open?.();return;}
+    if(target.type==='farm'){
+      const result=window.ABYSSAL_FARMING_V1?.interact?.(target.plotId);
+      if(result?.ok&&result.yield){toast(`收获盐风叶菜：食物 +${result.yield.food||0} · 种子 +${result.yield.seed||0}`);emitGameplayEvent('abyssal:food-harvested',{x:target.x,y:target.y,amount:result.yield.food||0});}
+      else if(result?.ok)toast('播下盐风叶菜种子。约 42 秒后可以收获。');
+      else if(result?.reason==='growing')toast(`盐风叶菜还要 ${result.secondsLeft} 秒成熟。`);
+      else if(result?.reason==='materials-required')toast('需要 1 包种子才能播种。');
+      else if(result?.reason==='save-failed')toast('农场状态没有保存成功，操作已恢复。');
+      else toast('这块菜畦现在无法操作。');
+      updateUI();refreshInteractionPrompt();return;
+    }
   }
 
   function triggerContextInteraction(){
@@ -262,7 +394,7 @@
     button.textContent='互动';
     old.replaceWith(button);
     button.addEventListener('pointerdown',event=>{event.preventDefault();triggerContextInteraction();},{passive:false});
-    button.addEventListener('click',event=>event.preventDefault());
+    button.addEventListener('click',event=>{event.preventDefault();if(event.detail===0)triggerContextInteraction();});
     return button;
   }
 
@@ -329,6 +461,22 @@
 
   addStyle();
   const prompt=makePrompt();
+  const breedButton=makeBreedButton();
+  const cookingButton=makeCookingButton();
+  const petButton=makePetButton();
+  let lastFishingPrompt='';
+  function refreshInteractionPrompt(){
+    if(dialogOpen){prompt.style.display='none';breedButton.style.display='none';cookingButton.style.display='none';petButton.style.display='none';return;}
+    const target=interactionTarget();
+    prompt.style.display=target?'block':'none';
+    if(target?.type==='fishing'&&target.stage==='bite'&&lastFishingPrompt!==`${target.pondId}:bite`)toast('有东西咬钩了！按 E 或点“互动”收杆。');
+    lastFishingPrompt=target?.type==='fishing'?`${target.pondId}:${target.stage}`:'';
+    prompt.textContent=target?.type==='fishing'&&target.stage==='bite'?`鱼咬钩了！按 E 或点“互动”收杆 · ${Math.max(0,Number(target.label?.match(/([\d.]+)秒/)?.[1])||0).toFixed(1)} 秒`:target?.label||'';
+    prompt.classList.toggle('fishing-bite',target?.type==='fishing'&&target.stage==='bite');
+    breedButton.style.display=target?.type==='livestock'&&!!target.breedPair&&(Number(inventory.food)||0)>0?'block':'none';
+    cookingButton.style.display=target?.type==='fire'&&!window.ABYSSAL_COOKING_PANEL_V1?.visible?.()?'block':'none';
+    petButton.style.display=target?.type==='pet-station'&&!window.ABYSSAL_PET_PANEL_V1?.visible?.()?'block':'none';
+  }
   makeDialog();
   replaceInteractionButton();
   const chat=replaceChatControls();
@@ -344,10 +492,7 @@
   document.getElementById('guideDialogV12')?.addEventListener('pointerdown',event=>event.stopPropagation());
 
   const interactionIntervalId=setInterval(()=>{
-    if(dialogOpen){prompt.style.display='none';return;}
-    const target=interactionTarget();
-    if(!target){prompt.style.display='none';}
-    else{prompt.style.display='block';prompt.textContent=target.label;}
+    refreshInteractionPrompt();
     flushChat();
   },200);
 

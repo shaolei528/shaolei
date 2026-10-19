@@ -20,6 +20,7 @@ const RELAY={
   connectResolve:null,
   connectReject:null,
   channels:new Map(),
+  pendingSubscriptions:new Map(),
   retryTimer:0,
   retryCount:0,
   pingSeq:0,
@@ -32,6 +33,7 @@ const RELAY={
   route:'relay'
 };
 window.ABYSSAL_RELAY_V16=RELAY;
+let globalPresenceSynced=false;
 
 function badge(){
   let el=document.getElementById('routeBadgeV16');
@@ -66,13 +68,20 @@ function refreshDiag(){
     'WebSocket: '+(RELAY.connected?'OPEN':'CLOSED'),
     'Global: '+(globalConnected?'已订阅':'未订阅'),
     'Zone: '+(zoneConnected?'已订阅':'未订阅'),
-    '在线: '+Math.max(1,globalPresenceIds.size||1),
+    '人数: '+presenceDisplayLabel(),
     'RTT: '+lastPing,
     'Ping 丢失: '+loss,
     '最近数据: '+(RELAY.lastPacketAt?Math.max(0,Math.round((Date.now()-RELAY.lastPacketAt)/1000))+'秒前':'--'),
     '错误: '+(RELAY.lastError||'--'),
     '说明: 公网中继不需要两台手机互相打洞。'
   ].join('\n');
+}
+function presenceDisplayLabel(){
+  if(window.AW_SUCCESSOR_PREVIEW===true)return '本地 1';
+  if(RELAY.active&&window.navigator?.onLine===false)return '离线';
+  if(!RELAY.active||!RELAY.connected||!globalConnected)return RELAY.retryTimer?'重连中':'未连接';
+  if(!globalPresenceSynced)return '同步中';
+  return '在线 '+globalPresenceIds.size;
 }
 function setBadge(text,color){const el=badge();el.textContent=text;if(color)el.style.color=color;}
 function setConnection(text,cls='reconnect'){if(connectionEl){connectionEl.textContent=text;connectionEl.className='connection '+cls;}}
@@ -86,21 +95,37 @@ function finishConnect(ok,value){
   RELAY.connectResolve=null;RELAY.connectReject=null;RELAY.connectPromise=null;RELAY.connecting=false;
   ok?resolve?.(value):reject?.(value);
 }
-function scheduleReconnect(){
-  if(RELAY.retryTimer||!RELAY.active||!started)return;
+function scheduleReconnect(startupFailure=false){
+  if(RELAY.retryTimer||(!RELAY.active&&!startupFailure)||!started||window.navigator?.onLine===false)return;
   const delay=Math.min(12000,1800*Math.pow(1.55,Math.min(RELAY.retryCount++,4)));
   setConnection('公网重连中','reconnect');setBadge('联机线路：公网中继 · 重连中','#f0d58a');
   RELAY.retryTimer=setTimeout(async()=>{
     RELAY.retryTimer=0;
-    try{await ensureSocket();RELAY.retryCount=0;}catch{scheduleReconnect();}
+    if(window.navigator?.onLine===false)return;
+    try{
+      await ensureSocket();
+      if(!globalCh)await connectGlobalRelay();
+      if(!zoneCh)await switchZoneRelay(currentZone);
+      RELAY.retryCount=0;
+    }catch(error){RELAY.lastError=String(error?.message||error);scheduleReconnect(!RELAY.active);}
   },Math.round(delay));
 }
 function markDisconnected(reason){
   RELAY.connected=false;RELAY.helloAck=false;globalConnected=false;zoneConnected=false;
+  RELAY.pendingSubscriptions.clear();
+  globalPresenceIds=new Set();
+  globalPresenceSynced=false;
   if(reason)RELAY.lastError=String(reason);
   for(const ch of RELAY.channels.values())ch._markDisconnected();
+  if(RELAY.connecting)finishConnect(false,new Error(reason||'relay socket closed before hello_ack'));
   updateUI();refreshDiag();
   if(RELAY.active)scheduleReconnect();
+}
+function onSubscriptionAck(channel){
+  const pending=RELAY.pendingSubscriptions.get(channel);
+  const subscribed=pending?.shift();
+  if(pending&&!pending.length)RELAY.pendingSubscriptions.delete(channel);
+  if(subscribed&&!subscribed.closed&&RELAY.channels.get(channel)===subscribed)subscribed._markSubscribed();
 }
 function onSocketMessage(event){
   let msg;
@@ -114,9 +139,9 @@ function onSocketMessage(event){
     for(const ch of RELAY.channels.values())ch._resubscribe();
     finishConnect(true,RELAY.socket);refreshDiag();return;
   }
-  if(msg.type==='subscribed'){RELAY.channels.get(msg.channel)?._markSubscribed();return;}
+  if(msg.type==='subscribed'){onSubscriptionAck(msg.channel);return;}
   if(msg.type==='presence_snapshot'){RELAY.channels.get(msg.channel)?._applyPresence(msg.entries||[]);return;}
-  if(msg.type==='broadcast'){RELAY.channels.get(msg.channel)?._emitBroadcast(msg.event,msg.payload);return;}
+  if(msg.type==='broadcast'){RELAY.channels.get(msg.channel)?._emitBroadcast(msg.event,msg.payload,{from:String(msg.from||''),serverTime:Number(msg.serverTime)||0});return;}
   if(msg.type==='pong'){
     const id=String(msg.id||''),startedAt=RELAY.pendingPings.get(id);
     if(startedAt!=null){
@@ -138,7 +163,7 @@ function ensureSocket(){
   RELAY.connectPromise=new Promise((resolve,reject)=>{RELAY.connectResolve=resolve;RELAY.connectReject=reject;});
   let ws;
   try{ws=new WebSocket(RELAY.url);}catch(error){finishConnect(false,error);return Promise.reject(error);}
-  RELAY.socket=ws;
+  RELAY.socket=ws;RELAY.pendingSubscriptions.clear();
   const timeout=setTimeout(()=>{
     if(!RELAY.helloAck){try{ws.close();}catch{};const error=new Error('relay hello timeout');RELAY.lastError=error.message;finishConnect(false,error);}
   },8000);
@@ -155,8 +180,8 @@ function sendRaw(ws,packet){try{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.s
 
 class RelayChannel{
   constructor(key){
-    this.key=key;this.handlers=[];this.statusCb=null;this.subscribed=false;this.closed=false;this.trackMeta=null;
-    this.ready=new Promise((resolve,reject)=>{this._resolveReady=resolve;this._rejectReady=reject;});
+    this.key=key;this.handlers=[];this.statusCb=null;this.subscribed=false;this.closed=false;this.trackMeta=null;this.subscribeTimer=0;this.readySettled=false;
+    this.ready=new Promise(resolve=>{this._resolveReady=resolve;});
     RELAY.channels.set(key,this);
   }
   on(type,filter,cb){this.handlers.push({type,filter:filter||{},cb});return this;}
@@ -164,11 +189,12 @@ class RelayChannel{
   async track(meta){this.trackMeta={...(meta||{}),id:SESSION_ID};if(this.subscribed&&isOpen())send({type:'track',channel:this.key,meta:this.trackMeta});return isOpen()?'ok':'error';}
   async send(message){if(!this.subscribed||!isOpen())return 'error';if(message?.type==='broadcast'){return send({type:'broadcast',channel:this.key,event:message.event,payload:message.payload})?'ok':'error';}return 'ok';}
   presenceState(){const out={};for(const [id,meta] of this.presence)out[id]=[{...meta,id}];return out;}
-  close(){if(this.closed)return;this.closed=true;if(isOpen()){send({type:'untrack',channel:this.key});send({type:'unsubscribe',channel:this.key});}RELAY.channels.delete(this.key);}
-  _resubscribe(){if(this.closed||!isOpen())return;this.subscribed=false;send({type:'subscribe',channel:this.key});}
-  _markSubscribed(){if(this.closed)return;this.subscribed=true;try{this.statusCb?.('SUBSCRIBED');}catch{}this._resolveReady?.(this);this._resolveReady=null;if(this.trackMeta)send({type:'track',channel:this.key,meta:this.trackMeta});}
+  close(){if(this.closed)return;this.closed=true;if(this.subscribeTimer){clearTimeout(this.subscribeTimer);this.subscribeTimer=0;}this._settleReady(null);if(globalCh===this){globalCh=null;globalConnected=false;}if(zoneCh===this){zoneCh=null;zoneConnected=false;}if(isOpen()){send({type:'untrack',channel:this.key});send({type:'unsubscribe',channel:this.key});}RELAY.channels.delete(this.key);}
+  _settleReady(value){if(this.readySettled)return;this.readySettled=true;const resolve=this._resolveReady;this._resolveReady=null;resolve?.(value);}
+  _resubscribe(){if(this.closed||!isOpen())return;if(this.subscribeTimer)clearTimeout(this.subscribeTimer);this.subscribed=false;const pending=RELAY.pendingSubscriptions.get(this.key)||[];pending.push(this);RELAY.pendingSubscriptions.set(this.key,pending);send({type:'subscribe',channel:this.key});this.subscribeTimer=setTimeout(()=>{this.subscribeTimer=0;if(this.closed||this.subscribed)return;const socket=RELAY.socket;RELAY.socket=null;RELAY.connected=false;RELAY.helloAck=false;globalConnected=false;zoneConnected=false;globalPresenceIds=new Set();globalPresenceSynced=false;RELAY.pendingSubscriptions.clear();for(const ch of RELAY.channels.values())if(ch!==this)ch._markDisconnected();this._markDisconnected();this._settleReady(null);if(globalCh===this){globalCh=null;globalConnected=false;}if(zoneCh===this){zoneCh=null;zoneConnected=false;switching=false;}this.close();try{socket?.close();}catch{}setConnection('中继频道订阅超时','reconnect');RELAY.lastError='relay subscribe timeout: '+this.key;updateUI();refreshDiag();if(RELAY.active)scheduleReconnect();},8000);}
+  _markSubscribed(){if(this.closed)return;if(this.subscribeTimer){clearTimeout(this.subscribeTimer);this.subscribeTimer=0;}this.subscribed=true;try{this.statusCb?.('SUBSCRIBED');}catch{}this._settleReady(this);if(this.trackMeta)send({type:'track',channel:this.key,meta:this.trackMeta});}
   _markDisconnected(){if(this.closed)return;this.subscribed=false;try{this.statusCb?.('CLOSED');}catch{}}
-  _emitBroadcast(event,payload){for(const h of this.handlers){if(h.type==='broadcast'&&h.filter?.event===event){try{h.cb({payload});}catch(error){console.warn('[V16 relay broadcast]',error);}}}}
+  _emitBroadcast(event,payload,meta={}){for(const h of this.handlers){if(h.type==='broadcast'&&h.filter?.event===event){try{h.cb({payload,...meta});}catch(error){console.warn('[V16 relay broadcast]',error);}}}}
   _applyPresence(entries){
     const before=this.presence||new Map(),next=new Map();for(const item of entries||[])if(item?.id)next.set(item.id,item);this.presence=next;
     const joined=[],left=[];for(const[id,meta]of next)if(!before.has(id))joined.push(meta);for(const[id,meta]of before)if(!next.has(id))left.push(meta);
@@ -185,14 +211,15 @@ async function connectGlobalRelay(){
   await ensureSocket();RELAY.active=true;
   if(globalCh instanceof RelayChannel&&globalCh.subscribed){globalConnected=true;return globalCh;}
   if(globalCh instanceof RelayChannel)globalCh.close();
+  globalPresenceIds=new Set();globalPresenceSynced=false;
   const key=cfg.WORLD_CHANNEL+':global',ch=new RelayChannel(key);ch.presence=new Map();globalCh=ch;
-  ch.on('presence',{event:'sync'},()=>{const st=ch.presenceState(),ids=new Set();for(const list of Object.values(st))for(const p of list)if(p?.id)ids.add(p.id);globalPresenceIds=ids;updateUI();});
+  ch.on('presence',{event:'sync'},()=>{const st=ch.presenceState(),ids=new Set();for(const list of Object.values(st))for(const p of list)if(p?.id)ids.add(p.id);globalPresenceIds=ids;globalPresenceSynced=true;updateUI();});
   ch.on('presence',{event:'join'},({newPresences})=>{for(const p of newPresences||[])if(p.id!==SESSION_ID)toast(clean(p.name)+' 进入了世界');});
   ch.on('presence',{event:'leave'},({leftPresences})=>{for(const p of leftPresences||[])if(p.id!==SESSION_ID)toast(clean(p.name)+' 离开了世界');});
   ch.on('broadcast',{event:'chat'},({payload})=>receiveChat(payload));
   ch.on('broadcast',{event:'map_pos'},({payload})=>{try{window.ABYSSAL_UX_V11?.onMapPos?.(payload);}catch{}});
   ch.subscribe(status=>{globalConnected=status==='SUBSCRIBED';updateUI();});
-  await ch.ready;globalConnected=true;await ch.track(globalMeta());measurePingRelay();updateUI();return ch;
+  const ready=await ch.ready;if(!ready||ch!==globalCh){globalConnected=false;return null;}globalConnected=true;await ch.track(globalMeta());measurePingRelay();updateUI();return ch;
 }
 async function switchZoneRelay(z){
   await ensureSocket();RELAY.active=true;
@@ -205,11 +232,11 @@ async function switchZoneRelay(z){
     for(const[pid,p]of meta){if(pid===SESSION_ID)continue;let r=remotes.get(pid);if(!r){r={id:pid,name:clean(p.name),color:p.color||'#aab8af',x:finite(p.x,me.x),y:finite(p.y,me.y),tx:finite(p.x,me.x),ty:finite(p.y,me.y),dir:finite(p.dir,0),hp:100,sanity:100,attack:0,moving:false,ward:!!p.ward};remotes.set(pid,r);}else{r.name=clean(p.name);r.color=p.color||r.color;r.ward=!!p.ward;}}
     for(const rid of [...remotes.keys()])if(!ids.has(rid))remotes.delete(rid);electLeader();updateUI();
   });
-  ch.on('broadcast',{event:'move'},({payload})=>onMove(payload));ch.on('broadcast',{event:'attack'},({payload})=>onAttack(payload));ch.on('broadcast',{event:'mobs'},({payload})=>onMobs(payload));ch.on('broadcast',{event:'mob_hit'},({payload})=>onMobHit(payload));ch.on('broadcast',{event:'loot'},({payload})=>onLoot(payload));ch.on('broadcast',{event:'harvest'},({payload})=>onHarvest(payload));ch.on('broadcast',{event:'state_req'},()=>{if(zoneLeader)broadcastWorld();});ch.on('broadcast',{event:'world'},({payload})=>onWorld(payload));
+  ch.on('broadcast',{event:'move'},({payload})=>onMove(payload));ch.on('broadcast',{event:'attack'},({payload})=>onAttack(payload));ch.on('broadcast',{event:'mobs'},({payload})=>onMobs(payload));ch.on('broadcast',{event:'mob_hit'},({payload})=>onMobHit(payload));ch.on('broadcast',{event:'loot'},({payload})=>onLoot(payload));ch.on('broadcast',{event:'harvest'},({payload})=>onHarvest(payload));ch.on('broadcast',{event:'state_req'},()=>{if(zoneLeader)broadcastWorld();});ch.on('broadcast',{event:'world'},({payload})=>onWorld(payload));ch.on('broadcast',{event:'camp_world_v1'},({payload,from,serverTime})=>window.ABYSSAL_CAMP_WORLD_SYNC_V1?.receive?.(payload,{from,serverTime}));ch.on('broadcast',{event:'camp_world_request_v1'},({payload,from})=>window.ABYSSAL_CAMP_WORLD_SYNC_V1?.respondToRequest?.(payload,{from},ch));
   ch.subscribe(status=>{zoneConnected=status==='SUBSCRIBED';updateUI();});
-  await ch.ready;if(ch!==zoneCh||nonce!==switchNonce){switching=false;return null;}zoneConnected=true;
+  const ready=await ch.ready;if(!ready||ch!==zoneCh||nonce!==switchNonce){if(nonce===switchNonce)switching=false;return null;}zoneConnected=true;
   await ch.track({id:SESSION_ID,name:me.name,color:me.color,x:Math.round(me.x),y:Math.round(me.y),dir:me.dir,ward:fieldGraceUntil>Date.now()});if(globalCh instanceof RelayChannel)await globalCh.track(globalMeta());
-  setTimeout(()=>{if(ch===zoneCh&&zoneConnected)ch.send({type:'broadcast',event:'state_req',payload:{id:SESSION_ID,zone:target}});},250);
+  setTimeout(()=>{if(ch===zoneCh&&zoneConnected){ch.send({type:'broadcast',event:'state_req',payload:{id:SESSION_ID,zone:target}});window.ABYSSAL_CAMP_WORLD_SYNC_V1?.requestZoneState?.(target,ch);}},250);
   switching=false;updateUI();return ch;
 }
 function measurePingRelay(){
@@ -220,10 +247,10 @@ async function reconnectRelay(){
   try{try{RELAY.socket?.close();}catch{}RELAY.connected=false;RELAY.helloAck=false;await ensureSocket();globalConnected=false;zoneConnected=false;await connectGlobalRelay();await switchZoneRelay(currentZone);}catch(error){RELAY.lastError=String(error?.message||error);scheduleReconnect();}
 }
 connectGlobal=async function(){
-  return connectGlobalRelay();
+  try{return await connectGlobalRelay();}catch(error){RELAY.lastError=String(error?.message||error);scheduleReconnect(true);return null;}
 };
 switchZone=async function(z){
-  return switchZoneRelay(z);
+  try{return await switchZoneRelay(z);}catch(error){RELAY.lastError=String(error?.message||error);scheduleReconnect(true);return null;}
 };
 measurePing=function(){return measurePingRelay();};
 connectionQuality=function(){
@@ -235,17 +262,25 @@ if(NET_V9)NET_V9.reconnect=reconnectRelay;
 
 const baseUpdateUIV16=updateUI;
 updateUI=function(){
-  baseUpdateUIV16();if(!RELAY.active)return;
+  baseUpdateUIV16();if(onlineEl)onlineEl.textContent=presenceDisplayLabel();if(!RELAY.active){refreshDiag();return;}
   if(pingSamples.length){const p=pingSamples.at(-1);let j=0;for(let i=1;i<pingSamples.length;i++)j+=Math.abs(pingSamples[i]-pingSamples[i-1]);if(pingSamples.length>1)j/=pingSamples.length-1;pingEl.textContent=Math.round(p)+'ms';jitterEl.textContent=Math.round(j)+'ms';}else{pingEl.textContent='测量中';jitterEl.textContent='--';}
-  const total=RELAY.pingReplies+RELAY.pingLost;lossEl.textContent=total?(RELAY.pingLost/total*100).toFixed(1)+'%':'0.0%';onlineEl.textContent='在线 '+Math.max(1,globalPresenceIds.size||1);refreshDiag();
+  const total=RELAY.pingReplies+RELAY.pingLost;lossEl.textContent=total?(RELAY.pingLost/total*100).toFixed(1)+'%':'0.0%';refreshDiag();
 };
 
 setInterval(()=>{
   if(!started||!RELAY.active)return;const now=performance.now();for(const[id,t]of [...RELAY.pendingPings])if(now-t>5000){RELAY.pendingPings.delete(id);RELAY.pingLost++;}if(isOpen()){globalCh?.track(globalMeta());zoneCh?.track({id:SESSION_ID,name:me.name,color:me.color,x:Math.round(me.x),y:Math.round(me.y),dir:me.dir,ward:fieldGraceUntil>Date.now()});}updateUI();
 },2000);
 setInterval(()=>{if(started&&RELAY.active&&isOpen())measurePingRelay();},4000);
-window.addEventListener('online',()=>{if(started&&RELAY.active&&!isOpen())scheduleReconnect();});
-window.addEventListener('offline',()=>{if(RELAY.active){globalConnected=false;zoneConnected=false;setConnection('离线','poor');}});
+window.addEventListener('online',()=>{if(started&&RELAY.enabled&&(!isOpen()||!globalConnected||!zoneConnected))scheduleReconnect(!RELAY.active);});
+window.addEventListener('offline',()=>{
+  if(!RELAY.active)return;
+  const socket=RELAY.socket;RELAY.socket=null;RELAY.connected=false;RELAY.helloAck=false;globalConnected=false;zoneConnected=false;RELAY.pendingSubscriptions.clear();
+  globalPresenceIds=new Set();globalPresenceSynced=false;
+  for(const ch of RELAY.channels.values())ch._markDisconnected();
+  if(RELAY.connecting)finishConnect(false,new Error('browser offline'));
+  try{socket?.close();}catch{}
+  setConnection('离线','poor');updateUI();refreshDiag();
+});
 
 badge();
 })();

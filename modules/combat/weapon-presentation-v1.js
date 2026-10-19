@@ -71,18 +71,19 @@ function poseFor(p,self){
     y:Math.round(sy(p.y)+(safe?-1:-4)+fy*(forward-1)+sideY*side)
   };
 }
-function drawPixelBoneKnife(pose,alpha=1){
+function drawPixelBoneKnife(pose,alpha=1,target=ctx){
+  if(!target||!pose)return false;
   const angle=pose.angle,vx=Math.cos(angle),vy=Math.sin(angle),px=-vy,py=vx;
   const plot=(forward,side,size,color)=>{
     const x=Math.round(pose.x+vx*forward+px*side);
     const y=Math.round(pose.y+vy*forward+py*side);
     const s=Math.max(1,Math.round(size));
-    ctx.fillStyle=color;
-    ctx.fillRect(x-Math.floor(s/2),y-Math.floor(s/2),s,s);
+    target.fillStyle=color;
+    target.fillRect(x-Math.floor(s/2),y-Math.floor(s/2),s,s);
   };
-  ctx.save();
-  ctx.imageSmoothingEnabled=false;
-  ctx.globalAlpha=Math.max(.25,Math.min(1,alpha));
+  target.save();
+  target.imageSmoothingEnabled=false;
+  target.globalAlpha=Math.max(.25,Math.min(1,alpha));
 
   for(const d of [-8,-6,-4])plot(d,0,4,WRAP.dark);
   plot(-7,0,2,WRAP.light);plot(-5,0,2,WRAP.mid);plot(-3,0,2,WRAP.light);
@@ -101,7 +102,8 @@ function drawPixelBoneKnife(pose,alpha=1){
     const glint=Math.max(1,Math.round(2*pose.emphasis));
     plot(13,-1,glint,BONE.light);
   }
-  ctx.restore();
+  target.restore();
+  return true;
 }
 
 const baseOnAttack=onAttack;
@@ -147,7 +149,8 @@ window.ABYSSAL_WEAPON_PRESENTATION_V1={
   swingAngle,
   remoteWeapon,
   isSafeCamp,
-  poseFor
+  poseFor,
+  drawBoneKnife:drawPixelBoneKnife
 };
 window.ABYSSAL_WEAPON_PRESENTATION_RUNTIME_V1={
   version:1,bound:true,reentryCount:Number(existingRuntime?.reentryCount)||0

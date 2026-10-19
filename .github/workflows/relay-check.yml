@@ -4,14 +4,14 @@ on:
   push:
     paths:
       - 'relay/**'
-      - 'network-relay-v16.js'
-      - 'survival-v16.html'
+      - 'modules/network/network-relay-v16.js'
+      - 'survival-v21.html'
       - '.github/workflows/relay-check.yml'
   pull_request:
     paths:
       - 'relay/**'
-      - 'network-relay-v16.js'
-      - 'survival-v16.html'
+      - 'modules/network/network-relay-v16.js'
+      - 'survival-v21.html'
 
 jobs:
   test:
@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: '20'
       - name: Check client syntax
-        run: node --check network-relay-v16.js
+        run: node --check modules/network/network-relay-v16.js
       - name: Install relay dependencies
         working-directory: relay
         run: npm install --omit=dev

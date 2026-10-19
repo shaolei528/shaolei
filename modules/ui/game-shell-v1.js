@@ -52,9 +52,11 @@
     const brand=document.querySelector('.brand');
     const subtitle=document.querySelector('.subtitle');
     const note=document.querySelector('.gate .note');
+    const status=document.querySelector('.shell-status');
     if(brand)brand.innerHTML='ABYSSAL WAKE<span>深渊苏醒</span>';
     if(subtitle)subtitle.innerHTML='现代废墟之上的求生营地<br>准备、结伴、探索，然后平安归来';
     if(note)note.textContent='当前可用：公网实时营地 · SafeCamp 安全区域';
+    if(status&&window.AW_SUCCESSOR_VIEW==='34')status.textContent='3/4 斜俯视 · 海岸营地 · 探索后归来';
   }
   function refreshEntry(){
     const relay=window.ABYSSAL_RELAY_V16;
@@ -144,7 +146,7 @@
   pauseButton?.addEventListener('click',openPause);
   overlay.addEventListener('pointerdown',event=>event.stopPropagation());
   document.addEventListener('keydown',event=>{
-    if(event.key!=='Escape'||isTypingTarget(event.target))return;
+    if(event.key!=='Escape'||event.defaultPrevented||isTypingTarget(event.target))return;
     if(!started)return;
     event.preventDefault();event.stopImmediatePropagation();
     if(overlayMode==='closed')openPause();else if(overlayMode==='settings'||overlayMode==='confirm')openPause();else closeOverlay();

@@ -91,7 +91,7 @@ const rafFiles=inventory.filter(row=>row.raf).map(({path,raf})=>({path,raf}));
   assert.equal(attackHandlers.length,1,'combat module reload must not duplicate mobile attack listener');
   assert.equal(dashHandlers.length,1,'combat module reload must not duplicate mobile dash listener');
 }
-for(const invariant of ["dashCd=1.35","inventory.knife?.32:.48","attackFlash=.15","range:inventory.knife?80:62","damage:inventory.knife?22:11"]){
+for(const invariant of ["dashCd=1.35","inventory.knife?.32:.48","attackFlash=.15","const range=inventory.knife?80:62","damage:(inventory.knife?22:11)"]){
   assert.ok(combatSource.includes(invariant),`combat feel numeric invariant changed: ${invariant}`);
 }
 

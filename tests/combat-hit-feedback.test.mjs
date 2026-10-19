@@ -10,14 +10,14 @@ for(const forbidden of ['zoneCh.send','new WebSocket(','RELAY_URL',"event:'attac
   assert.equal(source.includes(forbidden),false,`hit feedback must stay local-only: ${forbidden}`);
 }
 assert.ok(playerCombat.includes('attackCd=inventory.knife?.32:.48'),'attack cooldown must remain unchanged');
-assert.ok(playerCombat.includes('range:inventory.knife?80:62'),'attack range must remain unchanged');
-assert.ok(playerCombat.includes('damage:inventory.knife?22:11'),'attack damage must remain unchanged');
+assert.ok(playerCombat.includes('const range=inventory.knife?80:62'),'attack range must remain unchanged');
+assert.ok(playerCombat.includes('damage:(inventory.knife?22:11)'),'attack damage must remain unchanged');
 
 const regressionIndex=boot.indexOf("'modules/ui/regression-v14.js'");
 const fxIndex=boot.indexOf("'modules/combat/hit-feedback.js'");
 assert.ok(regressionIndex>=0&&fxIndex>regressionIndex,'hit feedback must load after existing runtime patches');
 
-let now=1000,vibrations=0,baseMobDraws=0,basePlayerDraws=0,baseLightingDraws=0,fillRects=0,strokeRects=0,arcs=0;
+let now=1000,vibrations=0,baseMobDraws=0,basePlayerDraws=0,baseLightingDraws=0,fillRects=0,strokeRects=0,arcs=0,cueFills=0,cueTexts=[];
 const sandbox={
   console,window:null,globalThis:null,
   performance:{now:()=>now},
@@ -36,21 +36,29 @@ const sandbox={
   sx:x=>x,sy:y=>y,
   ctx:{
     imageSmoothingEnabled:true,globalAlpha:1,fillStyle:'',strokeStyle:'',lineWidth:1,
-    save(){},restore(){},beginPath(){},stroke(){},fillRect(){fillRects++;},strokeRect(){strokeRects++;},arc(){arcs++;}
+    save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},stroke(){},fill(){cueFills++;},fillText(text){cueTexts.push(text);},ellipse(){},fillRect(){fillRects++;},strokeRect(){strokeRects++;},arc(){arcs++;}
   }
 };
 sandbox.window=sandbox;sandbox.globalThis=sandbox;
 vm.createContext(sandbox);
 vm.runInContext(source,sandbox,{filename:'hit-feedback.js'});
 
+assert.equal(sandbox.ABYSSAL_HIT_FEEDBACK.drawMobWindupCue(sandbox.ctx,50,60,-.5),true,'an active windup draws its danger cue');
+assert.equal(cueFills,1,'the floating danger marker has a filled high-contrast shape');
+assert.deepEqual(cueTexts,['!'],'the danger marker has a readable symbol');
+assert.equal(sandbox.ABYSSAL_HIT_FEEDBACK.drawMobWindupCue(sandbox.ctx,50,60,0),false,'neutral phases do not show a warning');
+
 sandbox.handleMobAttack({id:'self'});
 assert.equal(sandbox.mobs[0].hp,20,'base mob damage logic must still run');
 assert.equal(sandbox.ABYSSAL_HIT_FEEDBACK.sparks.length,1,'confirmed local mob damage should create one hit spark');
+assert.equal(sandbox.ABYSSAL_HIT_FEEDBACK.labels[0].damage,10,'confirmed damage should create a readable local damage number');
+assert.ok(sandbox.ABYSSAL_HIT_FEEDBACK.impacts[0].duration>=390,'hit impact should remain visible beyond a brief input frame');
 assert.equal(vibrations,14,'confirmed local hit may use one short haptic pulse');
 
 sandbox.drawMobs(360,600);
 assert.equal(baseMobDraws,1,'base mob renderer must still run');
 assert.ok(fillRects>=5,'hit spark should add pixel feedback');
+assert.ok(cueTexts.includes('-10'),'confirmed damage number should render with the hit effect');
 
 sandbox.drawPlayer({x:10,y:20,dir:0,attack:.14},false);
 assert.equal(basePlayerDraws,1,'base player renderer must still run');

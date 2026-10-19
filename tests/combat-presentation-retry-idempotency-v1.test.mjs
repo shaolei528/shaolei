@@ -29,7 +29,7 @@ const sandbox={
   ctx:{
     imageSmoothingEnabled:true,globalAlpha:1,fillStyle:'',strokeStyle:'',lineWidth:1,
     save(){},restore(){},beginPath(){},stroke(){},
-    fillRect(){fillRects++;},strokeRect(){strokeRects++;},arc(){arcs++;}
+    fillRect(){fillRects++;},strokeRect(){strokeRects++;},arc(){arcs++;},fillText(){}
   }
 };
 sandbox.window=sandbox;sandbox.globalThis=sandbox;

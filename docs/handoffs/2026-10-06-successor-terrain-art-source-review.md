@@ -1,0 +1,18 @@
+# Successor terrain art source review — 2026-10-06
+
+## Ownership and interface
+
+- **Lead:** Asset Pipeline for authored terrain source quality. **Partner:** Rendering & Camera owns source-cell sampling, 3/4 diamond projection and display density. World & Terrain provides stable semantic tile IDs; Integration & QA validates the composed runtime views.
+- **Interface reviewed:** V21 `terrain-v21.js` supplies 64×64 semantic map cells and tile IDs. The successor renderer samples 64×64 crops from `assets/art-v21/terrain-v21.png`, clips each into a projected 64×32 diamond, and draws with smoothing disabled. The image is a 320×256, 5×4 atlas.
+- **Files reviewed:** `terrain-v21.js`, `modules/world/awakening-world-v1.js`, `prototypes/successor-3-4/successor-renderer.js`, `tests/successor-terrain-atlas-mapping-v1.test.mjs`, `assets/art-v21/terrain-v21.png`, `assets/awakening-v1/manifest.preview.json`, and isolated candidate readmes/previews. No art or runtime files were changed in this review.
+- **Boundary:** review only. Do not promote draft terrain into a production manifest, change collision/world IDs, or use source rotation/variation as a substitute for approved detailed terrain art.
+
+## Evidence and result
+
+- **VERIFIED current source:** successor clips legacy 64×64 atlas cells to 64×32 ground diamonds; `imageSmoothingEnabled=false` prevents interpolation but cannot add missing source detail.
+- **VERIFIED mapping workaround:** the current renderer maps logical `grass_b` and `grass_flowers` back to the one actual grass source cell and mirrors it. The focused regression verifies those source rectangles and confirms the explicit art-preview mapping remains separate. This prevents those logical IDs sampling tan sand, but it yields only mirrored copies of one grass texture.
+- **VERIFIED candidate status:** `assets/awakening-v1/manifest.json` is absent. The 64×64 V21 blocker candidates remain listed only in `manifest.preview.json`; their status explicitly requires human review. SafeCamp terrain candidate V2 is **REVISE**: even its authored variants/rotation study still show map-scale rows and insufficient detail. The isolated successor art candidates are not connected to the active renderer and their documented contracts remain unapproved.
+- **Candidate comparison:** `safecamp-successor-proof-v1` is the closest successor terrain source by footprint: native 64×32 diamonds, proposed center anchor `(32,16)`, and three variants per material family. Its own review remains **DRAFT / REVISE** for repeated sawtooth shoreline and sparse ground; the values are a finite proof-scene proposal, not a frozen production schema. `safecamp-continuous-scene-draft-v2` reads as a continuous composition but is one flattened scene, not a modular terrain family. V21 64×64 candidates follow another sampling contract.
+- **REVISE / NOT A BUG:** the source sheet and limited variation explain stamped-looking repeated ground in the prior guarded gameplay captures. No new collision or map-data defect was identified. Arbitrarily rotating road, shore, or water cells could damage edge continuity, so no such rendering change was made.
+- **UNKNOWN:** final native successor terrain family, complete terrain contract, current mobile display, and physical-device visual acceptance.
+- **Recommended next art direction:** continue refining the isolated 64×32 successor proof terrain family, using its reviewed center-anchor proposal only as a prototype input; revise the repeated grass/shore rhythm and enrich material clusters before guarded runtime preview. Do not copy the flattened composition into a tilemap or promote any candidate to production.

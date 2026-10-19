@@ -177,7 +177,11 @@ draw=function(){
 
   renderUpdating=true;
   try{
-    baseUpdate(dt);
+    /* Resolve the current global update chain on every frame. Gameplay modules
+       loaded after V18 (for example Boss progression's zone gate) wrap `update`
+       to enforce rules around movement. Calling the captured baseUpdate here
+       bypasses those later wrappers even though the legacy timer is blocked. */
+    update(dt);
   }finally{
     renderUpdating=false;
   }

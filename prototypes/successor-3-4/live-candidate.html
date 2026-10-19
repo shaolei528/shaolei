@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#14251f">
+  <title>深渊苏醒 · 统一灰盒</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body,#game{width:100%;height:100%;margin:0;border:0;background:#07110f}
+    body{overflow:hidden}
+    #game{display:block}
+    #error{position:fixed;inset:0;display:grid;place-content:center;padding:24px;color:#f2e9cf;background:#07110f;font:16px system-ui,sans-serif;text-align:center}
+    #error[hidden]{display:none}
+  </style>
+</head>
+<body>
+  <iframe id="game" title="深渊苏醒统一灰盒"></iframe>
+  <main id="error" hidden>游戏加载失败，请刷新后重试。</main>
+  <script src="./live-candidate.js"></script>
+</body>
+</html>

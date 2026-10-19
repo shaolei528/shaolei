@@ -9,9 +9,7 @@ on:
       - 'docs/contracts/HOME_WORKBENCH_UPGRADE_V1.md'
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
-      - 'awakening-assets-preview.html'
       - 'docs/contracts/PRODUCTION_BLOCKER_REDRAW_SPEC_V1.md'
-      - 'awakening-scene-preview.html'
       - 'tests/awakening-scene-placement-preview-v1.test.mjs'
       - 'survival-v21.html'
       - 'game-play.js'
@@ -24,6 +22,7 @@ on:
       - 'tests/terrain-v21.test.mjs'
       - 'tests/awakening-world-v1.test.mjs'
       - 'tests/awakening-world-logic-hardening-v1.test.mjs'
+      - 'tests/mob-cooldown-authority-handoff-v1.test.mjs'
       - 'tests/awakening-expedition-loop-v1.test.mjs'
       - 'tests/awakening-home-workbench-upgrade-v1.test.mjs'
       - 'tests/awakening-assets-validator.test.mjs'
@@ -38,6 +37,7 @@ on:
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
       - 'tests/v21-loader-retry-idempotency-v1.test.mjs'
+      - 'tests/network-relay-v16-subscribe-ack-timeout.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
   pull_request:
     paths:
@@ -47,9 +47,7 @@ on:
       - 'docs/contracts/HOME_WORKBENCH_UPGRADE_V1.md'
       - 'terrain-v21.js'
       - 'terrain-v21-preview.html'
-      - 'awakening-assets-preview.html'
       - 'docs/contracts/PRODUCTION_BLOCKER_REDRAW_SPEC_V1.md'
-      - 'awakening-scene-preview.html'
       - 'tests/awakening-scene-placement-preview-v1.test.mjs'
       - 'survival-v21.html'
       - 'game-play.js'
@@ -62,6 +60,7 @@ on:
       - 'tests/terrain-v21.test.mjs'
       - 'tests/awakening-world-v1.test.mjs'
       - 'tests/awakening-world-logic-hardening-v1.test.mjs'
+      - 'tests/mob-cooldown-authority-handoff-v1.test.mjs'
       - 'tests/awakening-expedition-loop-v1.test.mjs'
       - 'tests/awakening-home-workbench-upgrade-v1.test.mjs'
       - 'tests/awakening-assets-validator.test.mjs'
@@ -76,6 +75,7 @@ on:
       - 'tests/platform-inventory-v19.test.mjs'
       - 'tests/interaction-v12.test.mjs'
       - 'tests/v21-loader-retry-idempotency-v1.test.mjs'
+      - 'tests/network-relay-v16-subscribe-ack-timeout.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
 
 jobs:
@@ -123,12 +123,16 @@ jobs:
         run: node tests/awakening-world-v1.test.mjs
       - name: Awakening world logic hardening integration
         run: node tests/awakening-world-logic-hardening-v1.test.mjs
+      - name: Mob cooldown authority handoff regression
+        run: node tests/mob-cooldown-authority-handoff-v1.test.mjs
       - name: MIRE MART expedition loop
         run: node tests/awakening-expedition-loop-v1.test.mjs
       - name: HOME workbench expedition payoff
         run: node tests/awakening-home-workbench-upgrade-v1.test.mjs
       - name: V21 boot retry idempotency
         run: node tests/v21-loader-retry-idempotency-v1.test.mjs
+      - name: Relay subscription acknowledgement timeout
+        run: node tests/network-relay-v16-subscribe-ack-timeout.test.mjs
       - name: V21 boot and static preview syntax
         if: ${{ always() }}
         run: |
@@ -145,7 +149,7 @@ jobs:
                   raise SystemExit('V21 module missing: '+required)
           if "const VER='21c'" not in boot:
               raise SystemExit('V21c cache key missing')
-          for name in ['terrain-v21-preview.html','awakening-assets-preview.html']:
+          for name in ['terrain-v21-preview.html']:
               source=Path(name).read_text()
               scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',source)
               if not scripts:
@@ -156,7 +160,6 @@ jobs:
           PY
           node --check /tmp/v21-boot.js
           node --check /tmp/terrain-v21-preview.html.js
-          node --check /tmp/awakening-assets-preview.html.js
       - name: Existing gameplay regression suite
         if: ${{ always() }}
         run: |

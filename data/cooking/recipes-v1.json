@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "station": "campfire",
+  "recipes": [
+    {
+      "id": "reedcarp-stew",
+      "name": "芦影鱼汤",
+      "costs": { "fish_reedcarp": 1, "food": 1 },
+      "result": "meal_river_stew",
+      "description": "温热的鱼汤让呼吸慢下来。"
+    },
+    {
+      "id": "glassmilk-porridge",
+      "name": "玻璃银鱼奶粥",
+      "costs": { "fish_glassminnow": 1, "milk": 1 },
+      "result": "meal_glass_porridge",
+      "description": "稀有鱼肉与牛奶带来稳定的心神。"
+    },
+    {
+      "id": "holloweye-chowder",
+      "name": "空眼浓汤",
+      "costs": { "fish_holloweye": 1, "egg": 1, "food": 1 },
+      "result": "meal_holloweye_chowder",
+      "description": "恢复很多体力，但深渊余味会侵蚀理智。"
+    },
+    {
+      "id": "guide-trail-stew",
+      "name": "巡路暖汤",
+      "costs": { "fish_reedcarp": 1, "food": 1 },
+      "result": "meal_trail_stew",
+      "description": "营地向导记下的巡路做法，能补充体力并稳住理智。",
+      "unlockId": "guide-trail-stew"
+    }
+  ],
+  "meals": {
+    "meal_river_stew": {
+      "name": "芦影鱼汤",
+      "effects": { "hunger": 38, "hp": 8, "sanity": 8 },
+      "buff": { "id": "steady-breath", "name": "平稳呼吸", "durationSeconds": 90, "sanityDrainMultiplier": 0.82 }
+    },
+    "meal_glass_porridge": {
+      "name": "玻璃银鱼奶粥",
+      "effects": { "hunger": 32, "hp": 6, "sanity": 18 },
+      "buff": { "id": "clear-water", "name": "清明", "durationSeconds": 110, "sanityDrainMultiplier": 0.68 }
+    },
+    "meal_holloweye_chowder": {
+      "name": "空眼浓汤",
+      "effects": { "hunger": 52, "hp": 14, "sanity": -14 },
+      "buff": { "id": "abyssal-sight", "name": "深渊视野", "durationSeconds": 55, "sanityDrainMultiplier": 0.55 }
+    },
+    "meal_trail_stew": {
+      "name": "巡路暖汤",
+      "effects": { "hunger": 40, "hp": 9, "sanity": 12 },
+      "buff": { "id": "trail-breath", "name": "巡路呼吸", "durationSeconds": 105, "sanityDrainMultiplier": 0.74 }
+    }
+  }
+}

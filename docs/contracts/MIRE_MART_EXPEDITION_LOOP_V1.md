@@ -1,6 +1,6 @@
 # MIRE MART Expedition Loop V1
 
-Status: session/local-slice gameplay contract
+Status: character-save/local-slice gameplay contract
 
 ## Objective
 
@@ -32,11 +32,12 @@ No new item type or inventory schema is introduced.
 
 ### Expedition service owns
 
-- current session objective phase
+- current per-character objective phase
 - progression between the seven states
 - death/retry handling for the expedition attempt
 - objective text derived from the current phase and existing runtime state
 - one local completion announcement
+- its additive V5 save-extension snapshot
 
 ### Existing systems continue to own
 
@@ -102,19 +103,19 @@ Repeated entry into MIRE MART does not duplicate state, rewards, listeners, time
 
 The service adds no scheduler and no event listener root. It advances when the existing UI update path calls `updateQuest()`.
 
-## Scope / persistence debt
+## Scope / persistence boundary
 
-V1 expedition state is intentionally **session-local**.
+Expedition state persists with the character through `ABYSSAL_SAVE_EXTENSIONS_V1` under `world.expedition-loop.v1`.
 
-It is not written into `abyssal_wake_save_v5`, Relay messages, or any shared-world persistence layer.
+The V5 save format and extension envelope versions stay unchanged. The service stores only its own phase, attempt, history, pending-death, and completion-announcement fields; inventory and player state remain owned by the existing save path.
 
 Consequences:
 
-- page reload can restart the expedition objective state even though existing inventory/save data remains
-- completion does not grant a permanent HOME upgrade
-- multiplayer clients can be on different local objective phases while still sharing the same world/combat/resource state
+- page reload resumes the same character's expedition phase
+- multiplayer clients can still have different local objective phases while sharing world/combat/resource state; Relay remains unchanged
+- the first successful return unlocks the existing Field Rig upgrade path; buying the upgrade remains a separate workbench action with its existing material cost and persistence checks
 
-A future persistent expedition/quest system must define authoritative shared-world semantics before adding permanent HOME upgrades or cross-session completion. V1 must not pretend that problem is solved.
+This is persistent character progress, not server-authoritative shared quest progress. A future shared expedition system must define party/world authority before claiming that co-op members share quest completion.
 
 ## Regression requirements
 
@@ -125,6 +126,8 @@ Before acceptance, verify:
 - repeated MIRE MART entry
 - early return
 - death / respawn
+- page reload during an expedition and after completion
+- save-extension migration from a V5 record with no expedition owner
 - starting with sufficient salvage
 - SafeCamp combat suppression unchanged
 - PC/mobile input unchanged

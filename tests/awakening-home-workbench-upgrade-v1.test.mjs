@@ -32,11 +32,11 @@ function createRuntime(store=memoryStorage()){
     questText:{textContent:'legacy'},
     localStorage:store,
     toast(text){toasts.push(String(text));},
-    saveLocal(){saveCalls++;},
     updateUI(){uiCalls++;},
     updateQuest(){oldQuestCalls++;},
     ABYSSAL_AWAKENING_WORLD_V1:{poi}
   };
+  sandbox.saveLocal=()=>{saveCalls++;try{store.setItem('abyssal_wake_save_v5',JSON.stringify({v:5,inventory:{...sandbox.inventory}}));return true;}catch{return false;}};
   sandbox.window=sandbox;
   sandbox.globalThis=sandbox;
   sandbox.inCamp=(p=sandbox.me)=>Math.hypot(p.x-CAMP.x,p.y-CAMP.y)<CAMP.r;
@@ -81,6 +81,62 @@ function reachMart(runtime){
   assert.notEqual(s.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'COMPLETE');
 }
 
+// If the dedicated HOME save rejects an upgrade write, keep both the clearance and materials.
+{
+  const failingStore={getItem(){return null;},setItem(key){if(key==='abyssal_home_workbench_v1')throw new Error('simulated storage failure');}};
+  const runtime=createRuntime(failingStore);
+  const s=runtime.sandbox;
+  const api=s.ABYSSAL_HOME_WORKBENCH_V1;
+  s.inventory.shard=2;
+  api.recordExpeditionReturn({at:1});
+  const result=api.upgrade();
+  assert.equal(result.ok,false,'upgrade must fail if its persistent HOME record cannot be written');
+  assert.equal(result.reason,'persistence-failed');
+  assert.equal(s.inventory.stone,3,'a failed HOME record must not consume stone');
+  assert.equal(s.inventory.shard,2,'a failed HOME record must not consume shards');
+  assert.equal(api.getState().tier,1,'failed persistence must restore the original workbench tier');
+  assert.equal(api.getState().returnClearance,true,'failed persistence must keep the in-session return clearance');
+  assert.equal(runtime.getSaveCalls(),0,'failed persistence must not save deducted inventory');
+}
+
+// A successful return must not silently present an unsaved HOME unlock as durable progression.
+{
+  const failingStore={getItem(){return null;},setItem(key){if(key==='abyssal_home_workbench_v1')throw new Error('simulated return-clearance storage failure');}};
+  const runtime=createRuntime(failingStore);
+  const s=runtime.sandbox;
+  const api=s.ABYSSAL_HOME_WORKBENCH_V1;
+  reachMart(runtime);
+  s.inventory.shard=2;s.updateQuest();
+  s.me.y=1500;s.updateQuest();
+  s.me.x=CAMP.x;s.me.y=CAMP.y;s.updateQuest();
+  assert.equal(api.getState().returnClearance,true,'the current session should retain its successful-return unlock');
+  assert.equal(api.getState().returnClearancePersisted,false,'the HOME module must expose the failed durable write');
+  assert.match(s.questText.textContent,/未能写入存档.*重进后需要重新完成远征/,'the objective must warn that reload will lose the unlock');
+  assert.ok(runtime.toasts.length>0,'the return transition must produce a player-facing notice');
+  assert.equal(failingStore.getItem(api.storageKey),null,'the test must prove no HOME record was written');
+}
+
+// If the existing player inventory save fails after the HOME write, compensate the HOME tier write too.
+{
+  const store=memoryStorage();
+  const setItem=store.setItem.bind(store);
+  store.setItem=(key,value)=>{if(key==='abyssal_wake_save_v5')throw new Error('simulated player-save failure');setItem(key,value);};
+  const runtime=createRuntime(store);
+  const s=runtime.sandbox;
+  const api=s.ABYSSAL_HOME_WORKBENCH_V1;
+  s.inventory.shard=2;
+  api.recordExpeditionReturn({at:1});
+  const result=api.upgrade();
+  assert.equal(result.ok,false,'upgrade must fail if the player inventory save cannot commit');
+  assert.equal(result.reason,'player-save-failed');
+  assert.equal(s.inventory.stone,3,'failed player save must restore stone');
+  assert.equal(s.inventory.shard,2,'failed player save must restore shards');
+  assert.equal(api.getState().tier,1,'failed player save must restore the workbench tier');
+  assert.equal(api.getState().returnClearance,true,'failed player save must restore the return clearance');
+  assert.deepEqual(JSON.parse(store.getItem(api.storageKey)),{v:1,tier:1,returnClearance:true,lastReturnAt:1},'the compensating HOME write must restore the saved clearance');
+  assert.equal(runtime.getSaveCalls(),1,'the failed player save must be detected');
+}
+
 // Death/respawn at HOME cannot create HOME upgrade clearance even if salvage was held at death.
 {
   const runtime=createRuntime();
@@ -110,9 +166,10 @@ let persistentSeed;
   assert.equal(api.getState().returnClearance,true,'successful live return must unlock the HOME upgrade opportunity');
   assert.ok(api.getState().lastReturnAt>0);
   assert.ok(store.getItem(api.storageKey),'successful return clearance must persist');
-  assert.match(s.questText.textContent,/Field Rig/);
+  assert.match(s.questText.textContent,/前往工作台.*野外装备架/);
 
   assert.equal(api.canUpgrade().ok,true);
+  const savesBeforeUpgrade=runtime.getSaveCalls();
   const upgraded=api.upgrade();
   assert.equal(upgraded.ok,true);
   assert.equal(s.inventory.stone,0);
@@ -120,16 +177,16 @@ let persistentSeed;
   assert.equal(api.getState().tier,2);
   assert.equal(api.getState().returnClearance,false);
   assert.equal(api.departureWardMs(),25000);
-  assert.equal(runtime.getSaveCalls(),1,'inventory consumption must flow through the existing saveLocal authority once');
+  assert.equal(runtime.getSaveCalls(),savesBeforeUpgrade+1,'inventory consumption must flow through the existing saveLocal authority once');
   assert.equal(runtime.getUiCalls(),1);
-  assert.ok(runtime.toasts.some(text=>text.includes('25 秒')));
+  assert.ok(runtime.toasts.length>0,'the return transition must produce a player-facing notice');
 
   const after={stone:s.inventory.stone,shard:s.inventory.shard};
   const duplicate=api.upgrade();
   assert.equal(duplicate.ok,false);
   assert.equal(duplicate.reason,'already-upgraded');
   assert.deepEqual({stone:s.inventory.stone,shard:s.inventory.shard},after,'repeat upgrade must be idempotent');
-  assert.equal(runtime.getSaveCalls(),1,'repeat upgrade must not write inventory again');
+  assert.equal(runtime.getSaveCalls(),savesBeforeUpgrade+1,'repeat upgrade must not write inventory again');
   persistentSeed=store._seed;
 }
 

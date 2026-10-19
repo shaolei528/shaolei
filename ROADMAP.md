@@ -6,7 +6,7 @@ This roadmap is ordered by dependency, not by a promise that later phases are al
 |---|---|---|
 | 0 — Blueprint v2 | Establish product, system and ownership boundaries. | `SYSTEM_BLUEPRINT.md`, `GAME_DESIGN.md` and this roadmap remain factual about current V21. |
 | 1 — High-quality game shell | Make entry, settings, HUD, feedback, accessibility and mobile behavior feel like one product. | Start-to-play flow works; UI does not regress touch/safe-area behavior; no gameplay semantics change without its own task. |
-| 2 — V21 art / visual | Turn the current slice into a coherent modern-ruin / abyss visual language. | Camp, terrain, creatures, lighting and UI follow `ART_BIBLE.md`; pixel clarity and mobile performance are checked. |
+| 2 — V21 art / visual | Turn the current slice into a coherent modern-ruin / abyss visual language and validate the user-approved 3/4 oblique camera target. | A small SafeCamp/OUTSIDE camera prototype proves sprite scale, occlusion, ground readability, pixel clarity and mobile HUD fit before any renderer or production-asset migration. |
 | 3 — Combat feel | Strengthen readable attack impact, enemy intent and recovery without changing authority casually. | Player and enemy feedback are understandable; combat regression and multiplayer checks pass. |
 | 4 — Awakening vertical slice | Deliver one compact HOME → POI → return loop with a visible world change. | A player can prepare, enter one authored dangerous place, fight/salvage, return, improve something and understand the next objective. |
 | 5 — Life + Adventure vertical slice | Make the first 20–30 minutes carry both expedition and home value. | Food/recovery/crafting choices, a practical base improvement and a small exploration decision form one repeatable session. |

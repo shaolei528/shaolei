@@ -2,7 +2,7 @@
 
 Base: unified playtest candidate `97143f80869b071060b5b1a62a8086c901d00775`.
 
-Open `awakening-scene-preview.html?awArtPreview=1` on the local development server. The page uses the actual spatial registration, art adapter, and Awakening world draw hooks. It has no gameplay simulation, relay connection, or player save access. It is an inspection harness, not a substitute for gameplay/mobile/multiplayer QA.
+**Retired:** the standalone `awakening-scene-preview.html` page has been removed so it cannot be mistaken for another game. This contract remains as historical geometry guidance. Use the single root `index.html` route for player-facing checks; use focused tests for geometry until a named art task is selected.
 
 ## Verified observations
 

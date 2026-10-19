@@ -7,7 +7,9 @@
   const GUIDE_V11={x:2325,y:2370};
   const FIRE_V11={x:2400,y:2400};
   const WORKBENCH_V11={x:2195,y:2535};
-  const CHEST_V11={id:'chest:1:1:main',x:2590,y:2540,cooldown:90000};
+  const chestService=window.ABYSSAL_SHARED_CHEST_V1;
+  if(!chestService)throw new Error('Shared chest module must load before UI.');
+  const CHEST_V11=chestService.definition;
   const ZH_ZONES={
     '0:0':'沉没林地','1:0':'黑沼','2:0':'盐蚀遗迹',
     '0:1':'泣水湿地','1:1':'沼林岛','2:1':'苍白泥沼',
@@ -42,6 +44,7 @@
     if(exact[text]) return exact[text];
     let m=text.match(/^Collected (wood|stone|food|shard)$/);if(m)return '获得 '+ITEM_ZH[m[1]];
     m=text.match(/^Recovered (\d+) eldritch shard/);if(m)return '获得 '+m[1]+' 个异质碎片。';
+    m=text.match(/^Safe return recorded · total (\d+)$/);if(m)return '安全返回已记录 · 累计 '+m[1];
     m=text.match(/^(.+) arrived at the world$/);if(m)return m[1]+' 进入了世界';
     m=text.match(/^(.+) went quiet$/);if(m)return m[1]+' 离开了世界';
     m=text.match(/^Entered (.+)$/);if(m)return '进入区域：'+m[1];
@@ -126,7 +129,6 @@
   };
 
   function localizeDynamic(){
-    if(onlineEl)onlineEl.textContent='在线 '+Math.max(1,globalPresenceIds.size);
     if(campBadge&&!campBadge.classList.contains('hidden'))campBadge.textContent='☀ 安全营地';
     if(dayBadgeV11){
       const d=dayBadgeV11.textContent;
@@ -180,8 +182,7 @@
       list.push({type:'guide',d:Math.hypot(me.x-GUIDE_V11.x,me.y-GUIDE_V11.y),text:'【互动】与营地向导交谈'});
       list.push({type:'fire',d:Math.hypot(me.x-FIRE_V11.x,me.y-FIRE_V11.y),text:'【互动】在篝火旁休息'});
       list.push({type:'workbench',d:Math.hypot(me.x-WORKBENCH_V11.x,me.y-WORKBENCH_V11.y),text:'【互动】使用工作台'});
-      const chestLeft=(harvested.get(CHEST_V11.id)||0)-Date.now();
-      list.push({type:'chest',d:Math.hypot(me.x-CHEST_V11.x,me.y-CHEST_V11.y),text:chestLeft>0?`共享宝箱刷新中 · ${Math.ceil(chestLeft/1000)}秒`:'【互动】打开共享宝箱'});
+      list.push(chestService.getTarget(me,harvested));
     }
     const nr=nearestResource();
     if(nr)list.push({type:'resource',d:nr.d,text:`【互动】采集${ITEM_ZH[nr.resource.type]||'资源'}`,resource:nr.resource});
@@ -197,24 +198,11 @@
   }
 
   function openSharedChest(){
-    const until=harvested.get(CHEST_V11.id)||0;
-    if(until>Date.now()){
-      toast(`共享宝箱还要 ${Math.ceil((until-Date.now())/1000)} 秒刷新。`);
-      return;
-    }
-    if(!zoneConnected||!zoneCh){
-      toast('联机同步尚未连接，暂时不能打开共享宝箱。');
-      return;
-    }
-    const next=Date.now()+CHEST_V11.cooldown;
-    harvested.set(CHEST_V11.id,next);
-    zoneCh.send({type:'broadcast',event:'harvest',payload:{zone:currentZone,rid:CHEST_V11.id,until:next}});
-    inventory.food+=1;
-    const gotShard=Math.random()<0.55;
-    if(gotShard)inventory.shard+=1;else inventory.stone+=1;
+    const result=chestService.open({player:me,harvested,inventory,zone:currentZone,connected:zoneConnected,channel:zoneCh});
+    if(!result.ok){toast(result.message||'宝箱暂时无法打开。');return;}
     saveLocal();
     updateUI();
-    toast(gotShard?'打开共享宝箱：获得食物 ×1、异质碎片 ×1。':'打开共享宝箱：获得食物 ×1、石头 ×1。');
+    toast(result.message);
   }
 
   document.addEventListener('click',event=>{

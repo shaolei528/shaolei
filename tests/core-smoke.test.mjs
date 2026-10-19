@@ -24,6 +24,7 @@ assert.ok(relay.includes('if(NET_V9)NET_V9.disposed=true'),'Relay must disable t
 // Survival state: execute the exact active split module with controlled globals.
 const survival={
   console,
+  window:{AW_SUCCESSOR_PREVIEW:false,AW_DEV_QA:false},
   me:{x:0,y:0,hp:50,hunger:50,sanity:50},
   inventory:{lantern:false},
   mobs:[],

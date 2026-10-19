@@ -58,7 +58,7 @@ function recordHurt(before){
   const after=Number(me?.hp);
   if(after<Number(before)){
     kick(3.4,118);
-    emit('abyssal:player-hurt',{hp:Number.isFinite(after)?after:0,delta:Number(before)-after});
+    emit('abyssal:player-hurt',{x:Number(me?.x)||0,y:Number(me?.y)||0,hp:Number.isFinite(after)?after:0,delta:Number(before)-after});
   }
 }
 
@@ -69,7 +69,7 @@ if(typeof attack==='function'){
     const result=baseAttack.apply(this,arguments);
     if(beforeCd<=0&&Number(attackCd)>0&&Number(attackFlash)>beforeFlash){
       let knife=false;try{knife=!!inventory?.knife;}catch{}
-      emit('abyssal:player-swing',{knife});
+      emit('abyssal:player-swing',{x:Number(me?.x)||0,y:Number(me?.y)||0,dir:Number(me?.dir)||0,knife});
     }
     return result;
   };

@@ -4,7 +4,8 @@ on:
   push:
     paths:
       - 'cloudflare/**'
-      - 'survival-v17.html'
+      - 'survival-v21.html'
+      - 'ui-shell.html'
       - 'network-relay-v16.js'
       - 'network-quality-v20.js'
       - 'smooth-motion-v18.js'
@@ -29,7 +30,8 @@ on:
   pull_request:
     paths:
       - 'cloudflare/**'
-      - 'survival-v17.html'
+      - 'survival-v21.html'
+      - 'ui-shell.html'
       - 'network-relay-v16.js'
       - 'network-quality-v20.js'
       - 'smooth-motion-v18.js'
@@ -90,28 +92,28 @@ jobs:
         run: node tests/ready-localization-v9.test.mjs
       - name: Network quality regression test
         run: node tests/network-quality-v20.test.mjs
-      - name: Check V17 boot syntax
+      - name: Check active V21 boot syntax
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
-          text = Path('survival-v17.html').read_text()
+          text = Path('survival-v21.html').read_text()
           match = re.search(r'<script>([\s\S]*?)</script>', text)
           if not match:
-              raise SystemExit('V17 inline boot script not found')
-          Path('/tmp/v17-boot.js').write_text(match.group(1))
+              raise SystemExit('V21 inline boot script not found')
+          Path('/tmp/v21-boot.js').write_text(match.group(1))
           if 'smooth-motion-v18.js' not in text:
-              raise SystemExit('V17 motion module missing')
+              raise SystemExit('V21 motion module missing')
           if 'platform-inventory-v19.js' not in text:
-              raise SystemExit('V17 platform inventory module missing')
+              raise SystemExit('V21 platform inventory module missing')
           if 'interaction-v12.js' not in text:
-              raise SystemExit('V17 interaction module missing')
+              raise SystemExit('V21 interaction module missing')
           if 'content-v9.js' not in text:
-              raise SystemExit('V17 content module missing')
+              raise SystemExit('V21 content module missing')
           if 'network-quality-v20.js' not in text:
-              raise SystemExit('V17 network quality module missing')
-          if "const VER='17h'" not in text:
-              raise SystemExit('V17h cache key missing')
+              raise SystemExit('V21 network quality module missing')
+          if "const VER='21c'" not in text:
+              raise SystemExit('V21 cache key missing')
           PY
           node --check /tmp/v17-boot.js
       - name: Check motion invariants

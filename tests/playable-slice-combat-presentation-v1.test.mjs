@@ -21,8 +21,8 @@ for(const source of [hitSource,weaponSource,feelSource]){
 for(const invariant of [
   'attackCd=inventory.knife?.32:.48',
   'attackFlash=.15',
-  'range:inventory.knife?80:62',
-  'damage:inventory.knife?22:11',
+  'const range=inventory.knife?80:62',
+  'damage:(inventory.knife?22:11)+',
   'if(diff<1.0)'
 ])assert.ok(playerCombat.includes(invariant),`gameplay invariant changed: ${invariant}`);
 assert.ok(playerCombat.includes("attackBtn.addEventListener('pointerdown',()=>attack())"),'mobile attack must still dynamically resolve the current attack wrapper');
@@ -35,7 +35,7 @@ assert.ok(perfSource.includes('location.search'),'normal URL dev instrumentation
     console,window:null,SESSION_ID:'self',inventory:{knife:true},attackFlash:.15,
     sx:x=>x,sy:y=>y,inCamp(){return false;},
     directionRow(){return 2;},onAttack(){},drawPlayer(){},
-    ctx:{imageSmoothingEnabled:true,globalAlpha:1,fillStyle:'',save(){},restore(){},fillRect(){}}
+    ctx:{imageSmoothingEnabled:true,globalAlpha:1,fillStyle:'',font:'',textAlign:'',textBaseline:'',save(){},restore(){},fillRect(){},fillText(){}}
   };
   sandbox.window=sandbox;vm.createContext(sandbox);vm.runInContext(weaponSource,sandbox,{filename:'weapon-presentation-v1.js'});
   const api=sandbox.ABYSSAL_WEAPON_PRESENTATION_V1;
@@ -106,7 +106,7 @@ assert.ok(perfSource.includes('location.search'),'normal URL dev instrumentation
     ctx:{
       imageSmoothingEnabled:true,globalAlpha:1,fillStyle:'',strokeStyle:'',lineWidth:1,
       save(){},restore(){},beginPath(){},stroke(){},arc(){},
-      fillRect(){fillRects++;},strokeRect(){strokeRects++;}
+      fillRect(){fillRects++;},strokeRect(){strokeRects++;},fillText(){}
     }
   };
   sandbox.window=sandbox;sandbox.globalThis=sandbox;
@@ -120,7 +120,7 @@ assert.ok(perfSource.includes('location.search'),'normal URL dev instrumentation
   assert.ok(sandbox.ABYSSAL_HIT_FEEDBACK.impacts.some(p=>p.killed),'lethal impacts need a distinct presentation pulse');
   sandbox.drawMobs(360,600);
   assert.ok(fillRects>0,'confirmed hits must render impact pixels beyond the swing-only presentation');
-  now+=500;sandbox.drawMobs(360,600);
+  now+=521;sandbox.drawMobs(360,600);
   assert.equal(sandbox.ABYSSAL_HIT_FEEDBACK.sparks.length,0,'expired hit sparks must be released');
   assert.equal(sandbox.ABYSSAL_HIT_FEEDBACK.impacts.length,0,'expired impact pulses must be released');
 

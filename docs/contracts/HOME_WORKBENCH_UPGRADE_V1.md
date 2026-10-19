@@ -43,6 +43,8 @@ Upgrade rules:
 - consumes the resources exactly once
 - is idempotent after completion
 - persists independently from the existing `abyssal_wake_save_v5` inventory schema
+- if either the dedicated HOME record or the existing player inventory save rejects its write, the upgrade must fail and restore the in-session costs/tier; the HOME record is compensated if the player save fails
+- if the successful-return clearance cannot be persisted, retain it for the current session but expose the failed-save state and warn the player in the return feedback/objective; do not imply it will survive a reload
 
 ## Functional payoff
 
@@ -111,6 +113,7 @@ Acceptance requires:
 - successful return records clearance once
 - upgrade requires Safe Camp
 - upgrade consumes exactly 3 stone + 2 shard
+- rejected HOME or player-save writes restore the costs and leave/revert the upgrade tier
 - repeated upgrade attempts do not consume more resources
 - tier persists across reload
 - departure ward remains 15 seconds before upgrade

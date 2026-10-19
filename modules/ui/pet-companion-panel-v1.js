@@ -1,0 +1,25 @@
+(()=>{
+  'use strict';
+  if(globalThis.ABYSSAL_PET_PANEL_V1?.version===1)return;
+  const root=document.getElementById('game');if(!root)return;
+  let panel=null,openState=false,refreshId=0;
+  function ensure(){
+    if(panel)return panel;
+    const style=document.createElement('style');style.id='petPanelV1Style';style.textContent=`#petPanelV1{position:absolute;inset:112px 10px auto;z-index:93;max-height:calc(100% - 132px);overflow:auto;border:2px solid #849d8e;background:#101a17f8;color:#edf3ef;box-shadow:0 18px 48px #000c}#petPanelV1[hidden]{display:none!important}.pet-v1-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #46574f;background:#172721}.pet-v1-title{font:950 12px ui-monospace,monospace;letter-spacing:.08em}.pet-v1-close{width:31px;height:30px;border:1px solid #72877c;background:#21362d;color:#fff;font-size:18px}.pet-v1-body{display:grid;gap:9px;padding:12px}.pet-v1-summary{padding:9px;border:1px solid #3b5046;background:#14221c;font:800 9px/1.65 ui-monospace,monospace;color:#d7e2da}.pet-v1-actions{display:flex;gap:7px;flex-wrap:wrap}.pet-v1-button{min-height:34px;padding:7px 10px;border:1px solid #91a99a;border-radius:3px;background:#28503d;color:#fff;font:900 8px ui-monospace,monospace}.pet-v1-button:disabled{border-color:#46534d;background:#252e2a;color:#89968f}.pet-v1-name-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}.pet-v1-name{min-height:34px;padding:6px 8px;border:1px solid #536b5d;background:#0b1411;color:#fff;font:800 9px ui-monospace,monospace}`;document.head.appendChild(style);
+    panel=document.createElement('section');panel.id='petPanelV1';panel.hidden=true;panel.innerHTML='<header class="pet-v1-head"><div><div class="pet-v1-title">同行伙伴</div><div class="pet-v1-summary">怪物掉蛋 · 回营孵化 · 同行协助战斗与采集</div></div><button class="pet-v1-close" type="button" aria-label="关闭伙伴面板">×</button></header><div class="pet-v1-body"><div class="pet-v1-summary" data-summary></div><div class="pet-v1-name-row"><input class="pet-v1-name" maxlength="14" aria-label="伙伴名字" placeholder="给伙伴起个名字"><button class="pet-v1-button" data-action="rename">命名</button></div><div class="pet-v1-actions"><button class="pet-v1-button" data-action="incubate">放入伙伴蛋</button><button class="pet-v1-button" data-action="follow">跟随</button><button class="pet-v1-button" data-action="wait">留守</button></div></div>';
+    panel.querySelector('.pet-v1-close').addEventListener('click',close);panel.addEventListener('pointerdown',event=>event.stopPropagation());
+    panel.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(!button)return;const pets=globalThis.ABYSSAL_PETS_V1,action=button.dataset.action;let result;if(action==='incubate')result=pets?.beginIncubation?.();else if(action==='rename')result=pets?.rename?.(panel.querySelector('.pet-v1-name')?.value);else if(action==='follow')result=pets?.command?.('FOLLOW');else if(action==='wait')result=pets?.command?.('WAIT');if(result?.ok){if(action==='rename')panel.querySelector('.pet-v1-name').value='';render();try{toast(action==='incubate'?'伙伴蛋已放入孵化器。':'伙伴状态已更新。')}catch{}}else if(result?.reason==='materials-required')try{toast('背包里没有深渊伙伴蛋。')}catch{}else if(result?.reason==='save-failed')try{toast('伙伴状态没有保存，操作已恢复。')}catch{}else if(result?.reason==='station-required')try{toast('需要靠近营地孵化器。')}catch{}else render();});
+    root.appendChild(panel);return panel;
+  }
+  function render(){
+    if(!panel)return;const state=globalThis.ABYSSAL_PETS_V1?.getSnapshot?.()||{},summary=panel.querySelector('[data-summary]'),eggCount=Math.max(0,Math.floor(Number(inventory?.companion_egg)||0));
+    if(state.incubation)summary.textContent=`伙伴蛋正在孵化，还需 ${state.incubation.secondsLeft} 秒。留在营地做些准备吧。`;
+    else if(state.companion){const pet=state.companion;summary.textContent=`${pet.evolved?'✦ ':''}${pet.name} · ${pet.command==='FOLLOW'?'正在跟随':'正在营地留守'} · 成长 ${pet.xp}${pet.evolved?' · 已进阶':` · 再获 ${state.xpToEvolve} 次协作经验进阶`}`;}
+    else summary.textContent=`还没有同行伙伴。击败怪物收集蛋（${state.killsObserved||0} 次遭遇），回营地孵化。背包伙伴蛋 ×${eggCount}。`;
+    for(const button of panel.querySelectorAll('[data-action]')){const action=button.dataset.action;button.hidden=(action==='incubate'&&!!state.companion)||(action!=='incubate'&&!state.companion);if(action==='incubate')button.disabled=!eggCount||!!state.incubation;}
+    const input=panel.querySelector('.pet-v1-name');if(input&&!input.dataset.bound){input.dataset.bound='1';input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();panel.querySelector('[data-action="rename"]').click();}});}
+  }
+  function open(){const pets=globalThis.ABYSSAL_PETS_V1;if(!pets?.getTarget?.(typeof me!=='undefined'?me:null)){try{toast('需要靠近营地孵化器才能管理伙伴。')}catch{}return false;}ensure();render();panel.hidden=false;openState=true;clearInterval(refreshId);refreshId=setInterval(render,600);return true;}
+  function close(){openState=false;clearInterval(refreshId);refreshId=0;if(panel)panel.hidden=true;}
+  globalThis.ABYSSAL_PET_PANEL_V1=Object.freeze({version:1,open,close,render,visible:()=>openState});
+})();

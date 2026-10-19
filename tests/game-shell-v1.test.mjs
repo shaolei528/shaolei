@@ -1,8 +1,9 @@
 import fs from 'node:fs';
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const boot=fs.readFileSync(new URL('../survival-v21.html',import.meta.url),'utf8');
-const template=fs.readFileSync(new URL('../survival-v7.html',import.meta.url),'utf8');
+const template=fs.readFileSync(new URL('../ui-shell.html',import.meta.url),'utf8');
 const shell=fs.readFileSync(new URL('../modules/ui/game-shell-v1.js',import.meta.url),'utf8');
 const platform=fs.readFileSync(new URL('../modules/input/platform-inventory-v19.js',import.meta.url),'utf8');
 
@@ -22,12 +23,31 @@ for(const required of[
   "SETTINGS_KEY='abyssal_wake_settings_v1'",
   'localStorage.setItem(SETTINGS_KEY',
   'blocksGameInput(event)',
+  'event.defaultPrevented',
   '多人游戏不会因打开菜单暂停',
   'location.reload()',
   'stopGameInput()',
   'applyMenuCopy()',
+  "window.AW_SUCCESSOR_VIEW==='34'",
+  '3/4 斜俯视 · 海岸营地 · 探索后归来',
   'window.ABYSSAL_SHELL_V1=API'
 ]) assert.ok(shell.includes(required),`game shell invariant missing: ${required}`);
+
+const applyMenuCopy=shell.match(/function applyMenuCopy\(\)\{[\s\S]*?\n  \}/)?.[0];
+assert.ok(applyMenuCopy,'player-facing menu copy hook must remain a named UI-owned function');
+function renderMenuCopy(route){
+  const nodes={
+    '.brand':{innerHTML:''},
+    '.subtitle':{innerHTML:''},
+    '.gate .note':{textContent:''},
+    '.shell-status':{textContent:'V21 · 像素地表 · SafeCamp · Cloudflare WebSocket Relay'}
+  };
+  const context={started:false,window:{AW_SUCCESSOR_VIEW:route},document:{querySelector:selector=>nodes[selector]||null}};
+  vm.runInNewContext(`${applyMenuCopy};applyMenuCopy();`,context);
+  return nodes['.shell-status'].textContent;
+}
+assert.equal(renderMenuCopy(undefined),'V21 · 像素地表 · SafeCamp · Cloudflare WebSocket Relay','legacy UI copy remains unchanged outside the successor view');
+assert.equal(renderMenuCopy('34'),'3/4 斜俯视 · 海岸营地 · 探索后归来','the successor menu hides internal V21 and provider labels');
 
 assert.ok(platform.includes('window.ABYSSAL_SHELL_V1?.blocksGameInput?.(event)'),'desktop controls must honor shell input isolation');
 assert.ok(platform.includes('API.stopMovement=stopMovement'),'shell must be able to release desktop movement safely');

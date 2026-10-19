@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 const source=fs.readFileSync(new URL('../platform-inventory-v19.js',import.meta.url),'utf8');
 const interactionSource=fs.readFileSync(new URL('../interaction-v12.js',import.meta.url),'utf8');
-const boot=fs.readFileSync(new URL('../survival-v17.html',import.meta.url),'utf8');
+const boot=fs.readFileSync(new URL('../survival-v21.html',import.meta.url),'utf8');
 const regression=fs.readFileSync(new URL('../regression-v14.js',import.meta.url),'utf8');
 
 const documentStub={
@@ -24,6 +24,8 @@ vm.runInContext(source,sandbox,{filename:'platform-inventory-v19.js'});
 const api=sandbox.ABYSSAL_PLATFORM_V19;
 assert.ok(api,'platform API must be exposed');
 assert.equal(api.version,19,'platform API version mismatch');
+assert.match(source,/移动转向\s*·\s*空格朝面向攻击/,'desktop controls must explain that movement sets the melee facing');
+assert.match(source,/移动转向\s*·\s*空格朝面向攻击/,'desktop hint must explain movement-facing melee attacks');
 
 function set(...codes){return new Set(codes);}
 function blockFrom(text,startToken,endToken){
@@ -57,11 +59,11 @@ assert.equal(api.isTypingTarget({tagName:'DIV'}),false,'normal game surface must
 {
   const bag=api.inventorySnapshot({wood:4.8,stone:-2,food:'3',shard:null,knife:1,lantern:0});
   assert.deepEqual(JSON.parse(JSON.stringify(bag)),{
-    wood:4,stone:0,food:3,shard:0,knife:true,lantern:false
+    wood:4,stone:0,food:3,seed:0,shard:0,egg:0,milk:0,wool:0,fish_reedcarp:0,fish_glassminnow:0,fish_holloweye:0,companion_egg:0,meal_river_stew:0,meal_glass_porridge:0,meal_holloweye_chowder:0,meal_trail_stew:0,knife:true,lantern:false
   },'inventory snapshot must preserve existing item semantics safely');
   assert.equal(
     api.inventorySignature(bag),
-    'wood:4|stone:0|food:3|shard:0|knife:1|lantern:0',
+    'wood:4|stone:0|food:3|seed:0|shard:0|egg:0|milk:0|wool:0|fish_reedcarp:0|fish_glassminnow:0|fish_holloweye:0|companion_egg:0|meal_river_stew:0|meal_glass_porridge:0|meal_holloweye_chowder:0|meal_trail_stew:0|knife:1|lantern:0',
     'inventory signature must change only with meaningful inventory state'
   );
 }
@@ -77,6 +79,7 @@ assert.equal(api.detectDesktop({
   hover:false,
   navigatorLike:{platform:'Win32',userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',maxTouchPoints:0}
 }),true,'Windows keyboard platform must not depend on viewport width');
+assert.match(source,/html\.abyssal-desktop-v19 \.top\{grid-template-columns:46px minmax\(0,1fr\) minmax\(112px,\.85fr\)!important/,'narrow desktop HUD must shrink network metrics instead of clipping them');
 
 assert.equal(api.detectDesktop({
   finePointer:false,
@@ -185,6 +188,7 @@ function runIntegratedKeyE(target){
     zoneConnected:false,
     zoneCh:null,
     currentZone:'1:1',
+    emitGameplayEvent(){},
     saveLocal(){},
     updateUI(){},
     toast(){},
@@ -212,10 +216,10 @@ function runIntegratedKeyE(target){
   assert.equal(event.prevented,true,'integrated PC KeyE Guide action must prevent browser default behavior');
 }
 
-const interactionIndex=boot.indexOf("'interaction-v12.js'");
-const platformIndex=boot.indexOf("'platform-inventory-v19.js'");
-const relayIndex=boot.indexOf("'network-relay-v16.js'");
-assert.ok(interactionIndex>=0,'interaction module missing from V17 boot');
+const interactionIndex=boot.indexOf("'modules/input/interaction-v12.js'");
+const platformIndex=boot.indexOf("'modules/input/platform-inventory-v19.js'");
+const relayIndex=boot.indexOf("'modules/network/network-relay-v16.js'");
+assert.ok(interactionIndex>=0,'interaction module missing from V21 boot');
 assert.ok(platformIndex>interactionIndex,'platform module must load after interaction controls exist');
 assert.ok(relayIndex>platformIndex,'platform module should load before relay wraps updateUI');
 

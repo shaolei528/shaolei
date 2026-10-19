@@ -9,8 +9,8 @@ const playerCombat=fs.readFileSync(new URL('../modules/combat/player-combat.js',
 for(const forbidden of ['zoneCh.send','new WebSocket(','RELAY_URL','STORAGE_KEY','localStorage','setInterval(','requestAnimationFrame(','ctx.rotate(','ctx.arc(']){
   assert.equal(source.includes(forbidden),false,`weapon presentation must stay local/presentation-only: ${forbidden}`);
 }
-assert.ok(source.includes('ctx.fillRect('),'knife must be rendered from crisp pixel blocks');
-assert.ok(source.includes('ctx.imageSmoothingEnabled=false'),'weapon renderer must explicitly keep pixel smoothing disabled');
+assert.ok(source.includes('target.fillRect('),'knife must be rendered from crisp pixel blocks into the active renderer');
+assert.ok(source.includes('target.imageSmoothingEnabled=false'),'weapon renderer must explicitly keep pixel smoothing disabled');
 assert.ok(source.includes('attackProgress(flash'),'weapon swing must derive from existing attack flash state');
 assert.equal(source.includes('let attack'),false,'weapon presentation must not create an independent attack timer');
 assert.equal(/steel/i.test(source),false,'Bone Knife renderer must not describe or palette the weapon as steel');
@@ -18,8 +18,8 @@ assert.ok(source.includes("weaponName:'Bone Knife'"),'presentation identity must
 
 assert.ok(playerCombat.includes("attackBtn.addEventListener('pointerdown',()=>attack())"),'mobile attack must dynamically resolve the current attack wrapper');
 assert.ok(playerCombat.includes('attackCd=inventory.knife?.32:.48'),'attack cooldown must remain unchanged');
-assert.ok(playerCombat.includes('range:inventory.knife?80:62'),'attack range must remain unchanged');
-assert.ok(playerCombat.includes('damage:inventory.knife?22:11'),'attack damage must remain unchanged');
+assert.ok(playerCombat.includes('const range=inventory.knife?80:62'),'attack range must remain unchanged');
+assert.ok(playerCombat.includes('damage:(inventory.knife?22:11)'),'attack damage must remain unchanged');
 assert.ok(playerCombat.includes("if(inCamp()){toast('Weapons stay lowered inside Safe Camp.');return}"),'Safe Camp attack restriction must remain unchanged');
 
 const hitIndex=boot.indexOf("'modules/combat/hit-feedback.js'");
@@ -63,6 +63,13 @@ assert.equal(api.version,1,'weapon presentation API version mismatch');
 assert.equal(api.weaponName,'Bone Knife','weapon presentation name must match crafting terminology');
 assert.equal(api.classifyAttackWeapon({range:80,damage:22}),'knife','existing knife attack payload must classify as knife');
 assert.equal(api.classifyAttackWeapon({range:62,damage:11}),'unarmed','existing unarmed attack payload must stay unarmed');
+assert.equal(typeof api.drawBoneKnife,'function','weapon presentation must expose its pixel knife draw routine to camera-specific renderers');
+{
+  const targetRects=[],target={imageSmoothingEnabled:true,globalAlpha:1,save(){},restore(){},fillRect(...args){targetRects.push(args)}};
+  assert.equal(api.drawBoneKnife({x:40,y:50,angle:0,attacking:false,emphasis:0},1,target),true,'camera-specific renderer should be able to draw the shared knife presentation');
+  assert.ok(targetRects.length>=20,'shared weapon draw routine must produce the complete pixel knife on the supplied context');
+  assert.equal(target.imageSmoothingEnabled,false,'shared weapon draw routine must disable smoothing on the supplied canvas');
+}
 
 assert.equal(api.attackProgress(.15),0,'fresh attack flash must start at progress 0');
 assert.ok(api.attackProgress(.075)>.49&&api.attackProgress(.075)<.51,'half flash duration must map to half swing progress');

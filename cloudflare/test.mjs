@@ -55,9 +55,23 @@ if (!attack) throw new Error('attack relay failed');
 if (attack.from!=='a' || attack.payload.id!=='a' || attack.payload.name!=='Alice' || attack.payload.zone!=='1:1') throw new Error('attack identity/zone spoof was not rejected');
 if (attack.payload.range!==62 || attack.payload.damage!==11) throw new Error('attack canonicalization damaged gameplay fields');
 
+const hitCooldownUntil=Date.now()+900;
+await send(a,{type:'broadcast',channel:ZONE,event:'mob_hit',payload:{target:'a',damage:4,sanity:1,kind:'crawler',mobId:'m-zone-test',hitCdUntil:hitCooldownUntil}});
+const mobHit = b.sent.filter(x=>x.type==='broadcast'&&x.channel===ZONE&&x.event==='mob_hit').at(-1);
+if (!mobHit || mobHit.payload?.target!=='a' || mobHit.payload?.mobId!=='m-zone-test' || mobHit.payload?.hitCdUntil!==hitCooldownUntil) throw new Error('mob cooldown state was not relayed intact');
+if (a.sent.some(x=>x.type==='broadcast'&&x.channel===ZONE&&x.event==='mob_hit')) throw new Error('mob_hit was echoed to its sender');
+
 await send(a,{type:'broadcast',channel:ZONE,event:'custom_probe',payload:{id:'legacy-id',value:7}});
 const custom = b.sent.filter(x=>x.type==='broadcast'&&x.event==='custom_probe').at(-1);
 if (!custom || custom.payload?.id!=='legacy-id' || custom.payload?.value!==7) throw new Error('unknown event payload compatibility was broken');
+
+const campWorldPayload={version:1,domain:'farm',zone:'1:1',sessionId:'a',epoch:'worker-test-epoch',seq:1,state:{version:1,plants:[]}};
+await send(a,{type:'broadcast',channel:ZONE,event:'camp_world_v1',payload:campWorldPayload});
+const campWorld=b.sent.filter(x=>x.type==='broadcast'&&x.channel===ZONE&&x.event==='camp_world_v1').at(-1);
+if (!campWorld || campWorld.from!=='a' || campWorld.payload?.sessionId!=='a' || campWorld.payload?.domain!=='farm') throw new Error('camp world snapshot relay failed');
+await send(a,{type:'broadcast',channel:ZONE,event:'camp_world_request_v1',payload:{version:1,zone:'1:1',sessionId:'a'}});
+const campWorldRequest=b.sent.filter(x=>x.type==='broadcast'&&x.channel===ZONE&&x.event==='camp_world_request_v1').at(-1);
+if (!campWorldRequest || campWorldRequest.from!=='a' || campWorldRequest.payload?.sessionId!=='a') throw new Error('camp world join request relay failed');
 
 await send(a,{type:'ping',id:'p1'});
 if (!a.sent.some(x=>x.type==='pong'&&x.id==='p1')) throw new Error('ping failed');

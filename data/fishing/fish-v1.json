@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "ponds": [
+    { "id": "camp-pool", "name": "营地回水池", "waterBodyId": "camp-pool" }
+  ],
+  "cast": {
+    "waitMinMs": 1800,
+    "waitMaxMs": 4200,
+    "biteWindowMs": 3600
+  },
+  "fish": [
+    { "id": "reedcarp", "name": "芦影鲫", "item": "fish_reedcarp", "weight": 62, "food": 10, "sanity": 1 },
+    { "id": "glassminnow", "name": "玻璃银鱼", "item": "fish_glassminnow", "weight": 31, "food": 8, "sanity": 5 },
+    { "id": "holloweye", "name": "空眼鱼", "item": "fish_holloweye", "weight": 7, "food": 16, "sanity": -8 }
+  ]
+}

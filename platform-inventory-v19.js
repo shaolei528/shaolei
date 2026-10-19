@@ -17,12 +17,25 @@ if(existingPlatform?.bound){
 */
 
 const RESOURCE_ITEMS=['wood','stone','food','shard'];
+const STACK_ITEMS=[...RESOURCE_ITEMS,'seed','egg','milk','wool','fish_reedcarp','fish_glassminnow','fish_holloweye','companion_egg','meal_river_stew','meal_glass_porridge','meal_holloweye_chowder','meal_trail_stew'];
 const ITEM_META={
   wood:{name:'木材',desc:'基础制作材料',sprite:0},
   stone:{name:'石头',desc:'制作武器与工具',sprite:1},
-  food:{name:'食物',desc:'用于恢复饥饿',sprite:2},
+  food:{name:'口粮',desc:'可供自己进食，也能喂养农场动物',sprite:2},
+  seed:{name:'盐风叶菜种子',desc:'播种在营地菜畦，成熟后补充口粮',glyph:'✿'},
   shard:{name:'异质碎片',desc:'带有冷光的稀有材料',sprite:3},
-  knife:{name:'骨刃',desc:'近战武器',glyph:'†'},
+  egg:{name:'鸡蛋',desc:'可烹饪的农场产物',glyph:'◡'},
+  milk:{name:'牛奶',desc:'可烹饪的农场产物',glyph:'◒'},
+  wool:{name:'羊毛',desc:'可制作布料的农场产物',glyph:'〰'},
+  fish_reedcarp:{name:'芦影鲫',desc:'营地回水池钓获，可烹饪',glyph:'≋'},
+  fish_glassminnow:{name:'玻璃银鱼',desc:'稀有钓获，能稳定心神',glyph:'≈'},
+  fish_holloweye:{name:'空眼鱼',desc:'深渊变异鱼，带有强烈风险',glyph:'◉'},
+  companion_egg:{name:'深渊伙伴蛋',desc:'怪物稀有掉落，可带回营地孵化同行伙伴',glyph:'◌'},
+  meal_river_stew:{name:'芦影鱼汤',desc:'恢复生命、饱食与理智，并短暂减缓理智流失',glyph:'♨'},
+  meal_glass_porridge:{name:'玻璃银鱼奶粥',desc:'恢复理智，并获得较强的短时安神效果',glyph:'♨'},
+  meal_holloweye_chowder:{name:'空眼浓汤',desc:'大幅恢复体力，但会损伤理智并短暂减缓理智流失',glyph:'♨'},
+  meal_trail_stew:{name:'巡路暖汤',desc:'向导记下的暖身料理，补充理智并减缓理智消耗',glyph:'♨'},
+  knife:{name:'骨刃',desc:'近战武器 · 砍木只需两次',glyph:'†'},
   lantern:{name:'提灯',desc:'降低黑暗中的理智消耗',glyph:'◈'}
 };
 
@@ -40,7 +53,7 @@ function isTypingTarget(target){
 }
 function inventorySnapshot(source){
   const src=source||{};
-  return Object.fromEntries(Object.keys(ITEM_META).map(id=>[id,id==='knife'||id==='lantern'?!!src[id]:Math.max(0,Math.floor(Number(src[id])||0))]));
+  return Object.fromEntries(Object.keys(ITEM_META).map(id=>[id,['knife','lantern'].includes(id)?!!src[id]:Math.max(0,Math.floor(Number(src[id])||0))]));
 }
 function inventorySignature(snapshot){
   const src=snapshot||{};
@@ -99,12 +112,13 @@ function addStyles(){
     .v19-item-icon.gear{font:950 23px Georgia,serif;color:#e6d8a3;text-shadow:0 2px #000}
     .v19-item-name{display:flex;align-items:baseline;justify-content:space-between;gap:6px;font:900 9px ui-monospace,monospace}.v19-item-count{color:#f1d98e;font-size:11px}
     .v19-item-desc{margin-top:4px;color:#9fb3aa;font:600 7px/1.45 ui-monospace,monospace}.v19-item-state{margin-top:4px;color:#a9dfb4;font:800 7px ui-monospace,monospace}
+    .v19-item-use{margin-top:6px;min-height:28px;padding:4px 9px;border:1px solid #91a88c;border-radius:4px;background:#304a36;color:#f4f1d8;font:800 8px ui-monospace,monospace;touch-action:manipulation}.v19-item-use:disabled{opacity:.45;filter:saturate(.35)}
     .v19-bag-foot{padding:0 10px 11px;color:#91a59c;font:600 7px/1.5 ui-monospace,monospace;text-align:center}
     #desktopControlsV19{display:none;position:absolute;left:50%;bottom:60px;transform:translateX(-50%);z-index:13;padding:6px 9px;border:1px solid #465f55;background:#0a1714d9;color:#b7c9c1;font:700 7px ui-monospace,monospace;white-space:nowrap;pointer-events:none}
     @media(max-height:700px){#inventoryToggleV19{bottom:145px}}
     html.abyssal-desktop-v19 .app{width:100vw!important;max-width:1100px!important;height:100svh!important}
     html.abyssal-desktop-v19 .top{grid-template-columns:56px minmax(250px,430px) minmax(220px,1fr);padding-left:12px;padding-right:12px}
-    html.abyssal-desktop-v19 .joystick,html.abyssal-desktop-v19 .actions{display:none!important}
+    html.abyssal-desktop-v19 .joystick,html.abyssal-desktop-v19 .actions,html.abyssal-desktop-v19 .successor-pad{display:none!important}
     html.abyssal-desktop-v19 .inventory{bottom:12px!important}
     html.abyssal-desktop-v19 .chat-toggle,html.abyssal-desktop-v19 .map-toggle{bottom:12px!important}
     html.abyssal-desktop-v19 .chat-toggle{left:12px!important}html.abyssal-desktop-v19 .map-toggle{right:12px!important}
@@ -114,7 +128,7 @@ function addStyles(){
     html.abyssal-desktop-v19 .v19-bag-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:12px}
     html.abyssal-desktop-v19 .v19-item{min-height:88px}
     html.abyssal-desktop-v19 .quest{width:190px}html.abyssal-desktop-v19 .players{width:160px}
-    @media(max-width:680px){html.abyssal-desktop-v19 .quest{width:150px}html.abyssal-desktop-v19 .players{width:130px}html.abyssal-desktop-v19 #desktopControlsV19{font-size:6px}}
+    @media(max-width:680px){html.abyssal-desktop-v19 .top{grid-template-columns:46px minmax(0,1fr) minmax(112px,.85fr)!important;padding-left:8px;padding-right:8px}html.abyssal-desktop-v19 .bars,html.abyssal-desktop-v19 .netgrid{min-width:0}html.abyssal-desktop-v19 .bar{grid-template-columns:24px minmax(0,1fr) 24px;gap:3px}html.abyssal-desktop-v19 .netgrid{grid-template-columns:repeat(2,minmax(0,1fr))}html.abyssal-desktop-v19 .quest{width:150px}html.abyssal-desktop-v19 .players{width:130px}html.abyssal-desktop-v19 #desktopControlsV19{font-size:6px}}
   `;
   document.head.appendChild(style);
 }
@@ -148,12 +162,18 @@ function makeInventory(){
   if(!hint){
     hint=document.createElement('div');
     hint.id='desktopControlsV19';
-    hint.textContent='WASD / 方向键 移动 · Shift 冲刺 · 空格 攻击 · E 互动 · B / I 背包';
+    hint.textContent='WASD / 方向键 移动转向 · 空格朝面向攻击 · Shift 冲刺 · E 互动 · B / I 背包';
     root.appendChild(hint);
   }
   toggle.setAttribute('aria-expanded','false');
   toggle.addEventListener('click',()=>setPanelOpen(panel.classList.contains('hidden')));
   panel.querySelector('.v19-bag-close')?.addEventListener('click',()=>setPanelOpen(false));
+  panel.querySelector('.v19-bag-grid')?.addEventListener('click',event=>{
+    const button=event.target?.closest?.('[data-inventory-use="food"]');if(!button)return;
+    const result=globalThis.ABYSSAL_SURVIVAL_NEEDS_V1?.eatFieldMeal?.()||{ok:false,reason:'survival-unavailable'};
+    if(result.ok){try{toast(`野外口粮已食用 · 饱食 +${result.hungerGained} · 生命 +${result.hpGained}`)}catch{};try{updateUI()}catch{};refreshInventory(true);return;}
+    const message=result.reason==='materials-required'?'至少需要 2 份口粮。':result.reason==='no-need'?'状态良好，不需要消耗口粮。':result.reason==='save-failed'?'进食未保存，口粮和状态已恢复。':'现在无法进食。';try{toast(message)}catch{};refreshInventory(true);
+  });
 }
 
 function stopMovement(){
@@ -191,11 +211,14 @@ function refreshInventory(force=false){
     const info=document.createElement('div');
     const title=document.createElement('div');title.className='v19-item-name';
     const name=document.createElement('span');name.textContent=meta.name;
-    const count=document.createElement('strong');count.className='v19-item-count';count.textContent=RESOURCE_ITEMS.includes(id)?`×${snapshot[id]}`:(snapshot[id]?'已装备':'未制作');
+    const count=document.createElement('strong');count.className='v19-item-count';count.textContent=STACK_ITEMS.includes(id)?`×${snapshot[id]}`:(snapshot[id]?'已装备':'未制作');
     title.append(name,count);
     const desc=document.createElement('div');desc.className='v19-item-desc';desc.textContent=meta.desc;
     info.append(title,desc);
-    if(!RESOURCE_ITEMS.includes(id)){
+    if(id==='food'){
+      const use=document.createElement('button');use.type='button';use.className='v19-item-use';use.dataset.inventoryUse='food';use.textContent='食用 2 份';use.disabled=snapshot.food<2;use.setAttribute('aria-label','食用两份口粮，恢复饱食和生命');info.appendChild(use);
+    }
+    if(!STACK_ITEMS.includes(id)){
       const state=document.createElement('div');state.className='v19-item-state';state.textContent=snapshot[id]?'当前生效':'可在工作台制作';info.appendChild(state);
     }
     card.append(icon,info);grid.appendChild(card);
@@ -212,7 +235,13 @@ function applyKeyboardMovement(){
 }
 function triggerDash(){try{if(started&&!dead&&dashCd<=0){dashQueued=true;dashCd=1.35;}}catch{}}
 function triggerAttack(){try{attack();}catch{}}
+let activeInteractionKeyboardEvent=null;
 function triggerInteract(){
+  try{
+    const intent=new CustomEvent('abyssal:interaction-intent',{detail:{source:'keyboard',keyboardEvent:activeInteractionKeyboardEvent},cancelable:true});
+    document.dispatchEvent(intent);
+    if(intent.defaultPrevented)return true;
+  }catch{}
   try{return window.ABYSSAL_INTERACTION_V12?.triggerContextInteraction?.();}catch{}
 }
 function movementCode(code){return ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].includes(code);}
@@ -229,7 +258,7 @@ function onKeyDown(event){
   if(API.panelOpen)return;
   if((event.code==='ShiftLeft'||event.code==='ShiftRight')&&!event.repeat){event.preventDefault();triggerDash();return;}
   if(event.code==='Space'&&!event.repeat){event.preventDefault();triggerAttack();return;}
-  if(event.code==='KeyE'&&!event.repeat){event.preventDefault();triggerInteract();}
+  if(event.code==='KeyE'&&!event.repeat){event.preventDefault();activeInteractionKeyboardEvent=event;try{triggerInteract()}finally{activeInteractionKeyboardEvent=null;}}
 }
 function onKeyUp(event){
   if(window.ABYSSAL_SHELL_V1?.blocksGameInput?.(event)){

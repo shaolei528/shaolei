@@ -3,6 +3,18 @@ if(!globalThis.ABYSSAL_PLAYER_COMBAT_INPUT_V1){
   dashBtn.addEventListener('pointerdown',()=>{if(started&&!dead&&dashCd<=0){dashQueued=true;dashCd=1.35}});
   attackBtn.addEventListener('pointerdown',()=>attack());
 }
-function attack(){if(!started||dead||attackCd>0||!zoneConnected)return;if(inCamp()){toast('Weapons stay lowered inside Safe Camp.');return}attackCd=inventory.knife?.32:.48;attackFlash=.15;const p={id:SESSION_ID,name:me.name,x:me.x,y:me.y,dir:me.dir,range:inventory.knife?80:62,damage:inventory.knife?22:11,zone:currentZone};zoneCh.send({type:'broadcast',event:'attack',payload:p});if(zoneLeader)handleMobAttack(p)}
-function rewardKill(targetId,kind){const payload={target:targetId,shard:kind==='watcher'?2:1,food:kind==='cultist'&&Math.random()<.4?1:0};if(targetId===SESSION_ID)onLoot(payload);else zoneCh?.send({type:'broadcast',event:'loot',payload})}
-function handleMobAttack(p){if(!zoneLeader||!p||campDist(finite(p.x,0),finite(p.y,0))<CAMP.r)return;for(const m of mobs){if(m.hp<=0)continue;const px=finite(p.x,0),py=finite(p.y,0),d=Math.hypot(m.x-px,m.y-py);if(d>finite(p.range,60))continue;const a=Math.atan2(m.y-p.y,m.x-p.x),diff=Math.abs(Math.atan2(Math.sin(a-finite(p.dir,0)),Math.cos(a-finite(p.dir,0))));if(diff<1.0){const spatial=globalThis.ABYSSAL_WORLD_SPATIAL_V1;if(spatial?.hasMeleeLineOfSight&&!spatial.hasMeleeLineOfSight(currentZone,px,py,m.x,m.y))continue;m.hp-=clamp(finite(p.damage,10),1,25);if(m.hp<=0){m.hp=0;m.respawnAt=Date.now()+11000;rewardKill(p.id,m.kind);if(p.id===SESSION_ID)toast('Something ancient collapses.')}}}}
+function attack(){
+  if(!started||dead||attackCd>0||!zoneConnected)return;
+  if(inCamp()){toast('Weapons stay lowered inside Safe Camp.');return}
+  const range=inventory.knife?80:62,spatial=globalThis.ABYSSAL_WORLD_SPATIAL_V1;
+  const target=mobs.filter(m=>m.hp>0&&Math.hypot(m.x-me.x,m.y-me.y)<=range)
+    .filter(m=>!spatial?.hasMeleeLineOfSight||spatial.hasMeleeLineOfSight(currentZone,me.x,me.y,m.x,m.y))
+    .sort((a,b)=>Math.hypot(a.x-me.x,a.y-me.y)-Math.hypot(b.x-me.x,b.y-me.y))[0];
+  const dir=target?Math.atan2(target.y-me.y,target.x-me.x):me.dir;
+  if(target)me.dir=dir;
+  attackCd=inventory.knife?.32:.48;attackFlash=.15;
+  const p={id:SESSION_ID,name:me.name,x:me.x,y:me.y,dir,range,damage:(inventory.knife?22:11)+(globalThis.ABYSSAL_PETS_V1?.attackBonus?.()||0),zone:currentZone};
+  zoneCh.send({type:'broadcast',event:'attack',payload:p});if(zoneLeader)handleMobAttack(p)
+}
+function rewardKill(targetId,kind,mob){const companionDrop=globalThis.ABYSSAL_PETS_V1?.rollMonsterDrop?.(kind,mob)||{},loot=globalThis.ABYSSAL_LOOT_REWARDS_V1,payload=loot?.createMobReward?.(targetId,kind,mob,companionDrop)||{target:targetId,mobKind:String(kind||''),shard:kind==='watcher'?2:1,food:kind==='cultist'&&Math.random()<.4?1:0,...companionDrop};if(!payload)return false;if(targetId===SESSION_ID)onLoot(payload);else zoneCh?.send({type:'broadcast',event:'loot',payload})}
+function handleMobAttack(p){if(!zoneLeader||!p||campDist(finite(p.x,0),finite(p.y,0))<CAMP.r)return;for(const m of mobs){if(m.hp<=0)continue;const px=finite(p.x,0),py=finite(p.y,0),d=Math.hypot(m.x-px,m.y-py);if(d>finite(p.range,60))continue;const a=Math.atan2(m.y-p.y,m.x-p.x),diff=Math.abs(Math.atan2(Math.sin(a-finite(p.dir,0)),Math.cos(a-finite(p.dir,0))));if(diff<1.0){const spatial=globalThis.ABYSSAL_WORLD_SPATIAL_V1;if(spatial?.hasMeleeLineOfSight&&!spatial.hasMeleeLineOfSight(currentZone,px,py,m.x,m.y))continue;m.hp-=clamp(finite(p.damage,10),1,25);if(m.hp<=0){m.hp=0;m.defeatedAt=Date.now();m.respawnAt=Date.now()+11000;rewardKill(p.id,m.kind,m);if(p.id===SESSION_ID)toast('Something ancient collapses.')}}}}

@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "encounters": {
+    "fen_warden": {
+      "id": "fen-warden",
+      "kind": "boss",
+      "name": "沼心守望者",
+      "zone": "1:0",
+      "requires": ["knife", "lantern"],
+      "spawn": { "x": 2400, "y": 1272 },
+      "health": 220,
+      "unlocks": ["1:2"],
+      "phases": [
+        { "atHealthRatio": 1, "windupSeconds": 1.05, "cooldownSeconds": 2.1, "damage": 8, "sanity": 5 },
+        { "atHealthRatio": 0.68, "windupSeconds": 0.82, "cooldownSeconds": 1.7, "damage": 10, "sanity": 7 },
+        { "atHealthRatio": 0.34, "windupSeconds": 0.68, "cooldownSeconds": 1.35, "damage": 12, "sanity": 9 }
+      ],
+      "reward": {
+        "id": "boss:fen-warden:clear:v1",
+        "shard": 3,
+        "food": 2,
+        "message": "沼心守望者倒下了 · 异质碎片 ×3 · 食物 ×2 · 南侧探索区已开放。"
+      },
+      "messages": {
+        "approach": "提灯照见停车场深处的巨大轮廓。准备迎战沼心守望者。",
+        "locked": "南侧探索区被深渊根须封住。击败沼心守望者后再前进。",
+        "phase2": "守望者裂开了 · 攻势变快。",
+        "phase3": "守望者暴怒 · 提灯正在压住黑暗。"
+      }
+    }
+  }
+}
