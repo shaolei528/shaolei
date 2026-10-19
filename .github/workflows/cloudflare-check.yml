@@ -24,6 +24,7 @@ on:
       - 'tests/interaction-v12.test.mjs'
       - 'tests/ready-localization-v9.test.mjs'
       - 'tests/network-companion-presence-v1.test.mjs'
+      - 'tests/cloudflare-same-origin-relay-v1.test.mjs'
       - 'tests/module-sort.test.mjs'
       - 'tests/network-quality-v20.test.mjs'
       - 'tests/companion-combat-integration-v1.test.mjs'
@@ -63,6 +64,7 @@ on:
       - 'tests/interaction-v12.test.mjs'
       - 'tests/ready-localization-v9.test.mjs'
       - 'tests/network-companion-presence-v1.test.mjs'
+      - 'tests/cloudflare-same-origin-relay-v1.test.mjs'
       - 'tests/module-sort.test.mjs'
       - 'tests/network-quality-v20.test.mjs'
       - 'tests/companion-combat-integration-v1.test.mjs'
@@ -89,6 +91,8 @@ jobs:
           node-version: '20'
       - name: Protocol test
         run: node cloudflare/test.mjs
+      - name: Cloudflare same-origin relay routing regression test
+        run: node tests/cloudflare-same-origin-relay-v1.test.mjs
       - name: Check relay client syntax
         run: node --check network-relay-v16.js
       - name: Check network quality syntax
