@@ -448,3 +448,12 @@
 - **水面表现修正：**鱼塘前岸绘制排序原先只用池塘尺寸加 13 像素作深度锚点，遗漏 96 像素的碰撞/可见岸带。玩家停在南侧岸边时，前岸可能排在角色后面，造成“站在水上”的观感。`fishing-render-v1` 现在根据同一水体的半宽、半高、碰撞岸带和安全边距提供排序锚点，3/4 渲染器改为读取该锚点；物理碰撞与存档/Relay 契约未改。
 - **VERIFIED：**`successor-fishing-rendering-v1.test.mjs` 通过，检查锚点包含岸带并由渲染器消费；两处 JS `node --check` 通过，`git diff --check` 无空白错误。
 - **UNKNOWN：**当前浏览器仍需确认角色脚底与岸线的实画效果；本轮没有手动浏览器试玩、双端 Relay 验收或 Cloudflare 实际部署。Wrangler 认证仍是部署前提。
+
+## 2026-10-19：统一灰盒合入公开主线与部署边界
+
+- **VERIFIED（主线）：**PR [#4](https://github.com/shaolei528/shaolei/pull/4) 已合入公开 `main`，主线提交为 `f61903bd8733f6629c49bf38d874ea77f0b236ab`。旧 V17f 不再是当前源码入口。
+- **VERIFIED（静态分享）：**新版候选入口 `https://raw.githack.com/shaolei528/shaolei/main/prototypes/successor-3-4/live-candidate.html` 与固定提交链接 `https://rawcdn.githack.com/shaolei528/shaolei/f61903bd8733f6629c49bf38d874ea77f0b236ab/prototypes/successor-3-4/live-candidate.html` 返回 HTTP 200；仅证明 HTML 可取回。
+- **VERIFIED（自动化边界）：**PR 头 13 个 GitHub Actions 检查通过。合并后的 CI 确认现有 Relay `/health` 和双客户端 Relay/重连流可用；没有部署新 Worker，也不代表游戏玩法同步已经完整。
+- **UNKNOWN（玩家体验）：**当前浏览器 8876 QA 页面连接被拒；另一个 8883 页面受保存的浏览器访问策略阻止检查。本轮未绕过限制，因此普通键盘完整循环、实际手感和“是否好玩”仍未验收。
+- **部署状态：**Cloudflare Wrangler 4.151.2 未认证，本轮没有新的 Cloudflare Worker/静态站部署。静态 githack 分享源已更新；Cloudflare 部署需在永久账号完成 Wrangler 登录后执行并验证。
+- **产品判断：**仓库已有许多分系统，但完整普通玩家流程未得到相同等级的验证。自动化测试和模块数量不能替代“探索采集→制作→战斗→取得奖励→安全返营”的可玩闭环验收；当前应把这条闭环作为下一项开发与验收目标。
