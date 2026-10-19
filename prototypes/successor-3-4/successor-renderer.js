@@ -948,8 +948,8 @@
      for(const p of remotes.values()){list.push({id:`remote:${p.id}`,kind:'actor',x:p.x,y:p.y,ref:p,isPlayer:true});if(p.pet)list.push({id:`remote-pet:${p.id}:${p.pet.id}`,kind:'companion',x:p.pet.x,y:p.pet.y,ref:p.pet});}
      list.push({id:`player:${SESSION_ID}`,kind:'actor',x:me.x,y:me.y,ref:me,self:true,isPlayer:true});
      if(currentZone==='1:1'){
-       const pond=window.ABYSSAL_WATER_BODIES_V1?.getBody?.('camp-pool');
-       if(pond){const bank=pond.halfWidth+13;list.push({id:'water:camp-pool-front-bank',kind:'pondBank',x:pond.cx+bank,y:pond.cy+bank+2});}
+        const bank=window.ABYSSAL_FISHING_RENDER_V1?.frontBankSortAnchor?.('camp-pool',13);
+        if(bank)list.push({id:'water:camp-pool-front-bank',kind:'pondBank',x:bank.x,y:bank.y+2});
      }
      list.sort((a,b)=>(a.x+a.y)-(b.x+b.y)||a.id.localeCompare(b.id));
        if(currentZone==='1:1')window.ABYSSAL_FISHING_RENDER_V1?.drawPond?.(out,project,lastTime);

@@ -29,8 +29,11 @@ assert.equal('drawAccessPier' in api,false,'the graybox does not draw a walkable
 assert.equal(api.drawPondFrontBank(ctx,project),true,'the front bank can be depth-sorted with world actors');
 assert.equal(fills.at(-1).color,'#ad976c','the foreground bank redraws the widened dry shoreline');
 assert.equal(fills.at(-1).points.length,6,'the foreground band covers only the near half of the pond');
-assert.match(successorRenderer,/kind:'pondBank',x:pond\.cx\+bank,y:pond\.cy\+bank\+2/,
-  'the pond front bank receives a world-depth key at its near corner');
+assert.deepEqual(JSON.parse(JSON.stringify(api.frontBankSortAnchor('camp-pool',13))),{x:331,y:291},
+  'the bank depth anchor includes the same padded shoreline used by collision and art');
+assert.equal(api.frontBankSortAnchor('missing'),null,'unknown water bodies cannot create a depth-sorted bank');
+assert.match(successorRenderer,/frontBankSortAnchor\?\.\('camp-pool',13\)/,
+  'the renderer delegates the pond depth anchor to the water presentation module');
 assert.doesNotMatch(successorRenderer,/drawAccessPier/,
   'the successor does not place a decorative pier across the shoreline');
 assert.match(successorRenderer,/list\.sort\([\s\S]*?drawPond\?\.\(out,project,lastTime\)[\s\S]*?for\(const o of list\)\{if\(o\.kind==='pondBank'\)window\.ABYSSAL_FISHING_RENDER_V1\?\.drawPondFrontBank/,

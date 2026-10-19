@@ -41,5 +41,12 @@
     polygon(ctx,[mid[1],mid[2],mid[3],inner[3],inner[2],inner[1]],'#ad976c','#d0b77f');
     ctx.restore();return true;
   }
-  globalThis.ABYSSAL_FISHING_RENDER_V1=Object.freeze({version:1,drawPond,drawPondFrontBank});
+  function frontBankSortAnchor(id,extra=0){
+    const body=water?.getBody?.(id);if(!body)return null;
+    const values=[body.cx,body.cy,body.halfWidth,body.halfHeight,body.collisionPadding,extra].map(Number);
+    if(!values.every(Number.isFinite))return null;
+    const [cx,cy,halfWidth,halfHeight,padding,margin]=values;
+    return{x:cx+halfWidth+Math.max(0,padding)+Math.max(0,margin),y:cy+halfHeight+Math.max(0,padding)+Math.max(0,margin)};
+  }
+  globalThis.ABYSSAL_FISHING_RENDER_V1=Object.freeze({version:1,drawPond,drawPondFrontBank,frontBankSortAnchor});
 })();
