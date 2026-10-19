@@ -128,7 +128,7 @@ const baseUpdate=typeof window.update==='function'?window.update:null;if(baseUpd
 
 let returnAnnounced=false;
 const baseUpdateQuest=typeof window.updateQuest==='function'?window.updateQuest:null;
-function rewardReady(){return(Number(inventory.shard)||0)>=STARTING_SHARDS+2;}
+function rewardReady(){const required=Math.max(1,Math.floor(Number(globalThis.ABYSSAL_EXPEDITION_LOOP_V1?.contract?.requiredSalvage?.shard)||1));return(Number(inventory.shard)||0)>=STARTING_SHARDS+required;}
 function objectiveText(){if(!started||dead||!inventory.knife)return null;if(inCamp()){if(hasLeftCamp&&rewardReady()){if(!returnAnnounced){returnAnnounced=true;try{toast('便利店调查完成 · 带回的异质碎片可以推进灯笼制作。');}catch{}}return inventory.lantern?'首次调查完成 · HOME 已补给。':'调查完成 · 工作台：准备灯笼与下一次外出。';}return '北门公路 → 调查停电的废弃便利店。';}if(inStore())return rewardReady()?'异常残留已取得 · 带着补给返回 Safe Camp。':'便利店：搜索货架、冰柜、碎屑与异常残留。';if(rewardReady())return '带着便利店补给返回 Safe Camp。';return '沿破损北路前进 · 寻找停电便利店。';}
 if(baseUpdateQuest)window.updateQuest=updateQuest=function(){baseUpdateQuest();const text=objectiveText();if(text&&questText)questText.textContent=text;};
 

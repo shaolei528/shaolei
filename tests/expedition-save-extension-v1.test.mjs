@@ -56,7 +56,7 @@ assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'SEARCH_FIGHT');
 game=boot();
 assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'SEARCH_FIGHT');
 game.me.x=2400;game.me.y=800;
-game.inventory.shard=2;
+game.inventory.shard=1;
 game.updateQuest();
 assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'SEARCH_FIGHT','salvage does not skip the creature encounter after reload');
 assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.recordConfirmedMobLoot({playerId:'save-test-player',mobId:'save-test-crawler',mobKind:'crawler',rewardKey:'companion-egg:save-test-crawler:2001',grants:{shard:1}}),true,'a claimed creature reward is accepted in the MIRE MART area');
@@ -81,7 +81,7 @@ assert.equal(returnRecords.length,1,'loading a completed route does not grant or
 const saved=JSON.parse(stored.raw);
 assert.equal(saved.v,5,'the existing save version remains unchanged');
 assert.equal(saved.extensions.version,1,'the existing additive save extension envelope remains unchanged');
-assert.equal(saved.inventory.shard,2,'player inventory persists alongside expedition progress');
+assert.equal(saved.inventory.shard,1,'one confirmed creature shard persists alongside expedition progress');
 
 stored.raw=JSON.stringify({v:5,inventory:{knife:false},extensions:{version:1,owners:{}}});
 game=boot();

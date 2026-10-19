@@ -22,9 +22,9 @@ Canonical V1 progression:
 6. `RETURN_HOME`
 7. `COMPLETE`
 
-Required salvage for V1 is the existing inventory item:
+Required salvage for the first playable V1 expedition is the existing inventory item:
 
-- `shard >= 2`
+- `shard >= 1`
 
 No new item type or inventory schema is introduced.
 
@@ -73,7 +73,7 @@ The player must defeat at least one creature inside the existing MIRE MART area 
 
 ### SECURE_REQUIRED_SALVAGE
 
-The run requires both a confirmed MIRE MART creature reward and `inventory.shard >= 2`. Existing salvage already carried by the player is valid, but the player must still physically reach MIRE MART, defeat a creature there, and complete the expedition route; starting with two shards does not auto-complete the expedition from HOME.
+The run requires both a confirmed MIRE MART creature reward and `inventory.shard >= 1`. This lets one defeated creature fund the first return loop. Existing salvage already carried by the player is valid, but the player must still physically reach MIRE MART, defeat a creature there, and complete the expedition route; starting with a shard does not auto-complete the expedition from HOME. Extra salvage remains useful for the separate Field Rig and Lantern recipes.
 
 ### RETURN_HOME
 

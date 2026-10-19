@@ -33,7 +33,7 @@ const api=sandbox.ABYSSAL_EXPEDITION_LOOP_V1;
 assert.ok(api,'expedition service must expose a runtime API');
 assert.equal(api.version,1);
 assert.equal(api.contract.scope,'character-save-slice');
-assert.deepEqual({...api.contract.requiredSalvage},{shard:2});
+assert.deepEqual({...api.contract.requiredSalvage},{shard:1});
 assert.deepEqual([...api.contract.phases],['PREPARE','LEAVE_HOME','REACH_MIRE_MART','SEARCH_FIGHT','SECURE_REQUIRED_SALVAGE','RETURN_HOME','COMPLETE']);
 
 function obs(overrides={}){return{started:true,dead:false,inCamp:true,atMart:false,hasKnife:true,lantern:false,wood:4,stone:3,food:2,shard:0,...overrides};}
@@ -54,12 +54,12 @@ function obs(overrides={}){return{started:true,dead:false,inCamp:true,atMart:fal
   assert.equal(m.step(obs()).phase,'LEAVE_HOME');
   assert.equal(m.step(obs({inCamp:false})).phase,'REACH_MIRE_MART');
   assert.equal(m.step(obs({inCamp:false,atMart:true})).phase,'SEARCH_FIGHT');
-  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2})).phase,'SEARCH_FIGHT','carried shards alone cannot satisfy the encounter');
+  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:1})).phase,'SEARCH_FIGHT','carried shards alone cannot satisfy the encounter');
   assert.equal(m.recordKill('mire-crawler-reward-1'),true,'a confirmed creature reward records the required fight');
   assert.equal(m.recordKill('mire-crawler-reward-1'),false,'replaying a claimed reward cannot count twice');
-  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2,hasDefeatedCreature:true})).phase,'SECURE_REQUIRED_SALVAGE');
-  assert.equal(m.step(obs({inCamp:false,atMart:false,shard:2})).phase,'RETURN_HOME');
-  assert.equal(m.step(obs({inCamp:true,atMart:false,shard:2})).phase,'COMPLETE');
+  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:1,hasDefeatedCreature:true})).phase,'SECURE_REQUIRED_SALVAGE');
+  assert.equal(m.step(obs({inCamp:false,atMart:false,shard:1})).phase,'RETURN_HOME');
+  assert.equal(m.step(obs({inCamp:true,atMart:false,shard:1})).phase,'COMPLETE');
   assert.deepEqual([...m.snapshot().history],['PREPARE','LEAVE_HOME','REACH_MIRE_MART','SEARCH_FIGHT','SECURE_REQUIRED_SALVAGE','RETURN_HOME','COMPLETE']);
 }
 
@@ -86,8 +86,8 @@ function obs(overrides={}){return{started:true,dead:false,inCamp:true,atMart:fal
 {
   const m=api.createMachine();
   m.step(obs());m.step(obs({inCamp:false}));m.step(obs({inCamp:false,atMart:true}));
-  assert.equal(m.step(obs({dead:true,inCamp:false,atMart:true,shard:2})).deathPending,true);
-  const afterRespawn=m.step(obs({dead:false,inCamp:true,atMart:false,shard:2}));
+  assert.equal(m.step(obs({dead:true,inCamp:false,atMart:true,shard:1})).deathPending,true);
+  const afterRespawn=m.step(obs({dead:false,inCamp:true,atMart:false,shard:1}));
   assert.equal(afterRespawn.phase,'LEAVE_HOME');
   assert.equal(afterRespawn.attempt,2);
   assert.notEqual(afterRespawn.phase,'COMPLETE');
@@ -110,12 +110,12 @@ function obs(overrides={}){return{started:true,dead:false,inCamp:true,atMart:fal
   const m=api.createMachine();
   assert.equal(m.step(obs({inCamp:true,shard:2})).phase,'LEAVE_HOME');
   assert.equal(m.step(obs({inCamp:false,shard:2})).phase,'REACH_MIRE_MART');
-  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2})).phase,'SEARCH_FIGHT');
-  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2})).phase,'SEARCH_FIGHT');
+  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:1})).phase,'SEARCH_FIGHT');
+  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:1})).phase,'SEARCH_FIGHT');
   m.recordKill('mire-crawler-reward-2');
-  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2,hasDefeatedCreature:true})).phase,'SECURE_REQUIRED_SALVAGE');
-  assert.equal(m.step(obs({inCamp:false,atMart:false,shard:2})).phase,'RETURN_HOME');
-  assert.equal(m.step(obs({inCamp:true,shard:2})).phase,'COMPLETE');
+  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:1,hasDefeatedCreature:true})).phase,'SECURE_REQUIRED_SALVAGE');
+  assert.equal(m.step(obs({inCamp:false,atMart:false,shard:1})).phase,'RETURN_HOME');
+  assert.equal(m.step(obs({inCamp:true,shard:1})).phase,'COMPLETE');
 }
 
 // Losing required salvage before return invalidates the secure state.
@@ -123,8 +123,8 @@ function obs(overrides={}){return{started:true,dead:false,inCamp:true,atMart:fal
   const m=api.createMachine();
   m.step(obs());m.step(obs({inCamp:false}));m.step(obs({inCamp:false,atMart:true}));
   m.recordKill('mire-crawler-reward-3');
-  m.step(obs({inCamp:false,atMart:true,shard:2,hasDefeatedCreature:true}));
-  assert.equal(m.step(obs({inCamp:false,atMart:false,shard:1})).phase,'SEARCH_FIGHT');
+  m.step(obs({inCamp:false,atMart:true,shard:1,hasDefeatedCreature:true}));
+  assert.equal(m.step(obs({inCamp:false,atMart:false,shard:0})).phase,'SEARCH_FIGHT');
 }
 
 // Runtime UI is only a display of service state and completion announcement fires once.
@@ -139,7 +139,7 @@ assert.equal(oldQuestCalls,0,'expedition service must own the active objective d
 sandbox.me={x:CAMP.x,y:CAMP.y};assert.equal(sandbox.inCamp(sandbox.me),true);sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^北路前往 MIRE MART/);
 sandbox.me={x:2400,y:1800};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^抵达 MIRE MART/);
 sandbox.me={x:2400,y:1200};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^搜寻\/击退爬行者/);
-sandbox.inventory.shard=2;sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^搜寻\/击退爬行者/,'shards alone keep the creature objective active');
+sandbox.inventory.shard=1;sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^搜寻\/击退爬行者/,'a carried shard alone cannot satisfy the creature objective');
 assert.equal(api.recordConfirmedMobLoot({playerId:'remote-player',mobId:'runtime-crawler',mobKind:'crawler',rewardKey:'companion-egg:runtime-crawler:1999',grants:{shard:1}}),false,'another player’s reward cannot satisfy the local expedition');
 assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-crawler',mobKind:'unknown',rewardKey:'companion-egg:runtime-crawler:1999',grants:{shard:1}}),false,'unconfigured creature rewards cannot satisfy the fight gate');
 assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-crawler',mobKind:'crawler',rewardKey:'companion-egg:runtime-crawler:2001',grants:{shard:1}}),true,'the confirmed-loot boundary records one MIRE MART kill');
