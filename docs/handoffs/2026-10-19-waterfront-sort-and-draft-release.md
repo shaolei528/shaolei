@@ -4,8 +4,9 @@
 
 - Branch: `feat/unified-graybox-slice-v1`
 - Unified graybox commit: `938bc7712895826c6b5b7e5fe495ff99395d9699`
+- Latest pushed fix: `d9d73dde73b1ab54e96ed61ee0d75013e2ebe354`
 - Draft PR: https://github.com/shaolei528/shaolei/pull/4
-- Raw.githack commit entry returned HTTP 200. This confirms the static file is retrievable only.
+- Latest candidate URL returned HTTP 200: https://raw.githack.com/shaolei528/shaolei/d9d73dde73b1ab54e96ed61ee0d75013e2ebe354/prototypes/successor-3-4/live-candidate.html. This confirms the static file is retrievable only.
 
 ## Change made after the unified slice commit
 
@@ -15,11 +16,12 @@ The rendered camp pond uses a widened dry bank that matches its collision paddin
 
 - `successor-fishing-rendering-v1.test.mjs` passes for a padded shoreline anchor and renderer integration.
 - `node --check` passes for the edited renderer files; `git diff --check` has no whitespace errors.
+- `npm run build:site` produces 100 static files; current Wrangler dry-run recognizes `env.WORLD`.
 - Current browser appearance, ordinary-input full loop, sustained two-client Relay, and Cloudflare deployment remain unverified.
-- Wrangler was unauthenticated at the previous session check; do not call the dry-run a deployment.
+- Wrangler is currently unauthenticated. The existing Relay health request did not reach an HTTP response from this environment. Do not call the dry-run a deployment.
 
 ## Next steps
 
-1. Commit and push the follow-up water-front ordering fix to the existing feature branch; update PR #4.
-2. Recheck the shared browser at the pond shoreline when visual browser inspection is available.
-3. Keep the PR draft until the ordinary-input slice and player-facing shoreline result are accepted; deploy the Worker only after Wrangler authentication is available.
+1. Recheck the shared browser at the pond shoreline and play the ordinary-input loop when visual browser inspection is available.
+2. Keep PR #4 a draft until player-facing acceptance. The public `main` still points at V17f.
+3. Deploy the Worker only after a permanent Cloudflare account is authenticated; current static preview availability is not a Cloudflare deployment.
