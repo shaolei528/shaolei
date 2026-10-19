@@ -898,11 +898,13 @@
     return interactMetroB2();
   }
   function drawStarterWaypoints(now){
+    const bossProgress=window.ABYSSAL_BOSS_PROGRESSION_V1;
     window.ABYSSAL_ROUTE_GUIDANCE_V1?.draw?.(out,{
       zone:currentZone,player:{x:me.x,y:me.y},inventory:{...inventory},
       availableResources:resources.filter(resource=>(harvested.get(resource.id)||0)<=Date.now()).map(resource=>({...resource})),
       interactionTarget:window.ABYSSAL_INTERACTION_V12?.getTarget?.()||null,
       phase:window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.phase,
+      boss:bossProgress?.encounter?.spawn||null,bossCleared:bossProgress?.isCleared?.()===true,
       camp:{x:CAMP.x,y:CAMP.y},worldZone:WORLD.zone,parking:worldApi?.poi?.parking||null,
       inCamp:inCamp(),workbench:{x:2195,y:2535},projectViewport:(x,y)=>projectViewport(x,y),
       width:view.clientWidth,height:view.clientHeight,dpr,now,worldNow:Date.now()

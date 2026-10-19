@@ -3,7 +3,7 @@
   if (globalThis.ABYSSAL_ROUTE_GUIDANCE_V1?.version === 1) return;
 
   function draw(ctx, state) {
-    if (!ctx || !state || !['1:1', '1:0'].includes(String(state.zone || ''))) return false;
+    if (!ctx || !state || !['1:1', '1:0', '1:2'].includes(String(state.zone || ''))) return false;
     const { zone, player, inventory = {}, availableResources = [], interactionTarget = null } = state;
     const phase = String(state.phase || ''), camp = state.camp || {}, worldZone = Number(state.worldZone) || 0;
     const projectViewport = state.projectViewport;
@@ -34,11 +34,15 @@
     }
 
     if (inventory.knife) {
-      if (zone === '1:1' && (!phase || phase === 'LEAVE_HOME' || phase === 'REACH_MIRE_MART')) {
+      if (zone === '1:1' && (!phase || phase === 'LEAVE_HOME' || phase === 'REACH_MIRE_MART' || (phase === 'COMPLETE' && !state.bossCleared && inventory.lantern))) {
         const exit = { x: Number(camp.x), y: worldZone - 10 }, distance = Math.hypot(exit.x - player.x, exit.y - player.y);
-        if (distance <= 1000) goals.push({ ...exit, type: 'exit', label: '→ MIRE MART', color: '#8edbd3', edge: true });
+        const label = phase === 'COMPLETE' ? '→ 挑战沼心守望者' : '→ MIRE MART';
+        if (distance <= 1000) goals.push({ ...exit, type: 'exit', label, color: '#8edbd3', edge: true });
+      } else if (zone === '1:1' && phase === 'COMPLETE' && state.bossCleared && insideCamp) {
+        const exit = { x: Number(camp.x), y: worldZone * 2 + 10 }, distance = Math.hypot(exit.x - player.x, exit.y - player.y);
+        if (distance <= 3600) goals.push({ ...exit, type: 'exit', label: '→ 南侧探索区', color: '#a8e6df', edge: true });
       } else if (zone === '1:0') {
-        let target = null, label = '', color = '#8edbd3';
+        let target = null, label = '', color = '#8edbd3', type = 'poi', maxDistance = 1100;
         if (phase === 'REACH_MIRE_MART' && state.parking) {
           const area = state.parking;
           target = { x: area.x + area.w / 2, y: area.y + area.h / 2 };
@@ -46,15 +50,31 @@
         } else if (phase === 'SEARCH_FIGHT') {
           target = availableResources.filter(resource => resource?.type === 'shard' && String(resource.id).startsWith('poi:store:'))
             .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
-          if (target) { label = '异质碎片'; color = '#a8e6df'; }
+          if (target) { label = '异质碎片'; color = '#a8e6df'; type = 'shard'; }
         } else if (phase === 'SECURE_REQUIRED_SALVAGE' || phase === 'RETURN_HOME') {
           target = { x: Number(camp.x), y: worldZone + 10 };
           label = '→ 返回安全营地';
+          type = 'home';
+        } else if (phase === 'COMPLETE' && state.bossCleared) {
+          target = { x: Number(camp.x), y: worldZone + 10 };
+          label = '返营 · 南侧新区已开放';
+          type = 'home';
+          maxDistance = 1600;
+        } else if (phase === 'COMPLETE' && inventory.lantern && state.boss) {
+          target = state.boss;
+          label = '沼心守望者';
+          type = 'boss';
+          maxDistance = 1600;
         }
         if (target) {
           const distance = Math.hypot(target.x - player.x, target.y - player.y);
-          if (distance <= 1100) goals.push({ ...target, type: phase === 'SEARCH_FIGHT' ? 'shard' : 'poi', label, color, edge: true });
+          if (distance <= maxDistance) goals.push({ ...target, type, label, color, edge: true });
         }
+      } else if (zone === '1:2' && phase === 'COMPLETE' && state.bossCleared) {
+        const target = availableResources.filter(resource => resource?.type === 'shard')
+          .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
+        if (target && Math.hypot(target.x - player.x, target.y - player.y) <= 1600)
+          goals.push({ ...target, type: 'shard', label: '新区异质遗物', color: '#a8e6df', edge: true });
       }
     }
 

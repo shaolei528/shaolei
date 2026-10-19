@@ -20,8 +20,10 @@ assert.ok(guidance.includes('distance <= 350'),
   'the workbench waypoint must stay near the player and clamp to the visible gameplay edge when needed');
 assert.ok(guidance.includes('if (inventory.knife)')&&guidance.includes("type: 'exit'"),
   'a crafted knife must reveal a right-up route marker at the real MIRE MART zone edge');
-assert.ok(guidance.includes("['1:1', '1:0']"),
-  'route guidance must stay active in both Safe Camp and MIRE MART so expedition and return markers can render');
+assert.ok(guidance.includes("['1:1', '1:0', '1:2']"),
+  'route guidance must stay active in Safe Camp, MIRE MART and the unlocked southern zone');
+assert.ok(renderer.includes('boss:bossProgress?.encounter?.spawn||null,bossCleared:bossProgress?.isCleared?.()===true'),
+  'the renderer adapter must pass boss location and unlock state to the wayfinding module');
 for(const marker of [
   "phase === 'REACH_MIRE_MART'",
   "phase === 'SEARCH_FIGHT'",
@@ -49,7 +51,7 @@ assert.ok(preview.indexOf("modules/ui/route-guidance-v1.js")<preview.indexOf("pr
 assert.ok(build.includes("'modules/ui/route-guidance-v1.js'"),
   'the canonical Cloudflare package must include the route UI module');
 
-const labelsFor=({zone,phase,player,inventory,resources=[],inCamp=false,width=800,height=600,projection}={})=>{
+const labelsFor=({zone,phase,player,inventory,resources=[],inCamp=false,bossCleared=false,boss=null,width=800,height=600,projection}={})=>{
   const labels=[],points=[],ctx={
     save(){},restore(){},setTransform(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},stroke(){},fill(){},fillRect(){},strokeRect(){},
     translate(x,y){points.push({x,y})},rotate(){},measureText(text){return{width:String(text).length*6}},
@@ -60,7 +62,7 @@ const labelsFor=({zone,phase,player,inventory,resources=[],inCamp=false,width=80
   const frozenResources=Object.freeze(resources.map(resource=>Object.freeze({...resource})));
   const state=Object.freeze({
     zone,phase,player:Object.freeze({...player}),inventory:Object.freeze({...inventory}),availableResources:frozenResources,
-    interactionTarget:null,camp:Object.freeze({x:2400,y:2400}),worldZone:1600,
+    interactionTarget:null,camp:Object.freeze({x:2400,y:2400}),worldZone:1600,bossCleared,boss,
     parking:Object.freeze({x:2200,y:900,w:300,h:200}),inCamp,workbench:Object.freeze({x:2195,y:2535}),
     projectViewport:projection||((x,y)=>({x:400+(x-player.x)*.5,y:300+(y-player.y)*.25})),
     width,height,dpr:1,now:1200,worldNow:1200,
@@ -77,6 +79,16 @@ assert.ok(labelsFor({zone:'1:1',phase:'RETURN_HOME',player:{x:2400,y:1900},inven
   'the last stretch back inside HOME must keep a visible camp destination');
 assert.ok(labelsFor({zone:'1:1',phase:'LEAVE_HOME',player:{x:Number(workbench[1]),y:Number(workbench[2])},inventory:{wood:4,stone:3},inCamp:true}).labels.includes('工作台 · E 使用'),
   'the SafeCamp workbench cue must use the V21 anchor after gathering supplies');
+assert.ok(labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true,lantern:true},inCamp:true,bossCleared:false}).labels.includes('→ 挑战沼心守望者'),
+  'after making the lantern, the camp should point north to the boss expedition');
+assert.ok(labelsFor({zone:'1:0',phase:'COMPLETE',player:{x:2400,y:1272},inventory:{knife:true,lantern:true},boss:{x:2400,y:1272}}).labels.includes('沼心守望者'),
+  'the MIRE MART route should point directly to the active boss');
+assert.ok(labelsFor({zone:'1:0',phase:'COMPLETE',player:{x:2400,y:1272},inventory:{knife:true,lantern:true},bossCleared:true}).labels.includes('返营 · 南侧新区已开放'),
+  'a boss victory should guide the player back through camp toward the unlocked south');
+assert.ok(labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true},inCamp:true,bossCleared:true}).labels.includes('→ 南侧探索区'),
+  'the returned player should get a visible route to the newly opened southern region');
+assert.ok(labelsFor({zone:'1:2',phase:'COMPLETE',player:{x:2400,y:4810},inventory:{knife:true},bossCleared:true,resources:[{id:'south:shard',type:'shard',x:2460,y:4810}]}).labels.includes('新区异质遗物 · 按 E 采集'),
+  'the new zone should turn its first nearby shard into a playable next objective');
 
 const mobileWidth=390,mobileHeight=844,rawExit={x:635,y:202},center={x:mobileWidth/2,y:mobileHeight/2};
 const edgeLabels=labelsFor({zone:'1:1',phase:'LEAVE_HOME',player:{x:2400,y:1000},inventory:{knife:true},width:mobileWidth,height:mobileHeight,inCamp:false,projection:()=>rawExit});

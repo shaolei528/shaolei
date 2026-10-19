@@ -14,7 +14,7 @@
   function render(){
     if(!panel)return;const state=globalThis.ABYSSAL_PETS_V1?.getSnapshot?.()||{},summary=panel.querySelector('[data-summary]'),eggCount=Math.max(0,Math.floor(Number(inventory?.companion_egg)||0));
     if(state.incubation)summary.textContent=`伙伴蛋正在孵化，还需 ${state.incubation.secondsLeft} 秒。留在营地做些准备吧。`;
-    else if(state.companion){const pet=state.companion;summary.textContent=`${pet.evolved?'✦ ':''}${pet.name} · ${pet.command==='FOLLOW'?'正在跟随':'正在营地留守'} · 成长 ${pet.xp}${pet.evolved?' · 已进阶':` · 再获 ${state.xpToEvolve} 次协作经验进阶`}`;}
+    else if(state.companion){const pet=state.companion,following=pet.command==='FOLLOW',rules=globalThis.ABYSSAL_PETS_CONFIG_V1?.companion||{},bonus=following?Math.max(0,Number(globalThis.ABYSSAL_PETS_V1?.attackBonus?.())||0):0,threshold=Math.max(1,Math.floor(Number(rules.evolutionXp)||1));summary.textContent=`${pet.evolved?'✦ ':''}${pet.name} · ${following?`跟随协战 +${bonus} 伤害`:'营地留守'} · 成长 ${pet.xp}/${threshold}${pet.evolved?' · 已进阶':` · 跟随时击杀/采集可进阶`}`;}
     else summary.textContent=`还没有同行伙伴。击败怪物收集蛋（${state.killsObserved||0} 次遭遇），回营地孵化。背包伙伴蛋 ×${eggCount}。`;
     for(const button of panel.querySelectorAll('[data-action]')){const action=button.dataset.action;button.hidden=(action==='incubate'&&!!state.companion)||(action!=='incubate'&&!state.companion);if(action==='incubate')button.disabled=!eggCount||!!state.incubation;}
     const input=panel.querySelector('.pet-v1-name');if(input&&!input.dataset.bound){input.dataset.bound='1';input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();panel.querySelector('[data-action="rename"]').click();}});}
