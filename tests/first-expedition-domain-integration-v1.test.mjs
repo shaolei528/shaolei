@@ -11,6 +11,7 @@ const craftingSource=read('modules/crafting/crafting-processing-v1.js');
 const resourceWorkSource=read('modules/interaction/resource-work.js');
 const combatSource=read('modules/combat/player-combat.js');
 const expeditionSource=read('modules/world/awakening-expedition-loop-v1.js');
+const lootBridgeSource=read('modules/world/expedition-loot-bridge-v1.js');
 const interactionSource=read('modules/input/interaction-v12.js');
 const recipes=JSON.parse(read('data/crafting/recipes-v1.json'));
 const rewards=JSON.parse(read('data/loot/creature-rewards-v1.json'));
@@ -67,6 +68,8 @@ const sandbox={
   }}
 };
 sandbox.window=sandbox;sandbox.globalThis=sandbox;
+const claimedLoot=[];
+sandbox.addEventListener('abyssal:loot-claimed',event=>claimedLoot.push(event.detail));
 sandbox.addEventListener('abyssal:resource-work-feedback',event=>workFeedback.push(event.detail));
 vm.createContext(sandbox);
 for(const[source,name]of[
@@ -77,7 +80,8 @@ for(const[source,name]of[
   [resourceWorkSource,'resource-work.js'],
   [craftingSource,'crafting-processing-v1.js'],
   [combatSource,'player-combat.js'],
-  [expeditionSource,'awakening-expedition-loop-v1.js']
+  [expeditionSource,'awakening-expedition-loop-v1.js'],
+  [lootBridgeSource,'expedition-loot-bridge-v1.js']
 ])vm.runInContext(source,sandbox,{filename:name});
 assert.ok(sandbox.ABYSSAL_RESOURCE_WORK_V1,'the successor resource-work stage gate must be active during this integration test');
 
@@ -131,6 +135,11 @@ function killNearestCrawler(x,y){
 killNearestCrawler(2264,1248);
 assert.equal(sandbox.mobs[0].hp,0,'three bone-knife hits defeat the first authored crawler');
 assert.equal(sandbox.inventory.shard,1,'the first kill reward reaches the player inventory');
+assert.equal(expedition.state.phase,'SEARCH_FIGHT','the first claimed creature reward still needs the required salvage amount');
+assert.equal(expedition.state.hasDefeatedCreature,true,'the claimed MIRE MART reward satisfies the creature part of the objective');
+assert.equal(claimedLoot.length,1,'the loot owner emits one confirmed claim event after inventory commit');
+sandbox.dispatchEvent(new TestCustomEvent('abyssal:loot-claimed',{detail:claimedLoot[0]}));
+assert.equal(expedition.state.killRewardKeys.length,1,'replaying a confirmed reward event cannot duplicate the expedition proof');
 killNearestCrawler(2712,1248);
 assert.equal(sandbox.mobs[1].hp,0,'the second authored crawler can be defeated');
 assert.equal(sandbox.inventory.shard,2,'the second unique kill reward completes the salvage requirement');
@@ -138,6 +147,7 @@ assert.equal(relayEvents.filter(message=>message.event==='attack').length,6,'com
 assert.equal(relayEvents.some(message=>message.event==='loot'),false,'local leader rewards settle locally without inventing a new relay message');
 
 sandbox.updateQuest();
+assert.equal(expedition.state.phase,'SECURE_REQUIRED_SALVAGE','the objective advances after both its real loot event and shard requirement are met');
 assert.match(sandbox.questText.textContent,/^带碎片回营/);
 sandbox.me.x=2400;sandbox.me.y=1600;
 sandbox.updateQuest();
@@ -150,4 +160,4 @@ assert.match(sandbox.questText.textContent,/^远征完成/);
 assert.ok(saves>=10,'each gathered node, craft and confirmed kill persists through the existing local save path');
 assert.ok(uiUpdates>=10,'inventory and reward changes refresh the visible HUD');
 
-console.log(JSON.stringify({ok:true,scope:'domain-integration-not-browser-play',resources:{wood:4,stone:3},craft:'bone-knife',encounter:'two authored crawlers',loot:{shards:sandbox.inventory.shard,uniqueKills:2},route:expedition.state.history,saves,uiUpdates,relayAttackEvents:6,protocol:'unchanged'}));
+console.log(JSON.stringify({ok:true,scope:'domain-integration-not-browser-play',resources:{wood:4,stone:3},craft:'bone-knife',encounter:'two authored crawlers',loot:{shards:sandbox.inventory.shard,uniqueKills:2,questGate:'confirmed-local-reward'},route:expedition.state.history,saves,uiUpdates,relayAttackEvents:6,protocol:'unchanged'}));

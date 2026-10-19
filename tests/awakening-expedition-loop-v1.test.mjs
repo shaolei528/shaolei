@@ -14,10 +14,12 @@ const toasts=[];
 let oldQuestCalls=0;
 const sandbox={
   console,window:null,globalThis:null,
-  started:true,dead:false,CAMP,
+  started:true,dead:false,CAMP,SESSION_ID:'test-player',
   me:{x:CAMP.x,y:CAMP.y},
   inventory:{wood:0,stone:0,food:2,shard:0,knife:false,lantern:false},
+  ABYSSAL_CREATURE_REWARDS_CONFIG_V1:{creatures:{crawler:{},cultist:{},watcher:{}}},
   questText:{textContent:'legacy'},
+  saveLocal(){return true;},
   toast(text){toasts.push(String(text));},
   updateQuest(){oldQuestCalls++;},
   ABYSSAL_AWAKENING_WORLD_V1:{poi}
@@ -52,7 +54,10 @@ function obs(overrides={}){return{started:true,dead:false,inCamp:true,atMart:fal
   assert.equal(m.step(obs()).phase,'LEAVE_HOME');
   assert.equal(m.step(obs({inCamp:false})).phase,'REACH_MIRE_MART');
   assert.equal(m.step(obs({inCamp:false,atMart:true})).phase,'SEARCH_FIGHT');
-  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2})).phase,'SECURE_REQUIRED_SALVAGE');
+  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2})).phase,'SEARCH_FIGHT','carried shards alone cannot satisfy the encounter');
+  assert.equal(m.recordKill('mire-crawler-reward-1'),true,'a confirmed creature reward records the required fight');
+  assert.equal(m.recordKill('mire-crawler-reward-1'),false,'replaying a claimed reward cannot count twice');
+  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2,hasDefeatedCreature:true})).phase,'SECURE_REQUIRED_SALVAGE');
   assert.equal(m.step(obs({inCamp:false,atMart:false,shard:2})).phase,'RETURN_HOME');
   assert.equal(m.step(obs({inCamp:true,atMart:false,shard:2})).phase,'COMPLETE');
   assert.deepEqual([...m.snapshot().history],['PREPARE','LEAVE_HOME','REACH_MIRE_MART','SEARCH_FIGHT','SECURE_REQUIRED_SALVAGE','RETURN_HOME','COMPLETE']);
@@ -88,13 +93,27 @@ function obs(overrides={}){return{started:true,dead:false,inCamp:true,atMart:fal
   assert.notEqual(afterRespawn.phase,'COMPLETE');
 }
 
+// A creature proof belongs to one attempt and clears when death starts a retry.
+{
+  const m=api.createMachine();
+  m.step(obs());m.step(obs({inCamp:false}));m.step(obs({inCamp:false,atMart:true}));
+  m.recordKill('mire-crawler-reward-death-test');
+  assert.equal(m.state.hasDefeatedCreature,true);
+  m.step(obs({dead:true,inCamp:false}));
+  const retry=m.step(obs({dead:false,inCamp:true}));
+  assert.equal(retry.attempt,2);
+  assert.equal(retry.hasDefeatedCreature,false,'a retry must defeat a creature again');
+}
+
 // Existing salvage is valid but cannot auto-complete from HOME; the route still has to happen.
 {
   const m=api.createMachine();
   assert.equal(m.step(obs({inCamp:true,shard:2})).phase,'LEAVE_HOME');
   assert.equal(m.step(obs({inCamp:false,shard:2})).phase,'REACH_MIRE_MART');
   assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2})).phase,'SEARCH_FIGHT');
-  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2})).phase,'SECURE_REQUIRED_SALVAGE');
+  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2})).phase,'SEARCH_FIGHT');
+  m.recordKill('mire-crawler-reward-2');
+  assert.equal(m.step(obs({inCamp:false,atMart:true,shard:2,hasDefeatedCreature:true})).phase,'SECURE_REQUIRED_SALVAGE');
   assert.equal(m.step(obs({inCamp:false,atMart:false,shard:2})).phase,'RETURN_HOME');
   assert.equal(m.step(obs({inCamp:true,shard:2})).phase,'COMPLETE');
 }
@@ -102,7 +121,9 @@ function obs(overrides={}){return{started:true,dead:false,inCamp:true,atMart:fal
 // Losing required salvage before return invalidates the secure state.
 {
   const m=api.createMachine();
-  m.step(obs());m.step(obs({inCamp:false}));m.step(obs({inCamp:false,atMart:true}));m.step(obs({inCamp:false,atMart:true,shard:2}));
+  m.step(obs());m.step(obs({inCamp:false}));m.step(obs({inCamp:false,atMart:true}));
+  m.recordKill('mire-crawler-reward-3');
+  m.step(obs({inCamp:false,atMart:true,shard:2,hasDefeatedCreature:true}));
   assert.equal(m.step(obs({inCamp:false,atMart:false,shard:1})).phase,'SEARCH_FIGHT');
 }
 
@@ -118,7 +139,12 @@ assert.equal(oldQuestCalls,0,'expedition service must own the active objective d
 sandbox.me={x:CAMP.x,y:CAMP.y};assert.equal(sandbox.inCamp(sandbox.me),true);sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^北路前往 MIRE MART/);
 sandbox.me={x:2400,y:1800};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^抵达 MIRE MART/);
 sandbox.me={x:2400,y:1200};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^搜寻\/击退爬行者/);
-sandbox.inventory.shard=2;sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^带碎片回营/);
+sandbox.inventory.shard=2;sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^搜寻\/击退爬行者/,'shards alone keep the creature objective active');
+assert.equal(api.recordConfirmedMobLoot({playerId:'remote-player',mobId:'runtime-crawler',mobKind:'crawler',rewardKey:'companion-egg:runtime-crawler:1999',grants:{shard:1}}),false,'another player’s reward cannot satisfy the local expedition');
+assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-crawler',mobKind:'unknown',rewardKey:'companion-egg:runtime-crawler:1999',grants:{shard:1}}),false,'unconfigured creature rewards cannot satisfy the fight gate');
+assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-crawler',mobKind:'crawler',rewardKey:'companion-egg:runtime-crawler:2001',grants:{shard:1}}),true,'the confirmed-loot boundary records one MIRE MART kill');
+assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-crawler',mobKind:'crawler',rewardKey:'companion-egg:runtime-crawler:2001',grants:{shard:1}}),false,'duplicate confirmed reward events are ignored');
+sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^带碎片回营/);
 sandbox.me={x:2400,y:1500};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^沿北路返营/);
 sandbox.me={x:CAMP.x,y:CAMP.y};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^远征完成/);sandbox.updateQuest();
 assert.equal(toasts.filter(t=>t.includes('远征完成')).length,1,'completion result must be announced once');
@@ -138,8 +164,8 @@ assert.ok(contract.includes('character-save'),'contract must state per-character
 assert.ok(contract.includes('ABYSSAL_SAVE_EXTENSIONS_V1'),'contract must use the existing additive save extension');
 assert.ok(contract.includes('buying the upgrade remains a separate workbench action'),'contract must keep the Field Rig purchase as an explicit follow-up action');
 
-const worldIndex=boot.indexOf("'modules/world/awakening-world-v1.js'"),expeditionIndex=boot.indexOf("'modules/world/awakening-expedition-loop-v1.js'"),motionIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");
+const worldIndex=boot.indexOf("'modules/world/awakening-world-v1.js'"),expeditionIndex=boot.indexOf("'modules/world/awakening-expedition-loop-v1.js'"),lootBridgeIndex=boot.indexOf("'modules/world/expedition-loot-bridge-v1.js'"),motionIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");
 assert.ok(worldIndex>=0&&expeditionIndex>worldIndex,'expedition objective must load after MIRE MART world data');
-assert.ok(motionIndex>expeditionIndex,'expedition service must load before final motion/UI tail without changing collision ownership');
+assert.ok(lootBridgeIndex>expeditionIndex&&motionIndex>lootBridgeIndex,'confirmed-loot bridge must load after the expedition owner and before the motion/UI tail');
 
 console.log(JSON.stringify({ok:true,scope:'character-save-slice',states:[...api.contract.phases],requiredSalvage:api.contract.requiredSalvage,reentry:'idempotent',earlyReturn:'not-complete',deathRespawn:'retry-not-complete',existingSalvage:'recognized-route-still-required',combat:'unchanged',relay:'unchanged'}));

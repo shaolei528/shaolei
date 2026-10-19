@@ -69,11 +69,11 @@ Entering the existing MIRE MART store or parking footprint advances the run.
 
 ### SEARCH_FIGHT
 
-The player searches the existing MIRE MART interactions and may fight the existing crawlers. Combat is not mandatory as a separate quest flag; the objective is to secure the required existing salvage without changing combat semantics.
+The player must defeat at least one creature inside the existing MIRE MART area and successfully claim that creature's existing loot reward. The Loot module emits `abyssal:loot-claimed` only after the inventory transaction succeeds; a small integration bridge forwards that confirmed reward key to the expedition owner. Replaying the same reward key cannot count twice. Combat damage, reward selection, and Relay messages remain owned by their existing modules.
 
 ### SECURE_REQUIRED_SALVAGE
 
-The run recognizes `inventory.shard >= 2`. Existing salvage already carried by the player is valid, but the player must still physically reach MIRE MART and complete the expedition route; starting with two shards does not auto-complete the expedition from HOME.
+The run requires both a confirmed MIRE MART creature reward and `inventory.shard >= 2`. Existing salvage already carried by the player is valid, but the player must still physically reach MIRE MART, defeat a creature there, and complete the expedition route; starting with two shards does not auto-complete the expedition from HOME.
 
 ### RETURN_HOME
 
@@ -95,7 +95,7 @@ Death interrupts the active expedition attempt. On respawn at SafeCamp, the serv
 
 This prevents death/respawn from being misclassified as `RETURN_HOME → COMPLETE`.
 
-If death reduces inventory below the required salvage threshold, the player must secure the missing salvage again.
+Death resets the attempt's confirmed-creature proof. If death reduces inventory below the required salvage threshold, the player must secure the missing salvage again as well.
 
 ## Re-entry / idempotency
 
@@ -124,11 +124,13 @@ Before acceptance, verify:
 - fresh start
 - complete state order
 - repeated MIRE MART entry
+- salvage without a claimed MIRE MART creature reward cannot advance
+- successful local MIRE MART reward advances the fight gate once; duplicate delivery is ignored
 - early return
 - death / respawn
 - page reload during an expedition and after completion
 - save-extension migration from a V5 record with no expedition owner
-- starting with sufficient salvage
+- starting with sufficient salvage still requires one MIRE MART creature reward
 - SafeCamp combat suppression unchanged
 - PC/mobile input unchanged
 - loader retry semantics unchanged

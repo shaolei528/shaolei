@@ -33,9 +33,10 @@ const CONTRACT=Object.freeze({
 function finite(value,fallback=0){const n=Number(value);return Number.isFinite(n)?n:fallback;}
 function inside(rect,x,y){return !!rect&&x>=rect.x&&y>=rect.y&&x<rect.x+rect.w&&y<rect.y+rect.h;}
 function hasRequiredSalvage(observation){return finite(observation?.shard,0)>=CONTRACT.requiredSalvage.shard;}
+function hasExpeditionProof(observation){return hasRequiredSalvage(observation)&&!!observation?.hasDefeatedCreature;}
 
 function createMachine(){
-  const state={phase:PHASES.PREPARE,attempt:1,history:[PHASES.PREPARE],deathPending:false,completionAnnounced:false};
+  const state={phase:PHASES.PREPARE,attempt:1,history:[PHASES.PREPARE],deathPending:false,completionAnnounced:false,killRewardKeys:[],hasDefeatedCreature:false};
   function persist(){try{return typeof saveLocal==='function'&&saveLocal()===true}catch{return false}}
   function transition(next){
     if(!next||state.phase===next)return false;
@@ -45,7 +46,19 @@ function createMachine(){
     persist();
     return true;
   }
-  function snapshot(){return{version:1,phase:state.phase,attempt:state.attempt,history:[...state.history],deathPending:state.deathPending,completionAnnounced:state.completionAnnounced};}
+  function recordKill(rewardKey){
+    const key=String(rewardKey||'');
+    if(!key||key.length>160||state.killRewardKeys.includes(key))return false;
+    const previousKeys=[...state.killRewardKeys],previousProof=state.hasDefeatedCreature;
+    state.killRewardKeys.push(key);
+    if(state.killRewardKeys.length>64)state.killRewardKeys.shift();
+    state.hasDefeatedCreature=true;
+    if(persist())return true;
+    state.killRewardKeys=previousKeys;
+    state.hasDefeatedCreature=previousProof;
+    return false;
+  }
+  function snapshot(){return{version:1,phase:state.phase,attempt:state.attempt,history:[...state.history],deathPending:state.deathPending,completionAnnounced:state.completionAnnounced,killRewardKeys:[...state.killRewardKeys],hasDefeatedCreature:state.hasDefeatedCreature};}
   function restore(raw){
     if(raw?.version!==1)return false;
     state.phase=ORDER.includes(raw.phase)?raw.phase:PHASES.PREPARE;
@@ -56,6 +69,8 @@ function createMachine(){
     if(state.history.length>64)state.history=state.history.slice(-64);
     state.deathPending=state.phase!==PHASES.COMPLETE&&!!raw.deathPending;
     state.completionAnnounced=state.phase===PHASES.COMPLETE||!!raw.completionAnnounced;
+    state.killRewardKeys=Array.isArray(raw.killRewardKeys)?[...new Set(raw.killRewardKeys.filter(key=>typeof key==='string'&&key.length>0&&key.length<=160))].slice(-64):[];
+    state.hasDefeatedCreature=state.killRewardKeys.length>0;
     return true;
   }
   function step(observation={}){
@@ -67,10 +82,13 @@ function createMachine(){
     if(state.deathPending&&observation.inCamp&&state.phase!==PHASES.COMPLETE){
       state.deathPending=false;
       state.attempt++;
-      transition(observation.hasKnife?PHASES.LEAVE_HOME:PHASES.PREPARE);
+      state.killRewardKeys=[];
+      state.hasDefeatedCreature=false;
+      if(!transition(observation.hasKnife?PHASES.LEAVE_HOME:PHASES.PREPARE))persist();
       return snapshot();
     }
     const secured=hasRequiredSalvage(observation);
+    const hasProof=hasExpeditionProof({...observation,hasDefeatedCreature:state.hasDefeatedCreature||!!observation.hasDefeatedCreature});
     switch(state.phase){
       case PHASES.PREPARE:
         if(observation.hasKnife)transition(PHASES.LEAVE_HOME);
@@ -82,14 +100,14 @@ function createMachine(){
         if(observation.atMart)transition(PHASES.SEARCH_FIGHT);
         break;
       case PHASES.SEARCH_FIGHT:
-        if(secured)transition(PHASES.SECURE_REQUIRED_SALVAGE);
+        if(hasProof)transition(PHASES.SECURE_REQUIRED_SALVAGE);
         break;
       case PHASES.SECURE_REQUIRED_SALVAGE:
-        if(!secured)transition(PHASES.SEARCH_FIGHT);
+        if(!hasProof)transition(PHASES.SEARCH_FIGHT);
         else if(!observation.atMart)transition(PHASES.RETURN_HOME);
         break;
       case PHASES.RETURN_HOME:
-        if(!secured)transition(PHASES.SEARCH_FIGHT);
+        if(!hasProof)transition(PHASES.SEARCH_FIGHT);
         else if(observation.inCamp)transition(PHASES.COMPLETE);
         break;
       case PHASES.COMPLETE:
@@ -97,7 +115,7 @@ function createMachine(){
     }
     return snapshot();
   }
-  return{state,step,snapshot,restore,transition};
+  return{state,step,snapshot,restore,transition,recordKill};
 }
 
 function atMireMart(player){
@@ -118,8 +136,23 @@ function runtimeObservation(){
     atMart:atMireMart(player),
     hasKnife:!!inv.knife,
     lantern:!!inv.lantern,
-    wood:finite(inv.wood),stone:finite(inv.stone),food:finite(inv.food),shard:finite(inv.shard)
+    wood:finite(inv.wood),stone:finite(inv.stone),food:finite(inv.food),shard:finite(inv.shard),hasDefeatedCreature:machine.state.hasDefeatedCreature
   };
+}
+function recordConfirmedMobLoot(detail){
+  const observation=runtimeObservation();
+  const phase=machine.state.phase;
+  const rewardKey=String(detail?.rewardKey||'');
+  const mobId=String(detail?.mobId||'');
+  const mobKind=String(detail?.mobKind||'');
+  if(!observation.started||!observation.atMart||!['SEARCH_FIGHT','SECURE_REQUIRED_SALVAGE'].includes(phase))return false;
+  if(!rewardKey||rewardKey.length>160||!mobId||mobId.length>96||!mobKind||mobKind.length>40)return false;
+  if(typeof SESSION_ID==='string'&&detail?.playerId!==SESSION_ID)return false;
+  if(!globalThis.ABYSSAL_CREATURE_REWARDS_CONFIG_V1?.creatures?.[mobKind])return false;
+  const prefix=`companion-egg:${mobId}:`;
+  if(!rewardKey.startsWith(prefix)||!/^\d{1,16}$/.test(rewardKey.slice(prefix.length)))return false;
+  if(!detail?.grants||!Object.entries(detail.grants).some(([item,amount])=>['shard','food'].includes(item)&&Number.isInteger(amount)&&amount>0))return false;
+  return machine.recordKill(rewardKey);
 }
 function objectiveText(snapshot,observation={}){
   if(!observation.started)return null;
@@ -135,7 +168,8 @@ function objectiveText(snapshot,observation={}){
     case PHASES.REACH_MIRE_MART:
       return observation.inCamp?'前往 MIRE MART · 沿北路':'抵达 MIRE MART · 沿北路继续';
     case PHASES.SEARCH_FIGHT:
-      return observation.inCamp?`缺少碎片 · 前往 MIRE MART ${shard}`:`搜寻/击退爬行者 · 碎片 ${shard}`;
+      if(observation.inCamp)return`缺少战利品 · 前往 MIRE MART ${shard}`;
+      return observation.hasDefeatedCreature?`已击退怪物 · 碎片 ${shard}`:`搜寻/击退爬行者 · 碎片 ${shard}`;
     case PHASES.SECURE_REQUIRED_SALVAGE:
       return`带碎片回营 · ${shard}`;
     case PHASES.RETURN_HOME:
@@ -175,5 +209,5 @@ function updateRuntime(){
 /* Expedition V1 owns the active objective display. Do not call the old temporary Awakening objective wrapper here: it used inventory delta as completion authority and could falsely complete on unrelated shard gains. */
 window.updateQuest=updateQuest=function(){updateRuntime();};
 
-globalThis.ABYSSAL_EXPEDITION_LOOP_V1={version:1,contract:CONTRACT,phases:PHASES,createMachine,hasRequiredSalvage,atMireMart,runtimeObservation,objectiveText,updateRuntime,state:machine.state};
+globalThis.ABYSSAL_EXPEDITION_LOOP_V1={version:1,contract:CONTRACT,phases:PHASES,createMachine,hasRequiredSalvage,hasExpeditionProof,recordConfirmedMobLoot,atMireMart,runtimeObservation,objectiveText,updateRuntime,state:machine.state};
 })();
