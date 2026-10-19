@@ -486,6 +486,7 @@
 
 - **改动：**PR [#10](https://github.com/shaolei528/shaolei/pull/10) 的玩法改动提交为 `8d57a4b859f986d5a97ab7fc3d7f3b244084a340`。远征要在 MIRE MART 领取至少一份本地怪物掉落并带回 2 枚碎片；奖励去重、保存到现有 V5 扩展，死亡重试会重置本次击杀证明。Relay 消息和战斗奖励结算没有改变。
 - **VERIFIED（代码模拟）：**远征状态、真实 Loot 事件整合、V5 重载、WASD/E/Space 完整路线与 Boss 区域解锁 4 项定向测试通过；两份相关模块通过 `node --check`，`git diff --check` 通过。
+- **VERIFIED（发布包形状）：**`npm run build:site` 生成 101 个公开文件（0.67 MiB）；Wrangler 4.102.0 dry-run 读取 141 个静态资源并识别 `WORLD` Durable Object。`wrangler.jsonc` 已指向该内容哈希包。以上是本地构建检查，不是远端部署。
 - **UNKNOWN：**当前浏览器实玩、PR Actions、公开 `main` 更新、Cloudflare 永久部署及两名玩家实时验收。本次还没有新版本可对外分享。
 - **REPORTED（Cloudflare 登录）：**用户在 Cloudflare 登录页看到 “You are unable to sign in”。官方状态页未显示当前同类登录事故；10 月 16 日的 Dashboard 注册问题已标为解决。单个账号的认证方式或会话原因无法从当前工作区确认。建议按最初注册方式重试（邮箱密码、Google/GitHub/Apple 或组织 SSO）；仍失败时在隐私窗口重试，并将错误全文、登录方式和发生时间提供给 Cloudflare 支持。不要在聊天中发送密码、验证码或 API Token。
 - **下一步：**PR 检查完成后合入 `main` 并复核 raw.githack；Cloudflare 登录恢复后再执行永久 Worker 部署及真实联机验收。
