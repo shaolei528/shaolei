@@ -21,7 +21,8 @@ function boot({dead=false,position={x:2400,y:1800}}={}){
   }catch{}
   context=vm.createContext({
     console,Date:TestDate,window:null,globalThis:null,STORAGE_KEY:'abyssal_wake_save_v5',localStorage,
-    CAMP,me:{x:position.x,y:position.y},inventory:contextInventory,currentZone:'1:1',started:true,dead,
+    CAMP,SESSION_ID:'save-test-player',me:{x:position.x,y:position.y},inventory:contextInventory,currentZone:'1:1',started:true,dead,
+    ABYSSAL_CREATURE_REWARDS_CONFIG_V1:{creatures:{crawler:{},cultist:{},watcher:{}}},
     questText:{textContent:''},fieldGraceUntil:0,updateQuest:()=>{},
     ABYSSAL_AWAKENING_WORLD_V1:{poi:{x:2112,y:640,w:640,h:448,parking:{x:2048,y:1088,w:768,h:288}}},
     ABYSSAL_HOME_WORKBENCH_V1:{recordExpeditionReturn:()=>{returnRecords.push('completed');return{returnClearancePersisted:true};},getState:()=>({tier:0})},
@@ -54,9 +55,15 @@ assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'SEARCH_FIGHT');
 
 game=boot();
 assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'SEARCH_FIGHT');
+game.me.x=2400;game.me.y=800;
 game.inventory.shard=2;
 game.updateQuest();
+assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'SEARCH_FIGHT','salvage does not skip the creature encounter after reload');
+assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.recordConfirmedMobLoot({playerId:'save-test-player',mobId:'save-test-crawler',mobKind:'crawler',rewardKey:'companion-egg:save-test-crawler:2001',grants:{shard:1}}),true,'a claimed creature reward is accepted in the MIRE MART area');
+game.updateQuest();
 assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'SECURE_REQUIRED_SALVAGE');
+game=boot();
+assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'SECURE_REQUIRED_SALVAGE','the claimed MIRE MART kill and salvage gate survive a V5 reload');
 game.me.x=2400;game.me.y=1800;
 game.updateQuest();
 assert.equal(game.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'RETURN_HOME');

@@ -18,6 +18,7 @@ const lootSource=read('modules/loot/creature-rewards-v1.js');
 const mobCombatSource=read('modules/combat/mob-combat.js');
 const playerCombatSource=read('modules/combat/player-combat.js');
 const expeditionSource=read('modules/world/awakening-expedition-loop-v1.js');
+const lootBridgeSource=read('modules/world/expedition-loot-bridge-v1.js');
 const bossCombatSource=read('modules/combat/boss-combat-v1.js');
 const bossProgressionSource=read('modules/world/boss-progression-v1.js');
 const interactionConstants=block(interactionSource,'  const FIRE={','  function emitGameplayEvent');
@@ -116,7 +117,8 @@ for(const[source,name]of[
   [read('modules/crafting/crafting-processing-v1.js'),'crafting-processing-v1.js'],
   [mobCombatSource,'mob-combat.js'],
   [playerCombatSource,'player-combat.js'],
-  [expeditionSource,'awakening-expedition-loop-v1.js']
+  [expeditionSource,'awakening-expedition-loop-v1.js'],
+  [lootBridgeSource,'expedition-loot-bridge-v1.js']
 ])vm.runInContext(source,sandbox,{filename:name});
 vm.runInContext(read('modules/main-loop/smooth-motion-v18.js'),sandbox,{filename:'smooth-motion-v18.js'});
 vm.runInContext(bossCombatSource,sandbox,{filename:'boss-combat-v1.js'});
