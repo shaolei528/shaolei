@@ -473,3 +473,11 @@
 - **发现并修复中的接线问题：**首个临时包的客户端仍默认连接既有 `zuoranzhang.workers.dev`。当前 PR #9 改为 Workers 域名下走同源 `/ws`，Githack 保持既有 Relay 地址；未完成后续重部署前，不宣称新临时 Worker 已接通客户端。
 - **UNKNOWN（线上验收）：**用户浏览器权限拒绝打开临时 Worker，本轮未通过浏览器检查游戏画面、`/health` 或实际联机；本机旧 QA 地址 `127.0.0.1:8876` 连接被拒。
 - **下一步：**合并 PR #9 后更新临时 Cloudflare 包；公网 UI 与双客户端验证仍须单独通过，临时环境需在有效期内认领才能长期保留。
+
+## 2026-10-19：首次远征战利品门槛与营地路障防御 PR 检查
+
+- **PR #10：**首次 MIRE MART 返营现在要求已领取一次当地怪物战利品及 2 枚碎片，并将已确认击杀凭证写入现有 V5 扩展。`06f39f6` 对应的四项 GitHub Actions 全部通过；公开 PR 页面仍标记 Cloudflare Workers Builds 部署失败，详情链接要求 Cloudflare 登录，因此不能推断具体根因。
+- **PR #11：**怪物被路障阻挡时发出移动受阻事件；HOME & Building 根据数据配置扣耐久、保存变更、销毁后移除碰撞，并经现有营地快照 Relay 广播。同步修复旧 `game-play.js` 汇总镜像，并补齐日夜拆分模块末尾换行。提交 `c421517` 已推送到 PR #11。
+- **VERIFIED（当前分支）：**全仓 101 个 `tests/*.test.mjs` 串行通过；其中模块重组、路障耐久/存档回滚/碰撞移除的专项回归均通过。PR #11 的 `terrain-v21-check` 与 `cloudflare-check` GitHub Actions 均成功。
+- **未验收：**当前浏览器对本机 `127.0.0.1:8883` 页面的观察权限被保存策略拒绝，本轮没有尝试绕过；普通浏览器实玩与双客户端防御同步仍为 UNKNOWN。用户报告 Cloudflare 登录页提示 “You are unable to sign in”；本机 Wrangler 仍未认证。PR #10/#11 均未合并；公开页面与永久 Cloudflare Worker 均未由本轮更新。
+- **下一步：**恢复 Cloudflare 账号访问后读取 Workers Builds 失败日志，再分别处理构建与部署；同时安排在可观察且获准的浏览器环境中实走采集、制作、战斗、战利品返营和路障防守路线。
