@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "plots": [
+    { "id": "camp-bed-1", "offset": { "x": 128, "y": 218 } },
+    { "id": "camp-bed-2", "offset": { "x": 188, "y": 218 } },
+    { "id": "camp-bed-3", "offset": { "x": 248, "y": 218 } }
+  ],
+  "crops": {
+    "saltwind-greens": {
+      "name": "盐风叶菜",
+      "seedItem": "seed",
+      "growthSeconds": 42,
+      "yield": { "food": 2, "seed": 1 }
+    }
+  },
+  "starterCrop": "saltwind-greens"
+}

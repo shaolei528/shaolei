@@ -1,9 +1,11 @@
 const PROTOCOL = 'abyssal-relay-v1';
 const WORLD_NAME = 'abyssal-wake-public-v1';
 const CHANNEL_PREFIX = 'abyssal-wake-public-v1:';
+const ZONE_CHANNEL_PREFIX = CHANNEL_PREFIX + 'zone:';
 const MAX_MESSAGE_CHARS = 48 * 1024;
 const MAX_CHANNELS = 8;
 const MAX_MESSAGES_PER_SECOND = 120;
+const PLAYER_IDENTITY_EVENTS = new Set(['move', 'attack', 'chat', 'map_pos', 'state_req']);
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -27,6 +29,26 @@ function sanitizeName(value) {
 function validChannel(value) {
   const key = String(value || '');
   return key.startsWith(CHANNEL_PREFIX) && key.length <= 160;
+}
+
+function zoneFromChannel(channel) {
+  const key = String(channel || '');
+  if (!key.startsWith(ZONE_CHANNEL_PREFIX)) return '';
+  const zone = key.slice(ZONE_CHANNEL_PREFIX.length);
+  return /^\d+:\d+$/.test(zone) ? zone : '';
+}
+
+function canonicalBroadcastPayload(event, payload, state, channel) {
+  if (!PLAYER_IDENTITY_EVENTS.has(event)) return payload;
+  const input = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+  const output = {
+    ...input,
+    id: state.sessionId,
+    name: sanitizeName(state.name)
+  };
+  const zone = zoneFromChannel(channel);
+  if (zone && (event === 'move' || event === 'attack' || event === 'state_req')) output.zone = zone;
+  return output;
 }
 
 function defaultSocketState() {
@@ -139,7 +161,7 @@ export class GameWorld {
       const meta = state.presence[channel];
       if (!state.sessionId || !meta || seen.has(state.sessionId)) continue;
       seen.add(state.sessionId);
-      entries.push({ ...meta, id: state.sessionId, name: sanitizeName(meta.name || state.name) });
+      entries.push({ ...meta, id: state.sessionId, name: sanitizeName(state.name) });
     }
     return entries;
   }
@@ -268,7 +290,7 @@ export class GameWorld {
       state.presence[channel] = {
         ...input,
         id: state.sessionId,
-        name: sanitizeName(input.name || state.name)
+        name: sanitizeName(state.name)
       };
       this.saveState(ws, state);
       this.publishPresence(channel);
@@ -290,7 +312,7 @@ export class GameWorld {
         type: 'broadcast',
         channel,
         event,
-        payload: msg.payload,
+        payload: canonicalBroadcastPayload(event, msg.payload, state, channel),
         from: state.sessionId,
         serverTime: Date.now()
       };

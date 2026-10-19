@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "feedItem": "food",
+  "interactionRadius": 86,
+  "habitats": [
+    {
+      "id": "camp-pens",
+      "name": "营地围栏",
+      "bounds": { "x": -260, "y": -405, "width": 520, "height": 160 }
+    }
+  ],
+  "species": {
+    "chicken": {
+      "name": "鸡",
+      "productItem": "egg",
+      "productName": "鸡蛋",
+      "productionSeconds": 18,
+      "maturitySeconds": 30,
+      "breedingCooldownSeconds": 45,
+      "maxAnimals": 12
+    },
+    "cow": {
+      "name": "牛",
+      "productItem": "milk",
+      "productName": "牛奶",
+      "productionSeconds": 28,
+      "maturitySeconds": 45,
+      "breedingCooldownSeconds": 60,
+      "maxAnimals": 8
+    },
+    "sheep": {
+      "name": "羊",
+      "productItem": "wool",
+      "productName": "羊毛",
+      "productionSeconds": 24,
+      "maturitySeconds": 40,
+      "breedingCooldownSeconds": 55,
+      "maxAnimals": 8
+    }
+  },
+  "starterAnimals": [
+    { "id": "hen-a", "species": "chicken", "sex": "female", "habitatId": "camp-pens", "offset": { "x": -205, "y": -350 } },
+    { "id": "hen-b", "species": "chicken", "sex": "male", "habitatId": "camp-pens", "offset": { "x": -155, "y": -350 } },
+    { "id": "cow-a", "species": "cow", "sex": "female", "habitatId": "camp-pens", "offset": { "x": -35, "y": -350 } },
+    { "id": "cow-b", "species": "cow", "sex": "male", "habitatId": "camp-pens", "offset": { "x": 15, "y": -350 } },
+    { "id": "sheep-a", "species": "sheep", "sex": "female", "habitatId": "camp-pens", "offset": { "x": 135, "y": -350 } },
+    { "id": "sheep-b", "species": "sheep", "sex": "male", "habitatId": "camp-pens", "offset": { "x": 185, "y": -350 } }
+  ]
+}

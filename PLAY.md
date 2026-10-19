@@ -1,5 +1,7 @@
-# Abyssal Wake
+# 《深渊苏醒》
 
-Current main build: `survival-v7.html`.
+**唯一玩家入口：**打开仓库根目录的 `index.html`。它会进入 3/4 统一灰盒。
 
-V7 keeps the existing shared survival world and adds a brighter sprite-only presentation, Mirewood Safe Camp onboarding, Camp Guide, starter resources, gentler starter-zone enemies, map/day UI, campfire rest, and additional gameplay/network safeguards.
+仓库里的 `survival-v21.html` 和 `ui-shell.html` 是目前保留的模拟、存档、联机和界面底层文件，不是供玩家挑选的版本。旧的 `prototypes/successor-3-4/index.html?view=...` 地址会回到唯一玩家入口；隔离式诊断脚本不算另一个发行版。
+
+灰盒目前优先验证移动、碰撞和采集反馈。五类沙盒玩法是后续同一条游戏循环的目标，尚未全部完成，也不能仅凭文档或测试标成已完成。

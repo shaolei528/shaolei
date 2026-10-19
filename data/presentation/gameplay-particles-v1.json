@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "maxParticles": 192,
+  "colors": {
+    "wood": ["#f3d18b", "#c58e4f", "#8b6240"],
+    "stone": ["#e4e2c7", "#a7b1a0", "#71827a"],
+    "food": ["#f5dda0", "#c99161", "#88a777"],
+    "shard": ["#d4c5f2", "#9b8bc4", "#76c8bb"],
+    "hit": ["#fff4cb", "#ffd17a", "#e68a4b"],
+    "death": ["#fff0b9", "#dfa75e", "#748f69"],
+    "hurt": ["#ef8b77", "#d65e58", "#f3d0a5"],
+    "craft": ["#fff0b5", "#e3b666", "#91aa7a"],
+    "rest": ["#f7dfa1", "#cfaa70", "#9eb182"],
+    "swing": ["#f5e6b3", "#d6c78f", "#b3c3ad"]
+  },
+  "profiles": {
+    "combatHit": { "count": 7, "life": 0.5, "speed": 28, "gravity": 92, "launch": 20 },
+    "mobDeath": { "count": 18, "life": 0.72, "speed": 32, "gravity": 92, "launch": 20 },
+    "playerHurt": { "count": 8, "life": 0.5, "speed": 22, "gravity": 92, "launch": 20 },
+    "playerSwing": { "count": 5, "life": 0.5, "speed": 18, "gravity": 92, "launch": 20 },
+    "resourceCollected": { "count": 9, "life": 0.5, "speed": 22, "gravity": 92, "launch": 20 },
+    "itemCrafted": { "count": 12, "life": 0.5, "speed": 22, "gravity": 92, "launch": 20 },
+    "campRested": { "count": 11, "life": 0.66, "speed": 22, "gravity": -6, "launch": 20 },
+    "chestOpened": { "count": 14, "life": 0.5, "speed": 22, "gravity": 92, "launch": 20 }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "creatures": {
+    "crawler": {
+      "guaranteed": { "shard": 1 },
+      "chanceDrops": []
+    },
+    "cultist": {
+      "guaranteed": { "shard": 1 },
+      "chanceDrops": [
+        { "item": "food", "amount": 1, "chance": 0.4 }
+      ]
+    },
+    "watcher": {
+      "guaranteed": { "shard": 2 },
+      "chanceDrops": []
+    }
+  }
+}

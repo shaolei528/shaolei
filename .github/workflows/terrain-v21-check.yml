@@ -1,0 +1,205 @@
+name: terrain-v21-check
+
+on:
+  push:
+    paths:
+      - 'ART_BIBLE.md'
+      - 'AWAKENING_ASSET_CONTRACT.md'
+      - 'docs/contracts/MIRE_MART_EXPEDITION_LOOP_V1.md'
+      - 'docs/contracts/HOME_WORKBENCH_UPGRADE_V1.md'
+      - 'terrain-v21.js'
+      - 'terrain-v21-preview.html'
+      - 'docs/contracts/PRODUCTION_BLOCKER_REDRAW_SPEC_V1.md'
+      - 'tests/awakening-scene-placement-preview-v1.test.mjs'
+      - 'survival-v21.html'
+      - 'game-play.js'
+      - 'package.json'
+      - 'assets/art-v21/**'
+      - 'assets/awakening-v1/**'
+      - 'assets/camp_props.png'
+      - 'modules/**'
+      - 'tools/awakening-assets/**'
+      - 'tests/terrain-v21.test.mjs'
+      - 'tests/awakening-world-v1.test.mjs'
+      - 'tests/awakening-world-logic-hardening-v1.test.mjs'
+      - 'tests/mob-cooldown-authority-handoff-v1.test.mjs'
+      - 'tests/awakening-expedition-loop-v1.test.mjs'
+      - 'tests/awakening-home-workbench-upgrade-v1.test.mjs'
+      - 'tests/awakening-assets-validator.test.mjs'
+      - 'tests/awakening-production-manifest-gate-hardening-v1.test.mjs'
+      - 'tests/awakening-art-mapping-v1.test.mjs'
+      - 'tests/camp-art-v21.test.mjs'
+      - 'tests/combat-hit-feedback.test.mjs'
+      - 'tests/weapon-presentation-v1.test.mjs'
+      - 'tests/module-sort.test.mjs'
+      - 'tests/smooth-motion-retry-idempotency-v1.test.mjs'
+      - 'tests/core-smoke.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
+      - 'tests/interaction-v12.test.mjs'
+      - 'tests/v21-loader-retry-idempotency-v1.test.mjs'
+      - 'tests/network-relay-v16-subscribe-ack-timeout.test.mjs'
+      - 'tests/successor-fishing-rendering-v1.test.mjs'
+      - '.github/workflows/terrain-v21-check.yml'
+  pull_request:
+    paths:
+      - 'ART_BIBLE.md'
+      - 'AWAKENING_ASSET_CONTRACT.md'
+      - 'docs/contracts/MIRE_MART_EXPEDITION_LOOP_V1.md'
+      - 'docs/contracts/HOME_WORKBENCH_UPGRADE_V1.md'
+      - 'terrain-v21.js'
+      - 'terrain-v21-preview.html'
+      - 'docs/contracts/PRODUCTION_BLOCKER_REDRAW_SPEC_V1.md'
+      - 'tests/awakening-scene-placement-preview-v1.test.mjs'
+      - 'survival-v21.html'
+      - 'game-play.js'
+      - 'package.json'
+      - 'assets/art-v21/**'
+      - 'assets/awakening-v1/**'
+      - 'assets/camp_props.png'
+      - 'modules/**'
+      - 'tools/awakening-assets/**'
+      - 'tests/terrain-v21.test.mjs'
+      - 'tests/awakening-world-v1.test.mjs'
+      - 'tests/awakening-world-logic-hardening-v1.test.mjs'
+      - 'tests/mob-cooldown-authority-handoff-v1.test.mjs'
+      - 'tests/awakening-expedition-loop-v1.test.mjs'
+      - 'tests/awakening-home-workbench-upgrade-v1.test.mjs'
+      - 'tests/awakening-assets-validator.test.mjs'
+      - 'tests/awakening-production-manifest-gate-hardening-v1.test.mjs'
+      - 'tests/awakening-art-mapping-v1.test.mjs'
+      - 'tests/camp-art-v21.test.mjs'
+      - 'tests/combat-hit-feedback.test.mjs'
+      - 'tests/weapon-presentation-v1.test.mjs'
+      - 'tests/module-sort.test.mjs'
+      - 'tests/smooth-motion-retry-idempotency-v1.test.mjs'
+      - 'tests/core-smoke.test.mjs'
+      - 'tests/platform-inventory-v19.test.mjs'
+      - 'tests/interaction-v12.test.mjs'
+      - 'tests/v21-loader-retry-idempotency-v1.test.mjs'
+      - 'tests/network-relay-v16-subscribe-ack-timeout.test.mjs'
+      - 'tests/successor-fishing-rendering-v1.test.mjs'
+      - '.github/workflows/terrain-v21-check.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Scene placement preview isolation
+        run: node tests/awakening-scene-placement-preview-v1.test.mjs
+      - name: Module-sort byte equivalence and load order
+        run: node tests/module-sort.test.mjs
+      - name: V18 retry ownership regression
+        run: node tests/smooth-motion-retry-idempotency-v1.test.mjs
+      - name: Categorized module syntax
+        run: find modules tools -name '*.js' -o -name '*.mjs' | xargs -n1 node --check
+      - name: Awakening asset validator
+        run: node tests/awakening-assets-validator.test.mjs
+      - name: Production manifest presentation-only and strict-required gate
+        run: node tests/awakening-production-manifest-gate-hardening-v1.test.mjs
+      - name: Production Awakening asset pack
+        run: |
+          if [ -f assets/awakening-v1/manifest.json ]; then
+            node tools/awakening-assets/validate-pack.mjs assets/awakening-v1 --strict-required
+          else
+            echo "BLOCKED: no production Awakening manifest exists; fixture gate tests do not validate a production art pack."
+            echo "## Production art readiness: BLOCKED" >> "$GITHUB_STEP_SUMMARY"
+            echo "No production manifest exists. Fixture tests validate the gate logic only; production art is not approved." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Awakening art mapping and fallback
+        run: node tests/awakening-art-mapping-v1.test.mjs
+      - name: Camp art contract
+        run: node tests/camp-art-v21.test.mjs
+      - name: Combat hit-feedback contract
+        run: node tests/combat-hit-feedback.test.mjs
+      - name: Weapon presentation regression
+        run: node tests/weapon-presentation-v1.test.mjs
+      - name: Terrain syntax
+        run: node --check terrain-v21.js
+      - name: Terrain vertical-slice regression
+        run: node tests/terrain-v21.test.mjs
+      - name: Awakening world vertical-slice regression
+        run: node tests/awakening-world-v1.test.mjs
+      - name: Awakening world logic hardening integration
+        run: node tests/awakening-world-logic-hardening-v1.test.mjs
+      - name: Mob cooldown authority handoff regression
+        run: node tests/mob-cooldown-authority-handoff-v1.test.mjs
+      - name: MIRE MART expedition loop
+        run: node tests/awakening-expedition-loop-v1.test.mjs
+      - name: HOME workbench expedition payoff
+        run: node tests/awakening-home-workbench-upgrade-v1.test.mjs
+      - name: V21 boot retry idempotency
+        run: node tests/v21-loader-retry-idempotency-v1.test.mjs
+      - name: Relay subscription acknowledgement timeout
+        run: node tests/network-relay-v16-subscribe-ack-timeout.test.mjs
+      - name: V21 boot and static preview syntax
+        if: ${{ always() }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          boot=Path('survival-v21.html').read_text()
+          match=re.search(r'<script>([\s\S]*?)</script>',boot)
+          if not match:
+              raise SystemExit('V21 inline boot script not found')
+          Path('/tmp/v21-boot.js').write_text(match.group(1))
+          for required in ["'terrain-v21.js'", "'modules/render/awakening-art-assets-v1.js'", "'modules/world/awakening-world-v1.js'", "'modules/world/awakening-expedition-loop-v1.js'", "'modules/safe-camp/home-workbench-upgrade-v1.js'"]:
+              if required not in boot:
+                  raise SystemExit('V21 module missing: '+required)
+          if not re.search(r"const VER='21[^']+'", boot):
+              raise SystemExit('V21 cache key missing')
+          for name in ['terrain-v21-preview.html']:
+              source=Path(name).read_text()
+              scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',source)
+              if not scripts:
+                  raise SystemExit(name+' inline script missing')
+              Path('/tmp/'+name+'.js').write_text('\n'.join(scripts))
+          if './terrain-v21.js' not in Path('terrain-v21-preview.html').read_text() or 'Collision: OFF' not in Path('terrain-v21-preview.html').read_text():
+              raise SystemExit('V21 static preview wiring missing')
+          PY
+          node --check /tmp/v21-boot.js
+          node --check /tmp/terrain-v21-preview.html.js
+      - name: Pond shoreline depth sorting
+        run: node tests/successor-fishing-rendering-v1.test.mjs
+      - name: Existing gameplay regression suite
+        if: ${{ always() }}
+        run: |
+          node tests/playable-slice-smoothness-v1.test.mjs
+          node tests/game-shell-v1.test.mjs
+          node tests/motion-v18.test.mjs
+          node tests/platform-inventory-v19.test.mjs
+          node tests/interaction-v12.test.mjs
+          node tests/ready-localization-v9.test.mjs
+          node tests/network-quality-v20.test.mjs
+      - name: Core survival and SafeCamp smoke
+        if: ${{ always() }}
+        run: node tests/core-smoke.test.mjs
+      - name: Relay protocol regression
+        if: ${{ always() }}
+        run: node cloudflare/test.mjs
+      - name: Worker bundle dry run
+        if: ${{ always() }}
+        run: |
+          npm install
+          npm run check:worker
+      - name: Current production relay health
+        if: ${{ always() }}
+        run: |
+          set -euxo pipefail
+          for i in 1 2 3; do
+            code=$(curl -sS -o /tmp/health.txt -w '%{http_code}' --connect-timeout 10 --max-time 20 \
+              -H 'Accept: application/json' \
+              https://abyssal-wake-relay.zuoranzhang.workers.dev/health || true)
+            if [ "$code" = "200" ] && grep -q '"ok":true' /tmp/health.txt; then exit 0; fi
+            sleep 8
+          done
+          cat /tmp/health.txt 2>/dev/null || true
+          exit 1
+      - name: Current production live two-client multiplayer
+        if: ${{ always() }}
+        env:
+          LIVE_RELAY_URL: wss://abyssal-wake-relay.zuoranzhang.workers.dev/ws
+        run: npm run test:live-relay

@@ -1,0 +1,1 @@
+function nightLevel(){const elapsed=(Date.now()-sessionStartedAt)/1000;if(elapsed<240)return 0;const p=(elapsed-240)%600;if(p<320)return 0;if(p<400)return(p-320)/80;if(p<540)return 1;return 1-(p-540)/60}

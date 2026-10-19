@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>深渊苏醒 — 地图 UI 演示</title>
+<style>
+:root{color-scheme:dark;--ink:#eaf0df;--muted:#a7b6a8;--line:#425c50;--panel:#14251f;--panel2:#1a3028;--sea:#1e5960;--sand:#c7b887;--gold:#edcf7d;--green:#a4d49d;--red:#e99b83;font-family:Inter,"Segoe UI",Arial,sans-serif}*{box-sizing:border-box}body{margin:0;min-height:100svh;background:#09130f;color:var(--ink);padding:clamp(10px,2.5vw,28px);background-image:linear-gradient(180deg,#14231d 0,#09130f 320px);}.frame{max-width:1120px;margin:0 auto;border:1px solid #334b40;background:#0d1915;box-shadow:0 20px 60px #0008}.masthead{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#182d25,#112019)}.brand{font-family:Georgia,serif;font-size:clamp(17px,3vw,24px);font-weight:700;letter-spacing:.14em}.brand small{display:block;margin-top:4px;color:#a9c2b4;font-family:Inter,"Segoe UI",Arial,sans-serif;font-size:9px;letter-spacing:.25em}.badges{display:flex;align-items:center;gap:8px}.badge{border:1px solid #7a6740;background:#3c3320;color:#ffe7a4;padding:6px 9px;font:800 10px/1 ui-monospace,Consolas,monospace;letter-spacing:.08em}.badge.demo{background:#753c32;border-color:#d49074;color:#fff0dc}.layout{display:grid;grid-template-columns:minmax(340px,1.18fr) minmax(290px,.82fr);gap:14px;padding:16px}.card{border:1px solid var(--line);background:var(--panel);box-shadow:inset 0 1px #ffffff08}.map-card{padding:13px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.eyebrow{color:#a4bcaa;font:800 10px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.14em}.section-head h1,.section-head h2{margin:3px 0 0;font-size:18px;letter-spacing:.035em}.demo-stamp{border:1px solid #be7961;color:#ffd5b6;padding:5px 7px;font:900 9px/1 ui-monospace,Consolas,monospace;white-space:nowrap}.map-wrap{position:relative;width:min(100%,342px);aspect-ratio:1;margin:0 auto;border:2px solid #708474;background:#27443a;box-shadow:0 8px 24px #0007;overflow:hidden}.map-wrap canvas{display:block;width:100%;height:100%;image-rendering:pixelated}.map-stamp{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;color:#fff4d6;font:1000 clamp(25px,8vw,43px)/1 ui-monospace,Consolas,monospace;letter-spacing:.16em;text-shadow:0 3px #523b2d,2px 0 #523b2d,-2px 0 #523b2d,0 -2px #523b2d,0 0 14px #121b17;opacity:.72;transform:rotate(-17deg)}.map-caption{display:flex;justify-content:space-between;gap:8px;margin-top:9px;color:var(--muted);font:700 10px/1.4 ui-monospace,Consolas,monospace}.legend{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;padding-top:10px;border-top:1px solid #30473d}.legend-item{display:flex;align-items:center;gap:6px;color:#d3ddd1;font-size:11px}.dot{display:inline-block;width:12px;height:12px;border:2px solid #dce9d4;background:#527b57}.dot.home{background:var(--gold);border-color:#fff0b6}.dot.you{width:10px;height:10px;background:#e8f1d6;border-radius:50%}.dot.poi{background:#d5a56b;border-color:#f6d9a4;transform:rotate(45deg);width:10px;height:10px}.side{display:grid;align-content:start;gap:12px}.info{padding:14px}.info h2{margin:0 0 11px;font-size:14px;letter-spacing:.05em}.notice{border-left:3px solid var(--gold);background:#283020;padding:10px 11px;color:#efe5bd;font-size:12px;line-height:1.6}.notice strong{display:block;margin-bottom:3px;color:#fff0ba;font-size:12px}.place{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #30473d}.place:first-of-type{border-top:0}.place-icon{display:grid;place-items:center;width:34px;height:34px;border:1px solid #64755b;background:#33442f;color:#f7dea1;font:900 12px ui-monospace,Consolas,monospace}.place-icon.poi{border-color:#956c4e;background:#4c382b;color:#ffd49e}.place-name{font-size:12px;font-weight:800}.place-sub{margin-top:3px;color:var(--muted);font-size:10px}.tag{color:#ffd9a7;font:800 8px ui-monospace,Consolas,monospace;letter-spacing:.05em}.footer{display:flex;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--line);color:#afbeb1;font-size:10px;line-height:1.5;background:#0a1511}.footer strong{color:#f0d58d}.pixel-rule{height:5px;background:repeating-linear-gradient(90deg,#a7824c 0 12px,#d6bb79 12px 19px,#49684c 19px 28px,#355548 28px 36px)}@media(max-width:760px){body{padding:0}.frame{border-left:0;border-right:0;min-height:100svh}.masthead{padding:13px 14px}.layout{grid-template-columns:1fr;gap:10px;padding:10px}.map-card{padding:10px}.section-head h1{font-size:16px}.side{grid-template-columns:1fr}.info{padding:12px}.footer{padding:11px 13px;display:block}.footer span{display:block;margin-top:4px}}@media(max-width:360px){.brand{font-size:16px}.badges{gap:5px}.badge{padding:5px 6px;font-size:8px}.layout{padding:7px}.map-card{padding:8px}.map-caption{font-size:9px}.legend-item{font-size:10px}}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="pixel-rule" aria-hidden="true"></div>
+  <header class="masthead">
+    <div class="brand">ABYSSAL WAKE<small>深渊苏醒 · FIELD MAP CONCEPT</small></div>
+    <div class="badges"><span class="badge">MAP / UI-1</span><span class="badge demo">DEMO DATA</span></div>
+  </header>
+  <main class="layout">
+    <section class="card map-card" aria-labelledby="mapTitle">
+      <div class="section-head"><div><div class="eyebrow">COASTAL DISTRICT · LAYOUT STUDY</div><h1 id="mapTitle">潮线导航图</h1></div><span class="demo-stamp">静态演示</span></div>
+      <div class="map-wrap"><canvas id="demoMap" width="342" height="342" role="img" aria-label="假数据绘制的海岸营地地图布局；不代表游戏中的实际位置"></canvas><div class="map-stamp" aria-hidden="true">DEMO</div></div>
+      <div class="map-caption"><span>示意坐标 · 非实时位置</span><span>无路线规划</span></div>
+      <div class="legend" aria-label="演示图例"><span class="legend-item"><i class="dot home"></i>HOME · 安全营地</span><span class="legend-item"><i class="dot you"></i>幸存者位置</span><span class="legend-item"><i class="dot poi"></i>示例地点 A · 假数据</span></div>
+    </section>
+    <aside class="side">
+      <section class="card info"><div class="eyebrow">CURRENT OBJECTIVE · MOCK</div><h2>返家后再整备</h2><div class="notice"><strong>演示状态 · 没有读取游戏进度</strong>这张稿只展示地图信息层级。当前地图不会判断你发现过哪些地点，也没有真实路线数据。</div></section>
+      <section class="card info"><div class="eyebrow">PLACES · MOCK LIST</div><h2>演示地点</h2>
+        <div class="place"><span class="place-icon">H</span><div><div class="place-name">Safe Camp</div><div class="place-sub">HOME · 演示锚点</div></div><span class="tag">DEMO</span></div>
+        <div class="place"><span class="place-icon poi">A</span><div><div class="place-name">示例地点 A</div><div class="place-sub">POI · 演示标记</div></div><span class="tag">DEMO</span></div>
+      </section>
+      <section class="card info"><div class="eyebrow">DATA BOUNDARY</div><h2>真实地图接入条件</h2><div class="notice"><strong>先有“地点发现”规则，再显示真实 POI</strong>V21 当前没有可核实的地点发现接口。真实地图需要 World 模块明确哪些地点已发现，UI 只负责显示。</div></section>
+    </aside>
+  </main>
+  <footer class="footer"><strong>概念演示 · NOT IN GAME</strong><span>所有地形、标记、任务文字和坐标均为静态假数据；此页面不连接游戏、World、存档或网络。</span></footer>
+</div>
+<script>
+(()=>{'use strict';const c=document.getElementById('demoMap');const x=c.getContext('2d',{alpha:false});x.imageSmoothingEnabled=false;const rect=(a,b,w,h,color)=>{x.fillStyle=color;x.fillRect(a,b,w,h)};
+// Hand-drawn pixel-cluster mock. Coordinates and labels below are illustrative only.
+rect(0,0,342,342,'#71855a');
+for(let y=0;y<342;y+=12)for(let a=0;a<342;a+=12){const v=((a*13+y*7)%41);if(v<7)rect(a+(v%5),y+((a+y)%4),3+(v%3),2,v<3?'#879263':'#667d53');}
+// Coastal water with a deliberate stepped edge.
+for(let y=0;y<342;y+=12){const edge=220+Math.floor(Math.sin(y/53)*19/12)*12;rect(edge,y,342-edge,12,'#28636a');if(edge>12)rect(edge-3,y,3,12,'#b29c6b');}
+for(let a=232;a<342;a+=24)for(let y=8;y<342;y+=29){if((a+y)%5)rect(a+(y%8),y,2,2,'#5b9990');}
+// Neighborhood blocks and a winding road, kept intentionally diagram-like.
+const blocks=[[28,42,52,34],[98,27,42,47],[42,102,47,36],[280,41,35,39],[267,111,46,32],[34,225,45,38],[96,260,53,35],[274,255,44,41],[195,38,33,28],[198,296,35,25]];
+for(let i=0;i<blocks.length;i++){const [a,b,w,h]=blocks[i];rect(a,b,w,h,i%3===0?'#394f3d':'#455846');rect(a+4,b+4,w-8,h-8,i%2===0?'#53664a':'#5e7150');rect(a+7,b+7,Math.max(8,w-23),3,'#7f8960');}
+// Generic street geometry; this is not a navigable route.
+rect(148,0,16,342,'#ae9a68');rect(151,0,3,342,'#c9b67d');rect(112,72,72,12,'#b5a06d');rect(82,72,12,89,'#b5a06d');rect(82,149,101,12,'#b5a06d');rect(170,149,12,68,'#b5a06d');rect(88,211,94,12,'#b5a06d');rect(88,211,12,62,'#b5a06d');rect(88,261,100,12,'#b5a06d');rect(185,214,12,59,'#b5a06d');
+// Dock and lantern glow are represented as crisp blocks, not blur filters.
+rect(206,188,44,9,'#8d704e');rect(213,197,5,39,'#977b53');rect(237,197,5,39,'#977b53');rect(208,232,42,5,'#806846');rect(246,171,5,15,'#493e2f');rect(243,167,11,7,'#f1c66e');rect(246,168,5,4,'#ffedaa');
+// DEMO home marker and example POI marker; the watermark and nearby labels repeat the mock status.
+rect(117,273,31,23,'#604936');rect(112,268,40,8,'#916b46');rect(119,279,7,8,'#e0bc70');rect(134,279,8,11,'#314738');rect(128,265,8,4,'#e9bf67');
+rect(142,91,37,31,'#554c3d');rect(137,86,47,8,'#987955');rect(149,97,8,7,'#dfc17d');rect(163,97,8,7,'#dfc17d');rect(154,111,11,11,'#263d34');
+// You marker shown only as an illustrative position.
+rect(203,177,8,8,'#f7e8b0');rect(200,174,14,14,'#253e34');rect(203,177,8,8,'#f6d777');
+// Orientation nib and scale-free frame; no distances are claimed.
+rect(18,18,18,3,'#eef0d9');rect(18,18,3,18,'#eef0d9');rect(31,18,5,3,'#eef0d9');rect(18,31,3,5,'#eef0d9');x.fillStyle='#f0edcf';x.font='bold 10px monospace';x.fillText('N',23,15);
+})();
+</script>
+</body>
+</html>

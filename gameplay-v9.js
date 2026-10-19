@@ -83,7 +83,7 @@
       state.longestExpeditionMs = Math.max(state.longestExpeditionMs, duration);
       if(duration >= 15000){
         state.successfulReturns += 1;
-        toast('Expedition complete · safe return ' + state.successfulReturns);
+        toast('Safe return recorded · total ' + state.successfulReturns);
       }
       state.expeditionStartedAt = 0;
       saveState();

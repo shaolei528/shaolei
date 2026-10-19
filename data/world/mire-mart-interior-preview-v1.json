@@ -1,0 +1,36 @@
+{
+  "id": "poi.mire_mart.interior.graybox.v1",
+  "room": { "width": 896, "height": 627, "wall": 22, "doorLeft": 392, "doorRight": 504 },
+  "scaleFromStore": 1.4,
+  "cabinet": { "x": 235, "y": 184, "range": 48 },
+  "blockers": [
+    { "id": "counter", "x": 67, "y": 90, "w": 224, "h": 67 },
+    { "id": "shelf-west", "x": 246, "y": 224, "w": 179, "h": 45 },
+    { "id": "shelf-east", "x": 493, "y": 224, "w": 179, "h": 45 },
+    { "id": "shelf-north", "x": 246, "y": 336, "w": 179, "h": 45 },
+    { "id": "cooler", "x": 661, "y": 67, "w": 157, "h": 67 },
+    { "id": "debris", "x": 549, "y": 414, "w": 112, "h": 78 }
+  ],
+  "objects": [
+    { "id": "counter", "x": 67, "y": 90, "w": 224, "h": 67, "lift": 34, "colors": ["#777e75", "#5b635d", "#454e49"] },
+    { "id": "cooler", "x": 661, "y": 67, "w": 157, "h": 67, "lift": 44, "colors": ["#8a9086", "#626a64", "#4d5651"] },
+    { "id": "shelf-west", "x": 246, "y": 224, "w": 179, "h": 45, "lift": 30, "colors": ["#747b72", "#585f59", "#434b46"] },
+    { "id": "shelf-east", "x": 493, "y": 224, "w": 179, "h": 45, "lift": 30, "colors": ["#747b72", "#585f59", "#434b46"] },
+    { "id": "shelf-north", "x": 246, "y": 336, "w": 179, "h": 45, "lift": 30, "colors": ["#747b72", "#585f59", "#434b46"] },
+    { "id": "debris", "x": 549, "y": 414, "w": 112, "h": 78, "lift": 18, "colors": ["#686f68", "#505852", "#3e4641"] }
+  ],
+  "materials": {
+    "outside": "#3d4542",
+    "floor": "#737b73",
+    "floorEdge": "#c2c4b7",
+    "pathMark": "#505a54",
+    "northWall": ["#888e83", "#666e67", "#4d5650"],
+    "eastWall": ["#7e857a", "#5a635c", "#48514b"],
+    "westWall": ["#777f76", "#525b55", "#424b46"],
+    "southWall": ["#777f76", "#525b55", "#424b46"]
+  },
+  "clue": {
+    "id": "mire_mart.shift_note.0213",
+    "text": "柜台里夹着一张褪色的交班纸：凌晨 02:13，店里所有钟同时停了。"
+  }
+}

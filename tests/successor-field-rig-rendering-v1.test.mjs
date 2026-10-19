@@ -1,0 +1,25 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+
+const source=fs.readFileSync(new URL('../prototypes/successor-3-4/successor-renderer.js',import.meta.url),'utf8');
+const start=source.indexOf('function fieldRigTier('),end=source.indexOf('\n  function drawPoiSign(',start);
+assert.ok(start>=0&&end>start,'3/4 renderer must expose a separate Field Rig presentation function');
+const calls=[],texts=[];
+const out={save(){},restore(){},createRadialGradient(){return{addColorStop(){}}},fillRect(...args){calls.push(args)},strokeRect(...args){calls.push(args)},fillText(text){texts.push(text)}};
+const sandbox={window:{ABYSSAL_HOME_WORKBENCH_V1:{getState:()=>({tier:1})},AW_SUCCESSOR_PREVIEW:true,AW_DEV_QA:true,AW_SUCCESSOR_PREVIEW_FIELD_RIG_TIER:2},currentZone:'1:1',project:(x,y)=>({x,y}),groundShadow(){},out};
+vm.createContext(sandbox);
+vm.runInContext(`${source.slice(start,end)}\nglobalThis.tier=fieldRigTier;globalThis.run=drawFieldRigUpgrade`,sandbox);
+sandbox.run({x:2195,y:2535},100);
+assert.ok(calls.length>=10,'guarded QA showcase must draw the visible scanner');
+assert.ok(texts.includes('WARD +10s · FIELD RIG'),'the showcase must name the visible upgrade and its added ward duration');
+calls.length=0;texts.length=0;sandbox.window.AW_DEV_QA=false;sandbox.run({x:2195,y:2535},100);
+assert.equal(calls.length,0,'unupgraded non-QA preview must not show a Field Rig device');
+sandbox.window.ABYSSAL_HOME_WORKBENCH_V1.getState=()=>({tier:2});
+assert.equal(sandbox.tier(),2,'renderer must read the real persisted workbench tier');
+sandbox.run({x:2195,y:2535},100);
+assert.ok(calls.length>=10,'upgraded camp must draw the docked scanner and its powered light');
+assert.ok(texts.includes('WARD +10s · FIELD RIG'),'the world prop must identify the persistent upgrade reward and its survival benefit');
+sandbox.window.AW_SUCCESSOR_PREVIEW=true;sandbox.window.AW_DEV_QA=true;sandbox.window.AW_SUCCESSOR_PREVIEW_FIELD_RIG_TIER=2;sandbox.window.ABYSSAL_HOME_WORKBENCH_V1.getState=()=>({tier:1});assert.equal(sandbox.tier(),2,'guarded QA preview may demonstrate the upgrade visually without writing progress');sandbox.window.AW_DEV_QA=false;assert.equal(sandbox.tier(),1,'preview-only tier override must require the explicit QA route');sandbox.window.AW_DEV_QA=true;sandbox.currentZone='1:0';calls.length=0;texts.length=0;sandbox.run({x:2195,y:2535},100);
+assert.equal(calls.length,0,'the HOME upgrade visual must not leak into the MIRE MART zone');
+console.log(JSON.stringify({ok:true,unupgraded:false,upgradedScanner:true,zoneScoped:true}));

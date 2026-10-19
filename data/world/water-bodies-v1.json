@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "bodies": [
+    {
+      "id": "camp-pool",
+      "zone": "1:1",
+      "anchor": "camp",
+      "offset": { "x": 300, "y": -96 },
+      "halfWidth": 54,
+      "halfHeight": 54,
+      "collisionPadding": 96,
+      "accessPoint": { "offset": { "x": 200, "y": 200 }, "interactionRange": 88 }
+    },
+    {
+      "id": "mire-puddle-1",
+      "zone": "1:1",
+      "anchor": "world",
+      "position": { "x": 2372, "y": 1757 },
+      "halfWidth": 36,
+      "halfHeight": 13,
+      "collisionPadding": 0,
+      "surface": "puddle"
+    },
+    {
+      "id": "mire-puddle-2",
+      "zone": "1:0",
+      "anchor": "world",
+      "position": { "x": 2498, "y": 1582 },
+      "halfWidth": 26,
+      "halfHeight": 10,
+      "collisionPadding": 0,
+      "surface": "puddle"
+    },
+    {
+      "id": "mire-puddle-3",
+      "zone": "1:0",
+      "anchor": "world",
+      "position": { "x": 2266, "y": 1336 },
+      "halfWidth": 34,
+      "halfHeight": 12,
+      "collisionPadding": 0,
+      "surface": "puddle"
+    }
+  ]
+}
