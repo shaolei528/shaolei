@@ -4,7 +4,7 @@
   "compatibility_date": "2026-09-10",
   "workers_dev": true,
   "assets": {
-    "directory": "./.cloudflare-site-70653cf1b9da",
+    "directory": "./.cloudflare-site-715486e99825",
     "run_worker_first": ["/health", "/ws"]
   },
   "durable_objects": {

@@ -1,11 +1,19 @@
 # 《深渊苏醒》当前状态
 
+## 2026-10-19：唯一灰盒入口与玩法切片核对
+
+- **VERIFIED：**当前唯一玩家入口为 `index.html` → `prototypes/successor-3-4/live-candidate.html`；`main` 已包含 PR #12 的功能提交 `be0409bf8e375c9132480a02f302d44d95d0b1fb`。
+- **VERIFIED（自动化范围）：**本轮 23 个定向测试脚本通过，覆盖键盘模拟的采集→制作→战斗→返营→存档、农场与繁殖、钓鱼烹饪、宠物、社交及建造。键盘路线仍是 V21 模拟驱动，不是人工浏览器试玩。
+- **VERIFIED（本地出包）：**`.cloudflare-site-715486e99825` 含 102 个公开文件（0.68 MiB）；`npm run check:worker` dry-run 读取 142 个资源文件并保留 `WORLD` Durable Object 绑定。
+- **VERIFIED（部署阻塞）：**`npx wrangler whoami` 返回本机未认证；本轮没有部署 Cloudflare Worker。dry-run 只证明本地包可供 Wrangler 解析。
+- **UNKNOWN：**本机 8884 候选页面尚无人工浏览器操作验收；真实双客户端、公网 Relay 上的连续玩法与 Cloudflare 线上版本均未通过本轮确认。
+
 ## 2026-10-19：发布与失败原因核对
 
 - **VERIFIED：**首次远征战斗闭环 PR #11 已合入 `main`，提交 `bcf6c274b75203a47bb5e296619aac6c42751daa`；重复且内容重叠的 PR #10 已关闭。合并前主线落后 9 个提交，导致开发分支上的改动没有进入主入口。
 - **VERIFIED：**主线开发入口与固定提交入口均返回 HTTP 200：`https://raw.githack.com/shaolei528/shaolei/main/prototypes/successor-3-4/live-candidate.html`、`https://rawcdn.githack.com/shaolei528/shaolei/bcf6c274b75203a47bb5e296619aac6c42751daa/prototypes/successor-3-4/live-candidate.html`。这只证明静态入口可取，不证明浏览器实玩或后端已更新。
 - **VERIFIED：**本地服务日志显示重复启动时，端口 8765 与 8876 已被占用（`EADDRINUSE`）；因此另起服务器会失败。当前浏览器使用的 8883 未通过页面内容或交互检查。
-- **UNKNOWN：**本轮未部署 Cloudflare Worker。打包和 Wrangler dry-run 只验证本地产物形状；不能证明 Cloudflare 上的实时后端版本。
+- **VERIFIED：**本轮未部署 Cloudflare Worker；`wrangler whoami` 返回本机未认证。打包和 Wrangler dry-run 只验证本地产物形状，不能证明 Cloudflare 上的实时后端版本。
 - **VERIFIED（代码边界审查）：**农场、牲畜、建筑有 Relay 世界快照；V5 是各浏览器本地存档。钓鱼/料理/生存效果、宠物成长、NPC 好感、个人掉落和 Boss 进度尚无队友共享状态流程。移动包里的背包/宠物快照只供队友展示与协作参考，不是共享库存或共享存档。
 - **根因归纳：**分支和入口没有及时归一；本地预览服务重复占端口；自动化模块测试被当成玩家验收；Relay presence/展示数据被误当成完整玩法同步。这四件事叠加，让“代码有改动”看起来像“朋友打开就能玩”，实际并非如此。
 - **下一步：**以 `main` 唯一入口继续，只选一个跨玩家状态域做权威同步闭环，使用两客户端验证；Cloudflare 实际部署另设验收，不以 dry-run 代替。
