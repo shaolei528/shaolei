@@ -132,23 +132,22 @@ function killNearestCrawler(x,y){
     now+=320;sandbox.attackCd=0;sandbox.attack();
   }
 }
+const uiBeforeKill=uiUpdates;
 killNearestCrawler(2264,1248);
 assert.equal(sandbox.mobs[0].hp,0,'three bone-knife hits defeat the first authored crawler');
 assert.equal(sandbox.inventory.shard,1,'the first kill reward reaches the player inventory');
-assert.equal(expedition.state.phase,'SEARCH_FIGHT','the first claimed creature reward still needs the required salvage amount');
+assert.ok(uiUpdates>uiBeforeKill,'the confirmed creature reward refreshes the visible inventory HUD');
+assert.equal(expedition.state.phase,'SEARCH_FIGHT','a confirmed reward event is still required before returning');
 assert.equal(expedition.state.hasDefeatedCreature,true,'the claimed MIRE MART reward satisfies the creature part of the objective');
 assert.equal(claimedLoot.length,1,'the loot owner emits one confirmed claim event after inventory commit');
 sandbox.dispatchEvent(new TestCustomEvent('abyssal:loot-claimed',{detail:claimedLoot[0]}));
 assert.equal(expedition.state.killRewardKeys.length,1,'replaying a confirmed reward event cannot duplicate the expedition proof');
-killNearestCrawler(2712,1248);
-assert.equal(sandbox.mobs[1].hp,0,'the second authored crawler can be defeated');
-assert.equal(sandbox.inventory.shard,2,'the second unique kill reward completes the salvage requirement');
-assert.equal(relayEvents.filter(message=>message.event==='attack').length,6,'combat keeps using the established attack relay event');
+sandbox.updateQuest();
+assert.equal(expedition.state.phase,'SECURE_REQUIRED_SALVAGE','one confirmed crawler reward now secures the first-trip salvage');
+assert.match(sandbox.questText.textContent,/^带碎片回营/);
+assert.equal(relayEvents.filter(message=>message.event==='attack').length,3,'combat keeps using the established attack relay event');
 assert.equal(relayEvents.some(message=>message.event==='loot'),false,'local leader rewards settle locally without inventing a new relay message');
 
-sandbox.updateQuest();
-assert.equal(expedition.state.phase,'SECURE_REQUIRED_SALVAGE','the objective advances after both its real loot event and shard requirement are met');
-assert.match(sandbox.questText.textContent,/^带碎片回营/);
 sandbox.me.x=2400;sandbox.me.y=1600;
 sandbox.updateQuest();
 assert.match(sandbox.questText.textContent,/^沿北路返营/);
@@ -158,6 +157,6 @@ sandbox.updateQuest();
 assert.equal(expedition.state.phase,'COMPLETE','returning with the secure shards completes the existing expedition route');
 assert.match(sandbox.questText.textContent,/^远征完成/);
 assert.ok(saves>=10,'each gathered node, craft and confirmed kill persists through the existing local save path');
-assert.ok(uiUpdates>=10,'inventory and reward changes refresh the visible HUD');
+assert.ok(uiUpdates>=8,'resource, crafting, and reward changes refresh the visible HUD');
 
-console.log(JSON.stringify({ok:true,scope:'domain-integration-not-browser-play',resources:{wood:4,stone:3},craft:'bone-knife',encounter:'two authored crawlers',loot:{shards:sandbox.inventory.shard,uniqueKills:2,questGate:'confirmed-local-reward'},route:expedition.state.history,saves,uiUpdates,relayAttackEvents:6,protocol:'unchanged'}));
+console.log(JSON.stringify({ok:true,scope:'domain-integration-not-browser-play',resources:{wood:4,stone:3},craft:'bone-knife',encounter:'one authored crawler',loot:{shards:sandbox.inventory.shard,uniqueKills:1,questGate:'confirmed-local-reward'},route:expedition.state.history,saves,uiUpdates,relayAttackEvents:3,protocol:'unchanged'}));

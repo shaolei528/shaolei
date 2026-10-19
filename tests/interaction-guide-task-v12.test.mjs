@@ -10,6 +10,7 @@ function block(startToken, endToken) {
   return source.slice(start, end);
 }
 
+const taskHelpers = block('function requiredExpeditionShards(){', 'function currentTaskAdvice(){');
 const advice = block('function currentTaskAdvice(){', 'function currentTaskText(){');
 const taskStatus = block('function currentTaskText(){', 'function showDialogPage(page){');
 const dialogPage = block('function showDialogPage(page){', 'function openGuideDialog(){');
@@ -17,10 +18,10 @@ const dialogPage = block('function showDialogPage(page){', 'function openGuideDi
 function evaluate(inventory, phase='PREPARE', homeTier=1) {
   const sandbox = {inventory, hasLeftCamp:false};
   sandbox.window=sandbox;
-  sandbox.ABYSSAL_EXPEDITION_LOOP_V1={state:{phase}};
+  sandbox.ABYSSAL_EXPEDITION_LOOP_V1={state:{phase},contract:{requiredSalvage:{shard:1}}};
   sandbox.ABYSSAL_HOME_WORKBENCH_V1={getState:()=>({tier:homeTier})};
   vm.createContext(sandbox);
-  return vm.runInContext(`${advice}\n${taskStatus}\n({advice:currentTaskAdvice(),status:currentTaskText()})`, sandbox);
+  return vm.runInContext(`${taskHelpers}\n${advice}\n${taskStatus}\n({advice:currentTaskAdvice(),status:currentTaskText()})`, sandbox);
 }
 
 const equipped = evaluate({wood:0,stone:0,food:1,knife:true});
@@ -40,14 +41,14 @@ const readyToCraft = evaluate({wood:4,stone:3,food:0,knife:false});
 assert.match(readyToCraft.advice,/工作台/,'when materials are ready but no knife is equipped, guide should point to crafting');
 
 const searching = evaluate({wood:0,stone:0,food:1,knife:true,shard:1},'SEARCH_FIGHT');
-assert.match(searching.advice,/当前 1\/2/,'Guide advice should read the official expedition salvage snapshot');
+assert.match(searching.advice,/当前 1\/1/,'Guide advice should read the official first-trip salvage snapshot');
 assert.match(searching.status,/搜索 MIRE MART/,'Guide footer should follow the expedition owner phase');
 
-const returning = evaluate({wood:0,stone:0,food:0,knife:true,shard:2},'RETURN_HOME');
+const returning = evaluate({wood:0,stone:0,food:0,knife:true,shard:1},'RETURN_HOME');
 assert.match(returning.advice,/返回篝火/,'Guide should stop asking the player to search after required salvage is secured');
 assert.match(returning.status,/返回安全营地/,'Guide footer should state the return leg');
 
-const completed = evaluate({wood:0,stone:3,food:0,knife:true,shard:2},'COMPLETE');
+const completed = evaluate({wood:0,stone:3,food:0,knife:true,shard:1},'COMPLETE');
 assert.match(completed.advice,/带回来了/,'Guide should acknowledge the completed trip as community progress');
 assert.match(completed.status,/强化野外装备架/,'Guide should point to the existing HOME progression reward');
 

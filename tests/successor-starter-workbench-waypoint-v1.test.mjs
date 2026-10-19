@@ -80,9 +80,9 @@ assert.ok(farmWinsNearbyWood.includes('木材')&&farmWinsNearbyWood.includes('E 
   'when a nearby farm wins interaction selection, the visible E prompt must say planting and the wood marker must stay non-actionable');
 assert.ok(!farmWinsNearbyWood.includes('木材 · 按 E 采集'),
   'an unselected resource must never claim that E will collect it');
-assert.ok(labelsFor({zone:'1:0',phase:'SECURE_REQUIRED_SALVAGE',player:{x:2400,y:1500},inventory:{knife:true,shard:2}}).labels.includes('→ 返回安全营地'),
+assert.ok(labelsFor({zone:'1:0',phase:'SECURE_REQUIRED_SALVAGE',player:{x:2400,y:1500},inventory:{knife:true,shard:1}}).labels.includes('→ 返回安全营地'),
   'after securing salvage the MIRE MART scene must show the return route');
-assert.ok(labelsFor({zone:'1:1',phase:'RETURN_HOME',player:{x:2400,y:1900},inventory:{knife:true,shard:2},inCamp:false}).labels.includes('篝火 · 安全营地'),
+assert.ok(labelsFor({zone:'1:1',phase:'RETURN_HOME',player:{x:2400,y:1900},inventory:{knife:true,shard:1},inCamp:false}).labels.includes('篝火 · 安全营地'),
   'the last stretch back inside HOME must keep a visible camp destination');
 assert.ok(labelsFor({zone:'1:1',phase:'LEAVE_HOME',player:{x:Number(workbench[1]),y:Number(workbench[2])},inventory:{wood:4,stone:3},inCamp:true}).labels.includes('前往工作台'),
   'the SafeCamp workbench cue must use the V21 anchor after gathering supplies');

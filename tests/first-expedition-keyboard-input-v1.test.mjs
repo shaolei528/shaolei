@@ -226,6 +226,8 @@ for(let hit=0;hit<3;hit++){
 }
 assert.equal(firstCrawler.hp,0,'three Space attacks with the crafted bone knife defeat the first crawler');
 assert.equal(sandbox.inventory.shard,1,'the first live kill reward reaches the real inventory transaction');
+advanceFrames(6);
+assert.equal(sandbox.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'SECURE_REQUIRED_SALVAGE','one crawler kill and its shard are sufficient to start the return leg');
 
 const secondCrawler=sandbox.mobs.find(mob=>mob.id==='poi:store:crawler-b');
 moveWithinRange(()=>({...secondCrawler,id:'second crawler attack position'}),64);
@@ -234,7 +236,7 @@ for(let hit=0;hit<3;hit++){
   if(hit<2)advanceFrames(7);
 }
 assert.equal(secondCrawler.hp,0,'the second authored crawler is defeated through normal Space input');
-assert.equal(sandbox.inventory.shard,2,'two unique crawler rewards complete the salvage requirement');
+assert.equal(sandbox.inventory.shard,2,'the optional second crawler provides extra salvage for later crafting');
 advanceFrames(6);
 assert.equal(sandbox.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'SECURE_REQUIRED_SALVAGE','the objective recognizes the secured salvage through its normal UI update');
 moveWithinRange({x:CAMP.x,y:1450,id:'MIRE MART north road return'},48);

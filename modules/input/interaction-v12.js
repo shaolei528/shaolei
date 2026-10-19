@@ -157,12 +157,13 @@
     }
   };
 
+  function requiredExpeditionShards(){const value=Number(window.ABYSSAL_EXPEDITION_LOOP_V1?.contract?.requiredSalvage?.shard);return Number.isFinite(value)&&value>0?Math.floor(value):1;}
   function currentTaskAdvice(){
     const wood=Math.max(0,Number(inventory.wood)||0),stone=Math.max(0,Number(inventory.stone)||0),food=Math.max(0,Number(inventory.food)||0);
-    const phase=window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.phase,shard=Math.max(0,Number(inventory.shard)||0);
+    const phase=window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.phase,shard=Math.max(0,Number(inventory.shard)||0),required=requiredExpeditionShards();
     if(phase==='LEAVE_HOME')return `骨刃已装备，${food?`背包有食物 ×${food}`:'当前没有食物，建议先在营地补给'}。沿北门公路前往 MIRE MART。`;
     if(phase==='REACH_MIRE_MART')return '沿破损北路继续向北。先找到停电的 MIRE MART，再决定是搜寻还是撤回。';
-    if(phase==='SEARCH_FIGHT')return `MIRE MART 的货架、冰柜和异常残留都值得检查。保持距离，收集异质碎片；当前 ${Math.min(2,shard)}/2。`;
+    if(phase==='SEARCH_FIGHT')return `MIRE MART 的货架、冰柜和异常残留都值得检查。保持距离，收集异质碎片；当前 ${Math.min(required,shard)}/${required}。`;
     if(phase==='SECURE_REQUIRED_SALVAGE')return '碎片已经够了。别贪心，离开 MIRE MART，沿北路把这批东西带回营地。';
     if(phase==='RETURN_HOME')return '沿来时的北路返回篝火。把异质碎片带进安全营地，工作台才能强化野外装备架。';
     if(phase==='COMPLETE'){
@@ -171,21 +172,21 @@
     }
     if(inventory.knife){
       const supplies=food?`背包有食物 ×${food}`:'当前没有食物，建议先在营地补给';
-      return `骨刃已装备，${supplies}。沿北门公路再次前往 MIRE MART，并带回 2 个异质碎片。`;
+      return `骨刃已装备，${supplies}。沿北门公路再次前往 MIRE MART，并带回 ${required} 个异质碎片。`;
     }
     if(wood<4||stone<3)return `先在营地周围收集 4 份木材和 3 块石头（当前：木材 ${wood}/4 · 石头 ${stone}/3）。靠近材料时，屏幕会出现【互动】提示。`;
     return '材料已齐，去营地西南侧工作台制作骨刃。做好骨刃、带上食物，再决定什么时候离开营地。';
   }
 
   function currentTaskText(){
-    const phase=window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.phase,shard=Math.max(0,Number(inventory.shard)||0);
+    const phase=window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.phase,shard=Math.max(0,Number(inventory.shard)||0),required=requiredExpeditionShards();
     if(phase==='LEAVE_HOME')return '当前目标：整备完成 · 沿北门公路前往 MIRE MART。';
     if(phase==='REACH_MIRE_MART')return '当前目标：沿北路找到停电的 MIRE MART。';
-    if(phase==='SEARCH_FIGHT')return `当前目标：搜索 MIRE MART · 异质碎片 ${Math.min(2,shard)}/2。`;
+    if(phase==='SEARCH_FIGHT')return `当前目标：搜索 MIRE MART · 异质碎片 ${Math.min(required,shard)}/${required}。`;
     if(phase==='SECURE_REQUIRED_SALVAGE')return '当前目标：离开 MIRE MART，把异质碎片带回营地。';
     if(phase==='RETURN_HOME')return '当前目标：沿北路返回安全营地 · 携带异质碎片。';
     if(phase==='COMPLETE')return window.ABYSSAL_HOME_WORKBENCH_V1?.getState?.()?.tier>=2?'当前状态：远征完成 · 野外装备架已强化。':'当前状态：远征发现已带回 · 前往工作台强化野外装备架。';
-    if(inventory.knife)return '当前目标：骨刃已装备 · 前往 MIRE MART，带回 2 个异质碎片。';
+    if(inventory.knife)return `当前目标：骨刃已装备 · 前往 MIRE MART，带回 ${required} 个异质碎片。`;
     if(inventory.wood<4||inventory.stone<3)return `当前目标：木材 ${inventory.wood}/4 · 石头 ${inventory.stone}/3`;
     if(!inventory.knife)return '当前目标：前往西南侧工作台制作【骨刃】。';
     if(!hasLeftCamp)return '当前目标：等待队友准备好，然后一起离开安全营地。';

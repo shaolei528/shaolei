@@ -24,7 +24,7 @@ const ORDER=Object.freeze([
 const CONTRACT=Object.freeze({
   id:'mire-mart-expedition-v1',
   scope:'character-save-slice',
-  requiredSalvage:Object.freeze({shard:2}),
+  requiredSalvage:Object.freeze({shard:1}),
   phases:ORDER,
   authority:'local-objective-state-only',
   persistence:'v5-save-extension-v1'
@@ -164,7 +164,7 @@ function objectiveText(snapshot,observation={}){
       if(finite(observation.wood)<4||finite(observation.stone)<3)return`整备骨刀 · 木 ${finite(observation.wood)}/4 · 石 ${finite(observation.stone)}/3`;
       return '工作台制作骨刀 → 北路 MIRE MART';
     case PHASES.LEAVE_HOME:
-      return snapshot.attempt>1?'再出发 · 北路 MIRE MART · 碎片 0/2':'北路前往 MIRE MART · 碎片 0/2';
+      return snapshot.attempt>1?'再出发 · 北路 MIRE MART · 碎片 0/1':'北路前往 MIRE MART · 碎片 0/1';
     case PHASES.REACH_MIRE_MART:
       return observation.inCamp?'前往 MIRE MART · 沿北路':'抵达 MIRE MART · 沿北路继续';
     case PHASES.SEARCH_FIGHT:
