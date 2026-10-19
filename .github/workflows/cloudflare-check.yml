@@ -112,10 +112,10 @@ jobs:
               raise SystemExit('V21 content module missing')
           if 'network-quality-v20.js' not in text:
               raise SystemExit('V21 network quality module missing')
-          if "const VER='21c'" not in text:
+          if not re.search(r"const VER='21[^']+'", text):
               raise SystemExit('V21 cache key missing')
           PY
-          node --check /tmp/v17-boot.js
+          node --check /tmp/v21-boot.js
       - name: Check motion invariants
         run: |
           python - <<'PY'

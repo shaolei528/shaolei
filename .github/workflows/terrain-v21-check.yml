@@ -38,6 +38,7 @@ on:
       - 'tests/interaction-v12.test.mjs'
       - 'tests/v21-loader-retry-idempotency-v1.test.mjs'
       - 'tests/network-relay-v16-subscribe-ack-timeout.test.mjs'
+      - 'tests/successor-fishing-rendering-v1.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
   pull_request:
     paths:
@@ -76,6 +77,7 @@ on:
       - 'tests/interaction-v12.test.mjs'
       - 'tests/v21-loader-retry-idempotency-v1.test.mjs'
       - 'tests/network-relay-v16-subscribe-ack-timeout.test.mjs'
+      - 'tests/successor-fishing-rendering-v1.test.mjs'
       - '.github/workflows/terrain-v21-check.yml'
 
 jobs:
@@ -147,8 +149,8 @@ jobs:
           for required in ["'terrain-v21.js'", "'modules/render/awakening-art-assets-v1.js'", "'modules/world/awakening-world-v1.js'", "'modules/world/awakening-expedition-loop-v1.js'", "'modules/safe-camp/home-workbench-upgrade-v1.js'"]:
               if required not in boot:
                   raise SystemExit('V21 module missing: '+required)
-          if "const VER='21c'" not in boot:
-              raise SystemExit('V21c cache key missing')
+          if not re.search(r"const VER='21[^']+'", boot):
+              raise SystemExit('V21 cache key missing')
           for name in ['terrain-v21-preview.html']:
               source=Path(name).read_text()
               scripts=re.findall(r'<script(?: [^>]*)?>([\s\S]*?)</script>',source)
@@ -160,6 +162,8 @@ jobs:
           PY
           node --check /tmp/v21-boot.js
           node --check /tmp/terrain-v21-preview.html.js
+      - name: Pond shoreline depth sorting
+        run: node tests/successor-fishing-rendering-v1.test.mjs
       - name: Existing gameplay regression suite
         if: ${{ always() }}
         run: |
