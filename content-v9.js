@@ -128,6 +128,7 @@
         ward:Date.now() < fieldGraceUntil,
         inventory:inventoryMoveSnapshot(),
         pet:companionMoveSnapshot(),
+        activity:globalThis.ABYSSAL_PLAYER_ACTIVITY_SYNC_V1?.getLocalSnapshot?.()||null,
         v9:{...v9, ready:CONTENT.ready}
       }
     });
@@ -166,8 +167,11 @@
         const name = document.createElement('span');
         name.textContent = '• ' + clean(remote.name) + status;
         const bag = remote.inventory;
+        const fishing = remote.activity?.fishing;
+        const fishingText = fishing ? ({waiting:`垂钓 · 等鱼 ${fishing.secondsLeft}s`,bite:`垂钓 · 咬钩 ${fishing.secondsLeft}s`,caught:`钓到 ${clean(fishing.fishName||'鱼')}`,escaped:'鱼线空了'}[fishing.phase] || '') : '';
+        const foodText = (remote.activity?.foodBuffs || []).slice(0,2).map(buff=>`${clean(buff.name)} ${buff.secondsLeft}s`).join(' / ');
         const details = document.createElement('small');
-        details.textContent = `生命 ${Math.round(remote.hp ?? 100)} · 饥饿 ${Math.round(remote.hunger ?? 100)}${bag ? ` · 木 ${bag.wood} 石 ${bag.stone} 食 ${bag.food} 碎 ${bag.shard}` : ' · 背包同步中'}${remote.pet ? ` · 伙伴 ${clean(remote.pet.name)}` : ''}`;
+        details.textContent = `生命 ${Math.round(remote.hp ?? 100)} · 饥饿 ${Math.round(remote.hunger ?? 100)}${bag ? ` · 木 ${bag.wood} 石 ${bag.stone} 食 ${bag.food} 碎 ${bag.shard}` : ' · 背包同步中'}${remote.pet ? ` · 伙伴 ${clean(remote.pet.name)}` : ''}${fishingText ? ` · ${fishingText}` : ''}${foodText ? ` · 增益 ${foodText}` : ''}`;
         details.style.cssText = 'display:block;opacity:.72;font:10px/1.35 ui-monospace,monospace;white-space:normal;overflow-wrap:anywhere';
         row.append(name, details);
         row.style.padding = '3px 0';

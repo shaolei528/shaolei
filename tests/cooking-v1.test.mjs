@@ -7,6 +7,7 @@ const config=JSON.parse(read('data/cooking/recipes-v1.json'));
 const inventory={wood:0,stone:0,food:3,shard:0,seed:0,egg:1,milk:1,wool:0,fish_reedcarp:2,fish_glassminnow:1,fish_holloweye:1,meal_river_stew:0,meal_glass_porridge:0,meal_holloweye_chowder:0,meal_trail_stew:0,knife:false,lantern:false};
 const unlockedRecipes=new Set();
 let saveResult=true,savedExtensions=null,saveCalls=0;
+const playerStateEvents=[];
 const sandbox={
   console,
   inventory,
@@ -16,7 +17,7 @@ const sandbox={
   clamp:(value,min,max)=>Math.max(min,Math.min(max,value)),
   inCamp:actor=>Math.hypot(actor.x-2400,actor.y-2400)<470,
   toast(){},
-  dispatchEvent(){return true;},
+  dispatchEvent(event){playerStateEvents.push(event);return true;},
   CustomEvent:class CustomEvent{constructor(type,init={}){this.type=type;this.detail=init.detail;}},
   localStorage:{getItem(){return null;}},
 };
@@ -49,6 +50,7 @@ assert.deepEqual({hp:sandbox.me.hp,hunger:sandbox.me.hunger,sanity:sandbox.me.sa
 assert.equal(inventory.meal_river_stew,0,'eating consumes the meal');
 assert.equal(sandbox.ABYSSAL_SURVIVAL_NEEDS_V1.hasFoodBuff('steady-breath',now+1),true);
 assert.equal(sandbox.ABYSSAL_SURVIVAL_NEEDS_V1.sanityDrainMultiplier(now+1),0.82,'the meal buff reduces field sanity drain');
+assert.ok(playerStateEvents.some(event=>event.type==='abyssal:player-food-state-v1'&&event.detail.buffs.some(buff=>buff.id==='steady-breath')),'meal effects publish the timed food-buff view for teammate display');
 assert.equal(sandbox.ABYSSAL_COOKING_V1.eatMeal('meal_river_stew',{actor:sandbox.me,now}).reason,'materials-required','a consumed meal cannot grant its effect twice');
 assert.equal(savedExtensions?.owners?.['survival.food-effects.v1']?.buffs?.[0]?.id,'steady-breath','food effects are part of the V5 owner-extension save');
 
