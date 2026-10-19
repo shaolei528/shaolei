@@ -3,6 +3,7 @@
   if (window.AW_SUCCESSOR_GRAYBOX_CONTINUITY !== true) return;
 
   const baseHitsRequired = Object.freeze({ wood: 3, stone: 4 });
+  const progressTimeoutMs = 60000;
   const progress = new Map();
 
   function hitsFor(resource) {
@@ -24,12 +25,12 @@
     const now = Date.now();
     const previous = progress.get(resource.id);
     if (previous && now - previous.at < 140) { event.preventDefault(); return; }
-    const hit = previous && now - previous.at < 10000 ? previous.hit + 1 : 1;
+    const hit = previous && now - previous.at < progressTimeoutMs ? previous.hit + 1 : 1;
     const complete = hit >= total;
     if (complete) progress.delete(resource.id);
     else progress.set(resource.id, { hit, at: now });
     window.dispatchEvent(new CustomEvent('abyssal:resource-work-feedback', {
-      detail: { ...resource, hit, total, remaining: total - hit, complete }
+      detail: { ...resource, hit, total, remaining: total - hit, complete, expiresInMs: complete ? 1400 : progressTimeoutMs }
     }));
     if (!complete) event.preventDefault();
   });

@@ -9,6 +9,27 @@
     const projectViewport = state.projectViewport;
     if (typeof projectViewport !== 'function' || !Number.isFinite(Number(player?.x)) || !Number.isFinite(Number(player?.y))) return false;
 
+    function drawInteractionPrompt() {
+      const action = String(interactionTarget?.label || '').replace(/^【互动】\s*/, '').trim();
+      if (!action) return false;
+      const text = `E / 互动  ${action}`;
+      ctx.save();
+      ctx.font = 'bold 9px ui-monospace,monospace';
+      ctx.textAlign = 'center';
+      const maxWidth = Math.max(0, width - 28);
+      const boxWidth = Math.min(maxWidth, Math.ceil(ctx.measureText(text).width) + 20);
+      const boxHeight = 21, boxX = Math.round((width - boxWidth) / 2), boxY = Math.max(8, Math.round(height - 108));
+      ctx.fillStyle = '#091512ed';
+      ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+      ctx.strokeStyle = '#a9c6b6';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(boxX + .5, boxY + .5, boxWidth - 1, boxHeight - 1);
+      ctx.fillStyle = '#f4f8f5';
+      ctx.fillText(text, width / 2, boxY + 14, boxWidth - 12);
+      ctx.restore();
+      return true;
+    }
+
     const goals = [], worldNow = Number(state.worldNow) || 0, insideCamp = state.inCamp === true;
     if (zone === '1:1') {
       for (const [type, need, label, color] of [['wood', 4, '木材', '#f0c77c'], ['stone', 3, '石料', '#b9d0d4']]) {
@@ -29,7 +50,7 @@
       const workbench = state.workbench || {};
       if (insideCamp && (Number(inventory.wood) || 0) >= 4 && (Number(inventory.stone) || 0) >= 3 && !inventory.knife && interactionTarget?.type !== 'workbench') {
         const distance = Math.hypot(Number(workbench.x) - player.x, Number(workbench.y) - player.y);
-        if (distance <= 350) goals.push({ x: Number(workbench.x), y: Number(workbench.y), type: 'workbench', label: '工作台 · E 使用', color: '#efd399', edge: true });
+        if (distance <= 350) goals.push({ x: Number(workbench.x), y: Number(workbench.y), type: 'workbench', label: '前往工作台', color: '#efd399', edge: true });
       }
     }
 
@@ -94,7 +115,6 @@
       const point = { x: Math.round(cx + dx * scale), y: Math.round(cy + dy * scale) }, offscreen = goal.edge && scale < .999;
       const pulse = .5 + .5 * Math.sin(now / 260 + (goal.type === 'stone' ? 1.2 : 0));
       const nearTarget = Math.hypot(goal.x - player.x, goal.y - player.y) <= 82;
-      const canGather = ['wood', 'stone', 'shard'].includes(goal.type);
       const rx = nearTarget ? 10 : 18 + Math.round(pulse * 4), ry = nearTarget ? 5 : 9 + Math.round(pulse * 2);
       ctx.save(); ctx.lineWidth = 2; ctx.strokeStyle = goal.color; ctx.globalAlpha = .5 + pulse * .35;
       ctx.beginPath(); ctx.moveTo(point.x, point.y - ry); ctx.lineTo(point.x + rx, point.y); ctx.lineTo(point.x, point.y + ry); ctx.lineTo(point.x - rx, point.y); ctx.closePath(); ctx.stroke();
@@ -103,7 +123,7 @@
         ctx.save(); ctx.translate(point.x, point.y); ctx.rotate(Math.atan2(dy, dx)); ctx.fillStyle = goal.color;
         ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-4, -5); ctx.lineTo(-2, 0); ctx.lineTo(-4, 5); ctx.closePath(); ctx.fill(); ctx.restore();
       }
-      const caption = canGather && nearTarget ? `${goal.label} · 按 E 采集` : goal.label;
+      const caption = goal.label;
       ctx.font = 'bold 9px ui-monospace,monospace'; ctx.textAlign = offscreen ? (point.x > cx ? 'right' : 'left') : 'center';
       const labelX = Math.round(point.x) + (offscreen ? (point.x > cx ? -13 : 13) : 0);
       const labelWidth = Math.ceil(ctx.measureText(caption).width) + 10;
@@ -113,6 +133,7 @@
       ctx.strokeStyle = goal.color; ctx.lineWidth = 1; ctx.strokeRect(left + .5, top + .5, labelWidth - 1, 13);
       ctx.fillStyle = '#f6f0dc'; ctx.fillText(caption, labelX, top + 10); ctx.restore();
     }
+    drawInteractionPrompt();
     ctx.restore();
     return goals.length > 0;
   }

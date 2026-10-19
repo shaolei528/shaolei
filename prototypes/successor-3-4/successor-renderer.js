@@ -48,7 +48,16 @@
   const nativeToast=toast;toast=function(message){if(String(message).startsWith('Expedition complete 锟斤拷 safe return '))return;nativeToast(message)};
   let dpr=1,lastTime=0,displayScale=1,placements=[],lastCollisionBlocked=false,updateTicks=0,pendingHitStop=0,hitStopUntil=0,visualMoving=false,visualMoveUntil=0,visualWalkClock=0,renderCameraX=me.x,renderCameraY=me.y,renderCameraScreenX=0,renderCameraScreenY=0,previousPlayerX=me.x,previousPlayerY=me.y;
   const resourceWorkFeedback=[];
-  addEventListener('abyssal:resource-work-feedback',event=>{const hit=event.detail;if(!hit?.id)return;for(let i=resourceWorkFeedback.length-1;i>=0;i--)if(resourceWorkFeedback[i].id===hit.id)resourceWorkFeedback.splice(i,1);resourceWorkFeedback.push({...hit,until:performance.now()+650});if(resourceWorkFeedback.length>12)resourceWorkFeedback.shift()});
+  addEventListener('abyssal:resource-work-feedback',event=>{
+    const hit=event.detail;if(!hit?.id)return;
+    const now=performance.now();
+    for(let i=resourceWorkFeedback.length-1;i>=0;i--)if(resourceWorkFeedback[i].id===hit.id)resourceWorkFeedback.splice(i,1);
+    resourceWorkFeedback.push({...hit,at:now,until:now+Math.max(900,Number(hit.expiresInMs)||60000)});
+    localAction=hit.type==='wood'?'harvest':'mine';localActionAt=Date.now();
+    if(hit.type==='wood')choppedResourceId=String(hit.id);
+    if(!hit.complete)toast(`${hit.type==='wood'?'木材':'石头'} ${hit.hit}/${hit.total}`);
+    if(resourceWorkFeedback.length>12)resourceWorkFeedback.shift();
+  });
   addEventListener('abyssal:combat-hit',event=>{const hit=event.detail;if(!hit?.local)return;const damage=Math.max(0,(Number(hit.hpBefore)||0)-(Number(hit.hpAfter)||0));pendingHitStop=Math.max(pendingHitStop,hit.killed?112:damage>=30?64:damage>=18?48:24)});
   const keys=new Set();
   joystick.style.display='none';
@@ -690,7 +699,7 @@
     if(self&&weapon&&!safe&&flash<=0)drawFacingCue(screen,face);
     if(self&&attackFlash>0){out.strokeStyle='#f4d887';out.lineWidth=2;out.beginPath();out.arc(screen.x,screen.y-(candidateReady?(pixelSurvivorLive?33:70):18),candidateReady?(pixelSurvivorLive?27:46):25,-.8,.8);out.stroke()}
     if(weapon&&!drawBefore)drawActorWeapon(screen,p,self,face);
-    if(self)drawAxeSwing(screen,performance.now(),candidateReady?12:8,candidateReady?22:23);
+    if(self){const actionNow=performance.now();drawAxeSwing(screen,actionNow,candidateReady?12:8,candidateReady?22:23);drawPickSwing(screen,actionNow,candidateReady?12:9,candidateReady?22:22)}
     if(p.name&&!(cozyPixelProof&&self&&p.name==='Local Preview')){const nameOffset=candidateReady?(pixelSurvivorLive?(view.clientWidth<520?43:51):(view.clientWidth<520?194:244)):41;out.fillStyle='#fff4d3';out.font='bold 8px ui-monospace,monospace';out.textAlign='center';out.fillText(clean(p.name),screen.x,screen.y-nameOffset)}
   }
   function drawCombatImpacts(now){
@@ -723,12 +732,15 @@
   function drawResourceWorkFeedback(now){
     for(let i=resourceWorkFeedback.length-1;i>=0;i--)if(resourceWorkFeedback[i].until<=now)resourceWorkFeedback.splice(i,1);
     if(!resourceWorkFeedback.length)return;
-    out.save();out.imageSmoothingEnabled=false;out.textAlign='center';out.textBaseline='middle';out.font='bold 9px ui-monospace,monospace';
+    out.save();out.imageSmoothingEnabled=false;out.textAlign='center';out.textBaseline='middle';out.font='bold 11px ui-monospace,monospace';
     for(const hit of resourceWorkFeedback){
-      const age=650-(hit.until-now),rise=Math.floor(age/110),point=project(hit.x,hit.y-20-rise),label=hit.complete?'+1':`${hit.hit}/${hit.total}`,width=hit.complete?25:34;
-      out.globalAlpha=Math.min(1,(hit.until-now)/130);out.fillStyle='#26332b';out.fillRect(Math.round(point.x-width/2),Math.round(point.y-42),width,14);
-      out.strokeStyle='#d7c78f';out.lineWidth=1;out.strokeRect(Math.round(point.x-width/2)+.5,Math.round(point.y-41.5),width-1,13);
-      out.fillStyle=hit.complete?'#f2d78e':'#eef0d4';out.fillText(label,Math.round(point.x),Math.round(point.y-35));
+      const age=now-hit.at,rise=Math.min(12,Math.floor(age/65)),point=project(hit.x,hit.y-20-rise),material=hit.type==='wood'?'木材':'石材',label=hit.complete?`获得 ${hit.type==='wood'?'木':'石'} ×1`:`${material} ${hit.hit}/${hit.total}`,width=Math.max(66,Math.ceil(label.length*11+18)),left=Math.round(point.x-width/2),top=Math.round(point.y-70),fade=Math.min(1,(hit.until-now)/180),tone=hit.type==='wood'?'#e7c77c':'#cad8d8';
+      const pulse=age<150?Math.sin(age/17)*2:0;
+      out.globalAlpha=fade;out.fillStyle='#1b2927';out.fillRect(left,top,width,20);
+      out.strokeStyle=hit.complete?'#f1d286':tone;out.lineWidth=1;out.strokeRect(left+.5,top+.5,width-1,19);
+      out.fillStyle=hit.complete?'#ffe3a0':'#f4f0d9';out.fillText(label,Math.round(point.x+pulse),top+8);
+      if(!hit.complete){const barWidth=width-12,fillWidth=Math.max(2,Math.round(barWidth*(hit.hit/hit.total)));out.fillStyle='#3c4942';out.fillRect(left+6,top+16,barWidth,2);out.fillStyle=tone;out.fillRect(left+6,top+16,fillWidth,2)}
+      if(age<320){const spread=Math.round(age/24),alpha=(1-age/320)*.95;out.globalAlpha=alpha;out.fillStyle=hit.type==='wood'?'#f1cf83':'#d9e4df';for(const [dx,dy,sx,sy] of [[-10,-7,-1,-1],[9,-5,1,-1],[-8,7,-1,1],[11,6,1,1]])out.fillRect(Math.round(point.x+dx+sx*spread),Math.round(point.y+dy+sy*spread),3,2)}
     }
     out.restore();
   }
@@ -779,13 +791,14 @@
   }
   function drawResource(r){
     const now=Date.now(),harvestUntil=harvested.get(r.id)||0,age=now-localActionAt,nodeCell=terrain?.worldToCell?.(r.x,r.y),treeNode=(treeCandidateQa||pixelSurvivorLive||cozyPixelProof)&&r.type==='wood'&&/^camp:[0-5]$/.test(String(r.id))&&!!nodeCell&&terrain.rawMaterial(nodeCell.col,nodeCell.row)==='grass',chopping=treeNode&&String(r.id)===choppedResourceId&&localAction==='harvest'&&age>=0&&age<560;
-    if(harvestUntil>now&&!chopping)return;const p=project(r.x,r.y);
+    if(harvestUntil>now&&!chopping)return;const p=project(r.x,r.y),impact=resourceWorkFeedback.find(hit=>String(hit.id)===String(r.id)),impactAge=impact?performance.now()-impact.at:Infinity;if(impactAge<220)p.x+=Math.round(Math.sin(impactAge/16)*3*(1-impactAge/220));
     if(resourceArtQa&&(String(r.id).startsWith('camp:')||String(r.id).startsWith('poi:store:'))&&r.type!=='wood'&&resourceCandidateImage.complete&&resourceCandidateImage.naturalWidth===1536&&resourceCandidateImage.naturalHeight===1024){const cell={stone:[768,0,86,72,43,72],food:[0,512,68,54,34,54],shard:[768,512,72,66,36,66]}[r.type];if(cell){out.save();out.imageSmoothingEnabled=true;out.drawImage(resourceCandidateImage,cell[0],cell[1],768,512,Math.round(p.x-cell[4]),Math.round(p.y-cell[5]),cell[2],cell[3]);out.restore();return}}
     if(treeNode){if(cozyPixelProof&&cozyPixelArt?.drawTree){cozyPixelArt.drawTree(out,{point:p,variant:Number(String(r.id).split(':')[1])||0,chopping,age})}else if(treeCandidateQa&&treeCandidateImage.complete&&treeCandidateImage.naturalWidth===1024){const v=Number(String(r.id).split(':')[1])||0,scale=.84+(v%3)*.08,fall=chopping?Math.pow(Math.max(0,Math.min(1,(age-90)/470)),1.35)*.92:0;out.save();out.translate(Math.round(p.x),Math.round(p.y));out.rotate(fall+(chopping?Math.sin(age/18)*.05:0));out.globalAlpha=chopping?Math.max(.04,1-age/560):1;out.imageSmoothingEnabled=false;out.scale(v%2?-1:1,1);out.drawImage(treeCandidateImage,-52*scale,-156*scale,104*scale,156*scale);out.restore()}else drawPixelTree(p,Number(String(r.id).split(':')[1])||0,chopping,age);return}
     if(cozyPixelProof&&cozyPixelArt?.drawBerryBush&&r.type==='food'){cozyPixelArt.drawBerryBush(out,{point:p,variant:Number(String(r.id).split(':')[1])||0});return}
     const frame={wood:0,stone:1,food:2,shard:3}[r.type]??0,size=liveGroundArt?36:28;if(img.resources?.complete&&img.resources.naturalWidth)out.drawImage(img.resources,frame*32,0,32,32,Math.round(p.x-size/2),Math.round(p.y-size),size,size);else{out.fillStyle='#e0d4a1';out.fillRect(p.x-4,p.y-8,8,8)}
   }
-  function drawAxeSwing(screen,now,offsetX=8,offsetY=23){if(!(treeCandidateQa||pixelSurvivorLive||cozyPixelProof)||localAction!=='harvest'||now-localActionAt<0||now-localActionAt>260)return;const t=(now-localActionAt)/260;out.save();out.translate(Math.round(screen.x+offsetX),Math.round(screen.y-offsetY));out.rotate(-1.15+1.8*t);out.globalAlpha=Math.min(1,(1-t)*1.5);out.fillStyle='#614936';out.fillRect(-2,-2,4,25);out.fillStyle='#a9c2bb';out.fillRect(-8,-8,13,10);out.fillStyle='#405d59';out.fillRect(-10,-5,5,13);out.restore()}
+  function drawAxeSwing(screen,now,offsetX=8,offsetY=23){if(localAction!=='harvest'||now-localActionAt<0||now-localActionAt>380)return;const t=(now-localActionAt)/380;out.save();out.translate(Math.round(screen.x+offsetX),Math.round(screen.y-offsetY));out.rotate(-1.15+1.8*t);out.globalAlpha=Math.min(1,(1-t)*1.5);out.fillStyle='#614936';out.fillRect(-2,-2,4,25);out.fillStyle='#a9c2bb';out.fillRect(-8,-8,13,10);out.fillStyle='#405d59';out.fillRect(-10,-5,5,13);out.restore()}
+  function drawPickSwing(screen,now,offsetX=9,offsetY=22){if(localAction!=='mine'||now-localActionAt<0||now-localActionAt>380)return;const t=(now-localActionAt)/380;out.save();out.translate(Math.round(screen.x+offsetX),Math.round(screen.y-offsetY));out.rotate(-1.2+1.9*t);out.globalAlpha=Math.min(1,(1-t)*1.5);out.fillStyle='#654d38';out.fillRect(-2,-1,4,24);out.fillStyle='#c7d3cd';out.fillRect(-10,-7,20,4);out.fillRect(-10,-7,4,8);out.fillRect(6,-7,4,8);out.fillStyle='#526c68';out.fillRect(-8,-5,16,2);out.restore()}
   function drawCampfireLight(now){
     if(currentZone!=='1:1')return;
     const p=project(CAMP.x,CAMP.y),pulse=.88+Math.sin(now/190)*.055+Math.sin(now/83)*.035;
