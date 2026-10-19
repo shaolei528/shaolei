@@ -496,3 +496,9 @@
 - **VERIFIED（本地包）：**`npm run check:worker` 构建出 `.cloudflare-site-d5819ffaab75`，含 101 个公开文件（0.67 MiB）；Wrangler dry-run 读取 141 个资源并识别 `WORLD` Durable Object。dry-run 不是部署。
 - **提交：**当前分支 `feat/barricade-defense-v1`，代码提交 `48701d4`、`bd6017f`、`0f65ab6`；工作区既有未跟踪 QA/工具文件仍保留。
 - **未验收：**这仍是 VM/自动化与本地包证据；当前浏览器普通实玩、双客户端同步、公开入口更新和 Cloudflare 部署仍未确认。
+
+## 2026-10-19：远征门槛推送与灰盒预览入口
+
+- **VERIFIED（GitHub）：**`feat/barricade-defense-v1` 已推送到 `fb90504989f645208c593fcca6203ebbcc6d3c84`，对应 PR #11。该提交的 `terrain-v21-check`、`cloudflare-check`、`relay-check`、`playable-feel-audio-v1-check` 四项 GitHub Actions 均成功；其中 Cloudflare 检查是本地包 dry-run 流程，不代表远端 Worker 已部署。
+- **VERIFIED（静态取回）：**分支开发页 `https://raw.githack.com/shaolei528/shaolei/feat/barricade-defense-v1/prototypes/successor-3-4/live-candidate.html` 与固定 SHA 页 `https://rawcdn.githack.com/shaolei528/shaolei/fb90504989f645208c593fcca6203ebbcc6d3c84/prototypes/successor-3-4/live-candidate.html` 均返回 HTTP 200。只证明入口 HTML 可取回，不证明浏览器游玩、Relay 双人流程或 Worker 新部署。
+- **待验收：**浏览器人工试玩、朋友异地实联机与当前 PR 外部 Cloudflare Workers Builds 发布状态仍需单独确认；PR #10/#11 仍未合入 `main`。
