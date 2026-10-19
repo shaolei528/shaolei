@@ -16,7 +16,7 @@ function companionMoveSnapshot(){
 function sendMove(){
   if(!zoneCh||!zoneConnected||dead)return;
   me.seq++;
-  zoneCh.send({type:'broadcast',event:'move',payload:{id:SESSION_ID,name:me.name,color:me.color,x:Math.round(me.x),y:Math.round(me.y),dir:me.dir,hp:Math.round(me.hp),hunger:Math.round(me.hunger),sanity:Math.round(me.sanity),zone:currentZone,seq:me.seq,attack:attackFlash,inventory:inventoryMoveSnapshot(),pet:companionMoveSnapshot()}});
+  zoneCh.send({type:'broadcast',event:'move',payload:{id:SESSION_ID,name:me.name,color:me.color,x:Math.round(me.x),y:Math.round(me.y),dir:me.dir,hp:Math.round(me.hp),hunger:Math.round(me.hunger),sanity:Math.round(me.sanity),zone:currentZone,seq:me.seq,attack:attackFlash,inventory:inventoryMoveSnapshot(),pet:companionMoveSnapshot(),activity:globalThis.ABYSSAL_PLAYER_ACTIVITY_SYNC_V1?.getLocalSnapshot?.()||null}});
 }
 function adaptiveInterval(){const p=pingSamples.at(-1)??120,total=recvSeq+missedSeq,loss=total?missedSeq/total:0;if(p<150&&loss<.06)return.14;if(p<280&&loss<.15)return.20;return.32}
 async function measurePing(){if(!globalCh||!globalConnected)return;const t=performance.now();try{const s=await globalCh.send({type:'broadcast',event:'net_probe',payload:{id:SESSION_ID,t:Date.now()}});if(s==='ok'){pingSamples.push(performance.now()-t);if(pingSamples.length>12)pingSamples.shift()}}catch{}updateUI()}

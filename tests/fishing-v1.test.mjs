@@ -24,8 +24,10 @@ vm.runInContext(source,context,{filename:'fishing-v1.js'});
 const api=context.ABYSSAL_FISHING_V1;
 
 assert.equal(api.getTarget(context.me,1000).type,'fishing','the camp pool is a normal nearby context target');
+assert.ok(events.some(event=>event.type==='abyssal:player-fishing-state-v1'&&event.detail.phase==='idle'),'the local activity view publishes its initial fishing state');
 const cast=api.interact({now:1000,random:()=>0});
 assert.deepEqual({...cast},{ok:true,phase:'waiting',attempt:1,biteInMs:1800});
+assert.ok(events.some(event=>event.type==='abyssal:player-fishing-state-v1'&&event.detail.phase==='waiting'),'casting publishes the waiting phase for teammate display');
 assert.equal(api.interact({now:2100,random:()=>0}).reason,'waiting','the cast cannot be instantly collected');
 assert.equal(api.getTarget(context.me,3200).stage,'bite','the timed bite window is visible to the interaction prompt');
 const catchResult=api.reelIn({now:3300,random:()=>.99});
@@ -33,6 +35,7 @@ assert.deepEqual({...catchResult},{ok:true,fishId:'holloweye',name:'空眼鱼',i
 assert.equal(context.inventory.fish_holloweye,1,'a successful catch is atomically added to the inventory');
 assert.equal(api.reelIn({now:3301,random:()=>0}).reason,'no-cast','a repeated reel cannot replay a settled catch');
 assert.ok(events.some(event=>event.type==='abyssal:fish-caught'));
+assert.ok(events.some(event=>event.type==='abyssal:player-fishing-state-v1'&&event.detail.phase==='caught'),'a settled catch publishes teammate feedback');
 assert.deepEqual([...api.getSnapshot(3301).catches],['holloweye'],'the catch journal records its fish ID');
 
 const failedCast=()=>api.interact({now:5000,random:()=>0});allowSave=false;
@@ -43,6 +46,7 @@ const nextCast=api.interact({now:6000,random:()=>0});
 assert.equal(nextCast.attempt,2);
 assert.equal(api.interact({now:7500,random:()=>0}).reason,'waiting');
 assert.equal(api.interact({now:11500,random:()=>0}).reason,'escaped','missed bite windows award no fish');
+assert.ok(events.some(event=>event.type==='abyssal:player-fishing-state-v1'&&event.detail.phase==='escaped'),'a missed bite publishes the escaped phase');
 assert.equal(context.inventory.fish_holloweye,1);
 
 const reload=vm.createContext({

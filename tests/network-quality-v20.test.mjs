@@ -47,7 +47,7 @@ const qualityIndex=boot.indexOf("'modules/network/network-quality-v20.js'");
 const motionIndex=boot.indexOf("'modules/main-loop/smooth-motion-v18.js'");
 assert.ok(relayIndex>=0&&qualityIndex>relayIndex,'V20 must load after the relay it observes');
 assert.ok(motionIndex>qualityIndex,'V20 quality policy must be installed before motion wraps the update loop');
-assert.ok(boot.includes("const VER='21f'"),'V21f cache key must be present');
+assert.ok(boot.includes("const VER='21g'"),'V21g cache key must be present');
 
 for(const forbidden of[
   'new WebSocket(',
