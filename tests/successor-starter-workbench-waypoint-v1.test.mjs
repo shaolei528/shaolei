@@ -24,6 +24,8 @@ assert.ok(guidance.includes("['1:1', '1:0', '1:2']"),
   'route guidance must stay active in Safe Camp, MIRE MART and the unlocked southern zone');
 assert.ok(renderer.includes('boss:bossProgress?.encounter?.spawn||null,bossCleared:bossProgress?.isCleared?.()===true'),
   'the renderer adapter must pass boss location and unlock state to the wayfinding module');
+assert.ok(renderer.includes('homeUpgrade:window.ABYSSAL_HOME_WORKBENCH_V1?.getState?.()||null'),
+  'the renderer adapter must pass the HOME-owned upgrade snapshot to the wayfinding module');
 for(const marker of [
   "phase === 'REACH_MIRE_MART'",
   "phase === 'SEARCH_FIGHT'",
@@ -51,7 +53,7 @@ assert.ok(preview.indexOf("modules/ui/route-guidance-v1.js")<preview.indexOf("pr
 assert.ok(build.includes("'modules/ui/route-guidance-v1.js'"),
   'the canonical Cloudflare package must include the route UI module');
 
-const labelsFor=({zone,phase,player,inventory,resources=[],interactionTarget=null,inCamp=false,bossCleared=false,boss=null,width=800,height=600,projection}={})=>{
+const labelsFor=({zone,phase,player,inventory,resources=[],interactionTarget=null,inCamp=false,bossCleared=false,boss=null,homeUpgrade=null,width=800,height=600,projection}={})=>{
   const labels=[],points=[],ctx={
     save(){},restore(){},setTransform(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},stroke(){},fill(){},fillRect(){},strokeRect(){},
     translate(x,y){points.push({x,y})},rotate(){},measureText(text){return{width:String(text).length*6}},
@@ -62,7 +64,7 @@ const labelsFor=({zone,phase,player,inventory,resources=[],interactionTarget=nul
   const frozenResources=Object.freeze(resources.map(resource=>Object.freeze({...resource})));
   const state=Object.freeze({
     zone,phase,player:Object.freeze({...player}),inventory:Object.freeze({...inventory}),availableResources:frozenResources,
-    interactionTarget,camp:Object.freeze({x:2400,y:2400}),worldZone:1600,bossCleared,boss,
+    interactionTarget,camp:Object.freeze({x:2400,y:2400}),worldZone:1600,bossCleared,boss,homeUpgrade,
     parking:Object.freeze({x:2200,y:900,w:300,h:200}),inCamp,workbench:Object.freeze({x:2195,y:2535}),
     projectViewport:projection||((x,y)=>({x:400+(x-player.x)*.5,y:300+(y-player.y)*.25})),
     width,height,dpr:1,now:1200,worldNow:1200,
@@ -82,6 +84,16 @@ assert.ok(!farmWinsNearbyWood.includes('木材 · 按 E 采集'),
   'an unselected resource must never claim that E will collect it');
 assert.ok(labelsFor({zone:'1:0',phase:'SECURE_REQUIRED_SALVAGE',player:{x:2400,y:1500},inventory:{knife:true,shard:1}}).labels.includes('→ 返回安全营地'),
   'after securing salvage the MIRE MART scene must show the return route');
+const rigLocked={returnClearance:true,tier:1,cost:{stone:3,shard:2}};
+const needRigShard=labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true,stone:0,shard:1},homeUpgrade:rigLocked,inCamp:true}).labels;
+assert.ok(needRigShard.includes('→ MIRE MART · 碎片'),'after first return, the camp must direct a player missing a shard back to the salvage area');
+const shardResource={id:'poi:store:shard-b',type:'shard',x:2400,y:1310};
+const findRigShard=labelsFor({zone:'1:0',phase:'COMPLETE',player:{x:2400,y:1272},inventory:{knife:true,stone:0,shard:1},resources:[shardResource],homeUpgrade:rigLocked}).labels;
+assert.ok(findRigShard.includes('装备架碎片'),'MIRE MART must point to an available shard while the upgrade is short one');
+const returnToRig=labelsFor({zone:'1:0',phase:'COMPLETE',player:{x:2400,y:1272},inventory:{knife:true,stone:3,shard:2},homeUpgrade:rigLocked}).labels;
+assert.ok(returnToRig.includes('→ 返营强化装备架'),'once upgrade materials are ready, the route must switch to HOME');
+const upgradeRig=labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true,stone:3,shard:2},homeUpgrade:rigLocked,inCamp:true}).labels;
+assert.ok(upgradeRig.includes('强化野外装备架'),'at HOME with the required materials, the marker must point to the workbench');
 assert.ok(labelsFor({zone:'1:1',phase:'RETURN_HOME',player:{x:2400,y:1900},inventory:{knife:true,shard:1},inCamp:false}).labels.includes('篝火 · 安全营地'),
   'the last stretch back inside HOME must keep a visible camp destination');
 assert.ok(labelsFor({zone:'1:1',phase:'LEAVE_HOME',player:{x:Number(workbench[1]),y:Number(workbench[2])},inventory:{wood:4,stone:3},inCamp:true}).labels.includes('前往工作台'),

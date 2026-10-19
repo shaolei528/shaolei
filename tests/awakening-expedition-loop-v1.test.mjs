@@ -148,7 +148,7 @@ sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^带碎片回�
 sandbox.me={x:2400,y:1500};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^沿北路返营/);
 sandbox.me={x:CAMP.x,y:CAMP.y};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^远征完成/);sandbox.updateQuest();
 assert.equal(toasts.filter(t=>t.includes('远征完成')).length,1,'completion result must be announced once');
-assert.match(sandbox.questText.textContent,/制作提灯后挑战沼心守望者/,'HOME completion must point toward the lantern-gated Boss loop');
+assert.match(sandbox.questText.textContent,/前往工作台解锁野外装备架/,'a completed first expedition must point to the actual next progression step');
 const conciseObjectives=api.contract.phases.map(phase=>api.objectiveText({phase,attempt:1},{...obs({inCamp:false,atMart:false,hasKnife:true,shard:0}),started:true}));
 assert.ok(conciseObjectives.every(text=>Array.from(text||'').length<=36),'each phase objective must fit a compact task card');
 assert.equal(api.objectiveText({phase:'COMPLETE',attempt:1},obs({lantern:true})),'远征完成 · 北上挑战沼心守望者','a prepared lantern should point directly to the Boss encounter');

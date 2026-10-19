@@ -178,9 +178,16 @@ function objectiveText(snapshot,observation={}){
       const home=globalThis.ABYSSAL_HOME_WORKBENCH_V1?.getState?.();
       if(home?.returnClearance&&home?.returnClearancePersisted===false)return '返营完成 · 解锁未能写入存档；重进后需要重新完成远征。';
       if(globalThis.ABYSSAL_BOSS_PROGRESSION_V1?.isCleared?.())return observation.zone==='1:2'?'南侧探索区已开放 · 搜寻异质遗物并带回营地。':'沼心守望者已击败 · 南侧探索区开放；回营后沿南路出发。';
-      const next=observation.lantern?'北上挑战沼心守望者':'制作提灯后挑战沼心守望者';
-      if(home?.tier>=2)return`Field Rig ONLINE · ${next}`;
-      return observation.lantern?`远征完成 · ${next}`:`远征完成 · 前往工作台升级野外装备架；${next}`;
+      if(observation.lantern)return home?.tier>=2?'Field Rig ONLINE · 北上挑战沼心守望者':'远征完成 · 北上挑战沼心守望者';
+      if(home?.tier>=2)return 'Field Rig ONLINE · 制作提灯后挑战沼心守望者';
+      if(home?.returnClearance){
+        const cost=home.cost||{stone:3,shard:2};
+        const missingStone=Math.max(0,Math.floor(finite(cost.stone,3))-Math.floor(finite(observation.stone)));
+        const missingShard=Math.max(0,Math.floor(finite(cost.shard,2))-Math.floor(finite(observation.shard)));
+        if(missingStone||missingShard)return`装备架已解锁 · 补石${missingStone}/碎片${missingShard}`;
+        return '装备架材料齐备 · 前往工作台强化';
+      }
+      return '远征完成 · 前往工作台解锁野外装备架';
     }
     default:return null;
   }
