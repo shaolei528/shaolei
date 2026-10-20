@@ -133,8 +133,10 @@ function killNearestCrawler(x,y){
   }
 }
 const uiBeforeKill=uiUpdates;
-killNearestCrawler(2264,1248);
-assert.equal(sandbox.mobs[0].hp,0,'three bone-knife hits defeat the first authored crawler');
+assert.equal(expedition.atMireMart(sandbox.me),true,'the encounter begins inside the authored parking boundary');
+killNearestCrawler(2817,1248);
+assert.equal(expedition.atMireMart(sandbox.me),false,'the player can kite the second authored crawler just beyond the parking boundary');
+assert.equal(sandbox.mobs[1].hp,0,'three bone-knife hits defeat the second authored crawler after kiting outside the parking boundary');
 assert.equal(sandbox.inventory.shard,1,'the first kill reward reaches the player inventory');
 assert.ok(uiUpdates>uiBeforeKill,'the confirmed creature reward refreshes the visible inventory HUD');
 assert.equal(expedition.state.phase,'SEARCH_FIGHT','a confirmed reward event is still required before returning');
@@ -155,7 +157,8 @@ sandbox.me.x=CAMP.x;sandbox.me.y=CAMP.y;
 sandbox.currentZone='1:1';
 sandbox.updateQuest();
 assert.equal(expedition.state.phase,'COMPLETE','returning with the secure shards completes the existing expedition route');
-assert.match(sandbox.questText.textContent,/^远征完成/);
+assert.match(sandbox.questText.textContent,/^提灯材料/,'the next objective after returning is to gather Lantern materials');
+assert.match(sandbox.questText.textContent,/木0\/3 碎片1\/2/,'the next objective reports the missing Lantern recipe materials');
 assert.ok(saves>=10,'each gathered node, craft and confirmed kill persists through the existing local save path');
 assert.ok(uiUpdates>=8,'resource, crafting, and reward changes refresh the visible HUD');
 

@@ -915,6 +915,8 @@
     window.ABYSSAL_ROUTE_GUIDANCE_V1?.draw?.(out,{
       zone:currentZone,player:{x:me.x,y:me.y},inventory:{...inventory},
       availableResources:resources.filter(resource=>(harvested.get(resource.id)||0)<=Date.now()).map(resource=>({...resource})),
+      mobs:mobs.map(mob=>({...mob})),
+      hasDefeatedCreature:window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.hasDefeatedCreature===true,
       interactionTarget:window.ABYSSAL_INTERACTION_V12?.getTarget?.()||null,
       phase:window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.phase,
       craftingRecipes:window.ABYSSAL_CRAFTING_RECIPES_V1?.recipes||null,

@@ -69,7 +69,7 @@ Entering the existing MIRE MART store or parking footprint advances the run.
 
 ### SEARCH_FIGHT
 
-The player must defeat at least one creature inside the existing MIRE MART area and successfully claim that creature's existing loot reward. The Loot module emits `abyssal:loot-claimed` only after the inventory transaction succeeds; a small integration bridge forwards that confirmed reward key to the expedition owner. Replaying the same reward key cannot count twice. Combat damage, reward selection, and Relay messages remain owned by their existing modules.
+The player must defeat at least one authored MIRE MART crawler and successfully claim that creature's existing loot reward while still in Zone `1:0`. Credit follows the encounter's authored identity, so kiting the crawler just beyond the store or parking footprint does not erase a valid kill. The Loot module emits `abyssal:loot-claimed` only after the inventory transaction succeeds; a small integration bridge forwards that confirmed reward key to the expedition owner. Replaying the same reward key cannot count twice. Combat damage, reward selection, and Relay messages remain owned by their existing modules.
 
 ### SECURE_REQUIRED_SALVAGE
 
@@ -126,6 +126,7 @@ Before acceptance, verify:
 - repeated MIRE MART entry
 - salvage without a claimed MIRE MART creature reward cannot advance
 - successful local MIRE MART reward advances the fight gate once; duplicate delivery is ignored
+- a confirmed authored crawler reward still advances the fight gate when the player kites outside the parking footprint but remains in Zone `1:0`
 - early return
 - death / respawn
 - page reload during an expedition and after completion
