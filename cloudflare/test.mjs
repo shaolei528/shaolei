@@ -89,6 +89,15 @@ await send(a,{type:'broadcast',channel:ZONE,event:'camp_world_request_v1',payloa
 const campWorldRequest=b.sent.filter(x=>x.type==='broadcast'&&x.channel===ZONE&&x.event==='camp_world_request_v1').at(-1);
 if (!campWorldRequest || campWorldRequest.from!=='a' || campWorldRequest.payload?.sessionId!=='a') throw new Error('camp world join request relay failed');
 
+const handoffStart=b.sent.length;
+await world.webSocketClose(a,1000,'leader disconnected');
+const handedOff=b.sent.slice(handoffStart).filter(packet=>packet.type==='broadcast'&&packet.event==='camp_world_v1'&&packet.from==='abyssal-relay');
+if(handedOff.length!==3)throw new Error(`the elected successor received ${handedOff.length} of 3 stored snapshots after leader disconnect`);
+const successorFarm={...ownerSnapshots[0],sessionId:'b',epoch:'successor-worker-epoch',seq:1,state:{version:1,plants:[{plotId:'bed-b',cropId:'saltleaf',plantedAt:30}]}};
+await send(b,{type:'broadcast',channel:ZONE,event:'camp_world_v1',payload:successorFarm});
+const handedOffFarm=await storage.get('camp-world:v1:1:1:farm');
+if(handedOffFarm?.sourceId!=='b'||handedOffFarm?.state?.plants?.[0]?.plotId!=='bed-b')throw new Error('the new zone leader could not checkpoint its restored world');
+
 const reserved=new FakeWS('reserved');
 reserved.serializeAttachment({sessionId:'',name:'Wanderer',subscriptions:[],presence:{},rateWindowAt:0,rateCount:0});
 sockets.push(reserved);
@@ -105,7 +114,7 @@ await restartedWorld.webSocketMessage(c,JSON.stringify({type:'subscribe',channel
 await restartedWorld.webSocketMessage(c,JSON.stringify({type:'track',channel:ZONE,meta:{x:2420,y:2400}}));
 const restored=c.sent.filter(packet=>packet.type==='broadcast'&&packet.event==='camp_world_v1'&&packet.from==='abyssal-relay');
 if(restored.length!==3)throw new Error(`a returning room leader received ${restored.length} of 3 durable domain snapshots`);
-if(restored.find(packet=>packet.payload.domain==='farm')?.payload?.state?.plants?.[0]?.plotId!=='bed-a')throw new Error('the farm snapshot was not restored after every player disconnected');
+if(restored.find(packet=>packet.payload.domain==='farm')?.payload?.state?.plants?.[0]?.plotId!=='bed-b')throw new Error('the latest leader farm snapshot was not restored after every player disconnected');
 if(restored.find(packet=>packet.payload.domain==='livestock')?.payload?.state?.animals?.[0]?.id!=='chicken-a')throw new Error('the livestock snapshot was not restored after every player disconnected');
 if(restored.find(packet=>packet.payload.domain==='building')?.payload?.state?.structures?.[0]?.id!=='barrier-a')throw new Error('the building snapshot was not restored after every player disconnected');
 
