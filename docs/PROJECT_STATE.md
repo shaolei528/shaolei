@@ -2,14 +2,16 @@
 
 ## 当前快照（2026-10-20，已复核）
 
-- **VERIFIED：**发布分支 `main` 已合入 PR #15（`Fix post-expedition Field Rig guidance`）。Field Rig 的 3 石料 + 2 碎片升级仍可选；Boss 的真实前置是骨刃与提灯。
-- **VERIFIED（当前特性分支）：**`fix/lantern-primary-guidance` 把返营后的主线指向提灯配方与材料差额；Field Rig 保留为可选升级。这项改动尚未合入 `main`，也未部署。
-- **VERIFIED（当前特性分支定向回归，不是浏览器实玩）：**远征目标、提灯材料指引、可选 Field Rig、路线标记及向导提示用例通过；路线模拟包含后续 Boss，但不证明浏览器实玩。
-- **VERIFIED（本地包与 CI）：**PR #15 的 `terrain-v21-check` 与 `cloudflare-check` 均通过；当前特性分支本地包包含 102 个公开文件。`cloudflare-check` 是本地打包/Worker 结构检查，不代表线上部署。
+- **VERIFIED：**发布分支 `main` 已合入 PR #15 和 PR #17（`Make Lantern the primary post-expedition goal`）。Field Rig 的 3 石料 + 2 碎片升级仍可选；Boss 的真实前置是骨刃与提灯。
+- **VERIFIED（当前主线定向回归）：**远征目标、提灯材料指引、可选 Field Rig、路线标记、向导提示及 HOME 升级用例通过；模拟到 Boss 不等于浏览器实玩。
+- **VERIFIED（GitHub CI）：**PR #17 的 `terrain-v21-check`、`cloudflare-check`、`playable-smoothness-v1-check`、`interaction-retry-idempotency-v1-check` 全部通过。生产 Relay 双客户端烟测也通过：A/B 连接、在线数、聊天、双向移动/攻击、怪物/资源/离区 presence、重连、世界投递与 ping。
+- **VERIFIED（本地包）：**主线构建包含 102 个公开文件；构建和 Worker dry-run 不等于部署此次前端改动。
+- **VERIFIED（静态文件读取）：**合并后 `raw.githack.com/main` 与钉住 `6bb844cf649251ed53a6d052de247d1edcbe9080` 的 `rawcdn.githack.com` 入口和提灯路线脚本均返回 HTTP 200，脚本内容包含新引导。HTTP 200 只证明静态文件可取，不证明游戏在浏览器中可玩。
 - **UNKNOWN / NOT PASS：**普通玩家在当前 8883 页面连续完成“采集 → 制作 → 击杀 → 拾取战利品 → 返营”仍未验收；当前浏览器站点权限阻止读取该页，因此不把模拟或本地包当作实玩。
-- **VERIFIED：**本轮没有 Cloudflare 远端部署，也没有真实双客户端联机验收；之前 Wrangler 未认证仍是部署阻塞。
-- **已确认的失败原因：**五款游戏的系统范围先膨胀，自动化模块/模拟闭环先于普通玩家闭环；提示与真实交互、配方和主线门槛曾不一致；本地预览、GitHub 静态入口与 Worker 部署也曾被混为一谈。当前只推进一条玩家路线，其他系统不以“模块存在”标为完成。
-- **本轮新增确认并修正：**Boss 实际只要求骨刃和提灯；但首次返营的目标、地图路标和向导曾把 Field Rig（3 石 + 2 碎片）放在提灯（3 木 + 2 碎片）之前，升级后又缺少提灯材料路线，造成额外碎片消耗和目标断线。现在主线按提灯配方显示差额；Field Rig 明确为可选项。
+- **UNKNOWN / NOT PASS：**当前 8883 页面上，普通玩家连续完成“采集 → 制作 → 击杀 → 拾取战利品 → 返营 → 制作提灯 → 击败 Boss”仍未实玩验收；此前页面读取受浏览器站点权限限制。生产 Relay 烟测通过不代表这条前端路线已通关，也不覆盖宠物、农场、背包等全部共享状态。
+- **VERIFIED：**此次没有部署 Cloudflare Worker 新版本。线上健康与 Relay 双客户端烟测针对当前已部署后端；此次改动仅在 GitHub 主线与静态包中。
+- **已确认的失败原因：**五款游戏范围先膨胀，模块和 VM 模拟跑在普通玩家路线前面；向导、路线标记与真实配方/主线门槛曾不一致；源代码镜像也曾未同步，且旧测试仍把可选 Field Rig 当必经目标；本地预览、GitHub 静态入口与 Worker 部署曾被混为一谈。
+- **本轮修正：**Boss 只要求骨刃和提灯（3 木 + 2 碎片）；返营后的地图路标、任务和向导现按提灯配方逐步引导，先采营地木材，再找碎片，最后回工作台制作。Field Rig（3 石 + 2 碎片）仍可升级但不挡主线；root 与分类目录交互脚本镜像已同步。
 - **VERIFIED（仓库治理）：**本轮只移除与已合入 PR #4、#5、#8、#9、#11、#14 对应的六条本地旧分支；其他分支和未跟踪工作文件仍需逐一核对，未做批量清理。
 
 ## 历史记录（以下每节是当时快照，不代表当前分支状态）
