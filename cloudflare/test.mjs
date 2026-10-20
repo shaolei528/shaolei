@@ -13,7 +13,12 @@ class FakeWS {
 const a = new FakeWS('a');
 const b = new FakeWS('b');
 const sockets = [a, b];
-const ctx = { getWebSockets: () => sockets };
+const worldStorage = new Map();
+const storage = {
+  async get(key) { return structuredClone(worldStorage.get(key)); },
+  async put(key, value) { worldStorage.set(key, structuredClone(value)); }
+};
+const ctx = { getWebSockets: () => sockets, storage };
 const world = new GameWorld(ctx, {});
 for (const ws of sockets) ws.serializeAttachment({sessionId:'',name:'Wanderer',subscriptions:[],presence:{},rateWindowAt:0,rateCount:0});
 
@@ -69,11 +74,42 @@ const campWorldPayload={version:1,domain:'farm',zone:'1:1',sessionId:'a',epoch:'
 await send(a,{type:'broadcast',channel:ZONE,event:'camp_world_v1',payload:campWorldPayload});
 const campWorld=b.sent.filter(x=>x.type==='broadcast'&&x.channel===ZONE&&x.event==='camp_world_v1').at(-1);
 if (!campWorld || campWorld.from!=='a' || campWorld.payload?.sessionId!=='a' || campWorld.payload?.domain!=='farm') throw new Error('camp world snapshot relay failed');
+const ownerSnapshots=[
+  {version:1,domain:'farm',zone:'1:1',sessionId:'a',epoch:'worker-test-epoch',seq:2,state:{version:1,plants:[{plotId:'bed-a',cropId:'saltleaf',plantedAt:10}]}},
+  {version:1,domain:'livestock',zone:'1:1',sessionId:'a',epoch:'worker-test-epoch',seq:1,state:{version:1,nextId:2,animals:[{id:'chicken-a',species:'chicken'}]}},
+  {version:1,domain:'building',zone:'1:1',sessionId:'a',epoch:'worker-test-epoch',seq:1,state:{version:1,nextId:2,structures:[{id:'barrier-a',zone:'1:1'}]}}
+];
+for(const payload of ownerSnapshots)await send(a,{type:'broadcast',channel:ZONE,event:'camp_world_v1',payload});
+const savedFarm=await storage.get('camp-world:v1:1:1:farm');
+if(savedFarm?.state?.plants?.[0]?.plotId!=='bed-a'||savedFarm?.revision!==2)throw new Error('zone leader farm snapshot was not checkpointed');
+const followerSnapshot={...ownerSnapshots[0],sessionId:'b',seq:99,state:{version:1,plants:[{plotId:'attacker-bed',cropId:'saltleaf',plantedAt:20}]}};
+await send(b,{type:'broadcast',channel:ZONE,event:'camp_world_v1',payload:followerSnapshot});
+if((await storage.get('camp-world:v1:1:1:farm'))?.state?.plants?.[0]?.plotId!=='bed-a')throw new Error('a nonleader overwrote the durable zone snapshot');
 await send(a,{type:'broadcast',channel:ZONE,event:'camp_world_request_v1',payload:{version:1,zone:'1:1',sessionId:'a'}});
 const campWorldRequest=b.sent.filter(x=>x.type==='broadcast'&&x.channel===ZONE&&x.event==='camp_world_request_v1').at(-1);
 if (!campWorldRequest || campWorldRequest.from!=='a' || campWorldRequest.payload?.sessionId!=='a') throw new Error('camp world join request relay failed');
 
-await send(a,{type:'ping',id:'p1'});
-if (!a.sent.some(x=>x.type==='pong'&&x.id==='p1')) throw new Error('ping failed');
+const reserved=new FakeWS('reserved');
+reserved.serializeAttachment({sessionId:'',name:'Wanderer',subscriptions:[],presence:{},rateWindowAt:0,rateCount:0});
+sockets.push(reserved);
+await send(reserved,{type:'hello',sessionId:'abyssal-relay',name:'Reserved'});
+if(!reserved.sent.some(packet=>packet.type==='error'&&packet.code==='BAD_SESSION'))throw new Error('a client claimed the durable relay snapshot identity');
 
-console.log('cloudflare relay protocol test passed: server-canonical identity + compatibility');
+a.readyState=3;b.readyState=3;reserved.readyState=3;
+const c=new FakeWS('c');
+c.serializeAttachment({sessionId:'',name:'Wanderer',subscriptions:[],presence:{},rateWindowAt:0,rateCount:0});
+sockets.push(c);
+const restartedWorld=new GameWorld(ctx,{});
+await restartedWorld.webSocketMessage(c,JSON.stringify({type:'hello',sessionId:'c',name:'Carol'}));
+await restartedWorld.webSocketMessage(c,JSON.stringify({type:'subscribe',channel:ZONE}));
+await restartedWorld.webSocketMessage(c,JSON.stringify({type:'track',channel:ZONE,meta:{x:2420,y:2400}}));
+const restored=c.sent.filter(packet=>packet.type==='broadcast'&&packet.event==='camp_world_v1'&&packet.from==='abyssal-relay');
+if(restored.length!==3)throw new Error(`a returning room leader received ${restored.length} of 3 durable domain snapshots`);
+if(restored.find(packet=>packet.payload.domain==='farm')?.payload?.state?.plants?.[0]?.plotId!=='bed-a')throw new Error('the farm snapshot was not restored after every player disconnected');
+if(restored.find(packet=>packet.payload.domain==='livestock')?.payload?.state?.animals?.[0]?.id!=='chicken-a')throw new Error('the livestock snapshot was not restored after every player disconnected');
+if(restored.find(packet=>packet.payload.domain==='building')?.payload?.state?.structures?.[0]?.id!=='barrier-a')throw new Error('the building snapshot was not restored after every player disconnected');
+
+await restartedWorld.webSocketMessage(c,JSON.stringify({type:'ping',id:'p1'}));
+if (!c.sent.some(x=>x.type==='pong'&&x.id==='p1')) throw new Error('ping failed');
+
+console.log('cloudflare relay protocol test passed: server-canonical identity + compatibility + durable camp snapshots');
