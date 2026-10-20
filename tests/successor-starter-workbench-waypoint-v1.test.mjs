@@ -54,7 +54,7 @@ assert.ok(preview.indexOf("modules/ui/route-guidance-v1.js")<preview.indexOf("pr
 assert.ok(build.includes("'modules/ui/route-guidance-v1.js'"),
   'the canonical Cloudflare package must include the route UI module');
 
-const labelsFor=({zone,phase,player,inventory,resources=[],interactionTarget=null,inCamp=false,bossCleared=false,boss=null,craftingRecipes=lanternRecipeData,width=800,height=600,projection}={})=>{
+const labelsFor=({zone,phase,player,inventory,resources=[],mobs=[],hasDefeatedCreature=false,interactionTarget=null,inCamp=false,bossCleared=false,boss=null,craftingRecipes=lanternRecipeData,width=800,height=600,projection}={})=>{
   const labels=[],points=[],ctx={
     save(){},restore(){},setTransform(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},stroke(){},fill(){},fillRect(){},strokeRect(){},
     translate(x,y){points.push({x,y})},rotate(){},measureText(text){return{width:String(text).length*6}},
@@ -65,7 +65,7 @@ const labelsFor=({zone,phase,player,inventory,resources=[],interactionTarget=nul
   const frozenResources=Object.freeze(resources.map(resource=>Object.freeze({...resource})));
   const state=Object.freeze({
     zone,phase,player:Object.freeze({...player}),inventory:Object.freeze({...inventory}),availableResources:frozenResources,
-    interactionTarget,camp:Object.freeze({x:2400,y:2400}),worldZone:1600,bossCleared,boss,craftingRecipes,
+    mobs,hasDefeatedCreature,interactionTarget,camp:Object.freeze({x:2400,y:2400}),worldZone:1600,bossCleared,boss,craftingRecipes,
     parking:Object.freeze({x:2200,y:900,w:300,h:200}),inCamp,workbench:Object.freeze({x:2195,y:2535}),
     projectViewport:projection||((x,y)=>({x:400+(x-player.x)*.5,y:300+(y-player.y)*.25})),
     width,height,dpr:1,now:1200,worldNow:1200,
@@ -75,7 +75,7 @@ const labelsFor=({zone,phase,player,inventory,resources=[],interactionTarget=nul
 };
 
 const shardTarget={type:'resource',d:0,label:'【互动】采集异质碎片',resource:{id:'poi:store:shard-a',type:'shard',x:2400,y:1300}};
-const shardLabels=labelsFor({zone:'1:0',phase:'SEARCH_FIGHT',player:{x:2400,y:1300},inventory:{knife:true},resources:[shardTarget.resource],interactionTarget:shardTarget}).labels;
+const shardLabels=labelsFor({zone:'1:0',phase:'SEARCH_FIGHT',player:{x:2400,y:1300},inventory:{knife:true},resources:[shardTarget.resource],hasDefeatedCreature:true,interactionTarget:shardTarget}).labels;
 assert.ok(shardLabels.includes('异质碎片')&&shardLabels.includes('E / 互动  采集异质碎片'),
   'MIRE MART must show the real selected shard action separately from its route marker');
 const farmWinsNearbyWood=labelsFor({zone:'1:1',phase:'',player:{x:2400,y:2400},inventory:{wood:0,stone:0},resources:[{id:'camp:wood-nearby',type:'wood',x:2410,y:2400}],interactionTarget:{type:'farm',d:20,label:'【互动】播种盐风叶菜',plotId:'plot-a'},inCamp:true}).labels;
