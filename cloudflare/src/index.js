@@ -3,8 +3,12 @@ const WORLD_NAME = 'abyssal-wake-public-v1';
 const CHANNEL_PREFIX = 'abyssal-wake-public-v1:';
 const ZONE_CHANNEL_PREFIX = CHANNEL_PREFIX + 'zone:';
 const MAX_MESSAGE_CHARS = 48 * 1024;
+const MAX_WORLD_SNAPSHOT_CHARS = 40 * 1024;
 const MAX_CHANNELS = 8;
 const MAX_MESSAGES_PER_SECOND = 120;
+const WORLD_SNAPSHOT_DOMAINS = ['farm', 'livestock', 'building'];
+const WORLD_SNAPSHOT_RELAY_ID = 'abyssal-relay';
+const WORLD_SNAPSHOT_RELAY_EPOCH = 'abyssal-relay-world-v1';
 const PLAYER_IDENTITY_EVENTS = new Set(['move', 'attack', 'chat', 'map_pos', 'state_req']);
 
 function json(data, status = 200) {
@@ -19,7 +23,8 @@ function json(data, status = 200) {
 }
 
 function sanitizeSessionId(value) {
-  return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 48);
+  const sessionId = String(value || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 48);
+  return sessionId === WORLD_SNAPSHOT_RELAY_ID ? '' : sessionId;
 }
 
 function sanitizeName(value) {
@@ -175,6 +180,90 @@ export class GameWorld {
     for (const { ws } of this.subscribers(channel, except)) this.send(ws, packet);
   }
 
+  campWorldSnapshotKey(zone, domain) {
+    return `camp-world:v1:${zone}:${domain}`;
+  }
+
+  validCampWorldSnapshot(domain, zone, payload) {
+    if (!WORLD_SNAPSHOT_DOMAINS.includes(domain) || payload?.version !== 1 || payload?.zone !== zone) return false;
+    if (typeof payload.epoch !== 'string' || payload.epoch.length < 8 || payload.epoch.length > 128 || !Number.isSafeInteger(payload.seq) || payload.seq < 1) return false;
+    const state = payload?.state;
+    if (!state || typeof state !== 'object' || Array.isArray(state) || state.version !== 1) return false;
+    if (domain === 'farm' && (!Array.isArray(state.plants) || state.plants.length > 64)) return false;
+    if (domain === 'livestock' && (!Array.isArray(state.animals) || state.animals.length > 48 || !Number.isSafeInteger(state.nextId) || state.nextId < 1)) return false;
+    if (domain === 'building' && (!Array.isArray(state.structures) || state.structures.length > 72 || !Number.isSafeInteger(state.nextId) || state.nextId < 1)) return false;
+    if (domain === 'farm' && !state.plants.every(plant => plant && typeof plant.plotId === 'string' && plant.plotId.length <= 64 && typeof plant.cropId === 'string' && plant.cropId.length <= 64 && Number.isFinite(Number(plant.plantedAt)) && Number(plant.plantedAt) >= 0)) return false;
+    if (domain === 'livestock' && !state.animals.every(animal => animal && typeof animal.id === 'string' && animal.id.length <= 64 && typeof animal.species === 'string' && animal.species.length <= 64)) return false;
+    if (domain === 'building' && !state.structures.every(item => item && typeof item.id === 'string' && item.id.length <= 64 && item.zone === zone)) return false;
+    try { return JSON.stringify(payload).length <= MAX_WORLD_SNAPSHOT_CHARS; }
+    catch { return false; }
+  }
+
+  zoneLeaderSubscriber(channel, except = null) {
+    return this.subscribers(channel, except)
+      .filter(({ state }) => Boolean(state.presence[channel]))
+      .sort((a, b) => String(a.state.sessionId).localeCompare(String(b.state.sessionId)))[0] || null;
+  }
+
+  async persistCampWorldSnapshot(channel, socketState, payload) {
+    const zone = zoneFromChannel(channel);
+    const domain = String(payload?.domain || '');
+    const storage = this.ctx?.storage;
+    if (!zone || !storage?.get || !storage?.put || payload?.sessionId !== socketState.sessionId) return false;
+    if (!this.validCampWorldSnapshot(domain, zone, payload)) return false;
+    const leader = this.zoneLeaderSubscriber(channel);
+    if (leader?.state.sessionId !== socketState.sessionId) return false;
+
+    const key = this.campWorldSnapshotKey(zone, domain);
+    const previous = await storage.get(key);
+    if (previous?.sourceId === socketState.sessionId && previous?.sourceEpoch === payload.epoch && Number(payload.seq) <= Number(previous.sourceSeq)) return false;
+    const revision = Number.isSafeInteger(previous?.revision) ? previous.revision + 1 : 1;
+    await storage.put(key, {
+      version: 1,
+      domain,
+      zone,
+      revision,
+      sourceId: socketState.sessionId,
+      sourceEpoch: String(payload.epoch || '').slice(0, 128),
+      sourceSeq: Math.max(0, Math.floor(Number(payload.seq) || 0)),
+      savedAt: Date.now(),
+      state: payload.state
+    });
+    return true;
+  }
+
+  async restoreCampWorldSnapshotsToLeader(channel, except = null) {
+    const zone = zoneFromChannel(channel);
+    const storage = this.ctx?.storage;
+    if (!zone || !storage?.get) return false;
+    const leader = this.zoneLeaderSubscriber(channel, except);
+    if (!leader) return false;
+    let sent = false;
+    for (const domain of WORLD_SNAPSHOT_DOMAINS) {
+      const record = await storage.get(this.campWorldSnapshotKey(zone, domain));
+      if (!record || record.version !== 1 || record.zone !== zone || record.domain !== domain || !Number.isSafeInteger(record.revision) || record.revision < 1) continue;
+      const payload = {
+        version: 1,
+        domain,
+        zone,
+        sessionId: WORLD_SNAPSHOT_RELAY_ID,
+        epoch: WORLD_SNAPSHOT_RELAY_EPOCH,
+        seq: record.revision,
+        state: record.state
+      };
+      if (!this.validCampWorldSnapshot(domain, zone, payload)) continue;
+      sent = this.send(leader.ws, {
+        type: 'broadcast',
+        channel,
+        event: 'camp_world_v1',
+        payload,
+        from: WORLD_SNAPSHOT_RELAY_ID,
+        serverTime: Date.now()
+      }) || sent;
+    }
+    return sent;
+  }
+
   rateAllowed(ws, state) {
     const now = Date.now();
     if (!state.rateWindowAt || now - state.rateWindowAt >= 1000) {
@@ -226,7 +315,10 @@ export class GameWorld {
         old.presence = {};
         this.saveState(peer, old);
         try { peer.close(4001, 'replaced'); } catch {}
-        for (const channel of affected) this.publishPresence(channel, peer);
+        for (const channel of affected) {
+          this.publishPresence(channel, peer);
+          await this.restoreCampWorldSnapshotsToLeader(channel, peer);
+        }
       }
       state.sessionId = sessionId;
       state.name = sanitizeName(msg.name);
@@ -276,7 +368,10 @@ export class GameWorld {
       delete state.presence[channel];
       this.saveState(ws, state);
       this.send(ws, { type: 'unsubscribed', channel });
-      if (hadPresence) this.publishPresence(channel);
+      if (hadPresence) {
+        this.publishPresence(channel);
+        await this.restoreCampWorldSnapshotsToLeader(channel, ws);
+      }
       return;
     }
 
@@ -287,6 +382,7 @@ export class GameWorld {
 
     if (msg.type === 'track') {
       const input = msg.meta && typeof msg.meta === 'object' ? msg.meta : {};
+      const wasTracked = Boolean(state.presence[channel]);
       state.presence[channel] = {
         ...input,
         id: state.sessionId,
@@ -294,6 +390,7 @@ export class GameWorld {
       };
       this.saveState(ws, state);
       this.publishPresence(channel);
+      if (!wasTracked) await this.restoreCampWorldSnapshotsToLeader(channel);
       return;
     }
 
@@ -301,13 +398,20 @@ export class GameWorld {
       const hadPresence = Boolean(state.presence[channel]);
       delete state.presence[channel];
       this.saveState(ws, state);
-      if (hadPresence) this.publishPresence(channel);
+      if (hadPresence) {
+        this.publishPresence(channel);
+        await this.restoreCampWorldSnapshotsToLeader(channel, ws);
+      }
       return;
     }
 
     if (msg.type === 'broadcast') {
       const event = String(msg.event || '').slice(0, 64);
       if (!event) return;
+      if (event === 'camp_world_v1') {
+        try { await this.persistCampWorldSnapshot(channel, state, msg.payload); }
+        catch { this.send(ws, { type: 'error', code: 'WORLD_SNAPSHOT_SAVE_FAILED', channel }); }
+      }
       const packet = {
         type: 'broadcast',
         channel,
@@ -323,13 +427,19 @@ export class GameWorld {
   async webSocketClose(ws, code, reason) {
     const state = this.socketState(ws);
     const affected = Object.keys(state.presence || {});
-    for (const channel of affected) this.publishPresence(channel, ws);
+    for (const channel of affected) {
+      this.publishPresence(channel, ws);
+      await this.restoreCampWorldSnapshotsToLeader(channel, ws);
+    }
     try { ws.close(code, reason); } catch {}
   }
 
   async webSocketError(ws) {
     const state = this.socketState(ws);
     const affected = Object.keys(state.presence || {});
-    for (const channel of affected) this.publishPresence(channel, ws);
+    for (const channel of affected) {
+      this.publishPresence(channel, ws);
+      await this.restoreCampWorldSnapshotsToLeader(channel, ws);
+    }
   }
 }

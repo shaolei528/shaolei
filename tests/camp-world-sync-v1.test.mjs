@@ -67,6 +67,8 @@ assert.equal(sync.receive(remoteFarm, { from: 'player-leader' }), false, 'replay
 assert.equal(sync.receive({ ...remoteFarm, epoch: 'epoch-remote-0002', seq: 1 }, { from: 'player-leader' }), true, 'a fresh page session may restart its sequence');
 assert.equal(sync.receive(remoteFarm, { from: 'spoofed-player' }), false, 'payload identity must match relay sender metadata');
 assert.equal(sync.receive({ ...remoteFarm, zone: '1:2', epoch: 'epoch-remote-0003' }, { from: 'player-leader' }), false, 'updates from another zone are rejected');
+const durableRelaySnapshot={...remoteFarm,sessionId:'abyssal-relay',epoch:'abyssal-relay-world-v1',seq:1};
+assert.equal(sync.receive(durableRelaySnapshot,{from:'abyssal-relay'}),false,'followers only accept the elected zone leader, not the storage relay');
 context.currentZone = '1:2';
 assert.equal(sync.sendDomain('farm'), false, 'farm snapshots are limited to their home zone');
 context.currentZone = '1:1';
@@ -76,8 +78,12 @@ context.zoneLeaderId = 'player-local';
 assert.equal(sync.respondToRequest({ version: 1, zone: '1:1', sessionId: 'spoofed-player' }, { from: 'player-visitor' }), false, 'join requests must match relay-authenticated sender identity');
 assert.equal(sync.respondToRequest({ version: 1, zone: '1:1', sessionId: 'player-visitor' }, { from: 'player-visitor' }), true);
 assert.deepEqual(sent.slice(-3).map(packet => packet.payload.domain), ['farm', 'livestock', 'building'], 'joining players receive all zone-owned camp snapshots');
+const sentBeforeDurable = sent.length;
+assert.equal(sync.receive(durableRelaySnapshot,{from:'abyssal-relay'}),true,'the elected zone leader accepts the persisted snapshot relayed by the Worker');
+assert.deepEqual(applied.at(-1),['farm',durableRelaySnapshot.state]);
+assert.equal(sent.length,sentBeforeDurable+1,'the elected leader republishes the restored snapshot through the owner sync');
 const sentBeforeCanonical = sent.length;
 assert.equal(sync.receive({ ...remoteFarm, sessionId: 'player-visitor', epoch: 'epoch-remote-0004', seq: 1 }, { from: 'player-visitor' }), true);
-assert.equal(sent.length, sentBeforeCanonical + 1, 'the elected leader republishes accepted state as the zone snapshot');
+assert.equal(sent.length, sentBeforeCanonical + 1, 'the elected leader republishes the joining player snapshot as the zone snapshot');
 
 console.log(JSON.stringify({ ok: true, localEvents: true, joinSnapshot: true, senderValidation: true, zoneIsolation: true, replayProtection: true, reloadEpoch: true, leaderRelay: true }));
