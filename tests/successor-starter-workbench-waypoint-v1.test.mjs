@@ -11,6 +11,7 @@ const build=read('cloudflare/build-site.mjs');
 const safeCamp=read('modules/safe-camp/game-v7-patch.js');
 const worldRenderer=read('modules/render/base-renderer.js');
 const runtime=read('modules/core/runtime-state.js');
+const lanternRecipeData=JSON.parse(read('data/crafting/recipes-v1.json')).recipes;
 
 const workbench=safeCamp.match(/const WORKBENCH=\{x:(\d+),y:(\d+)\}/);
 assert.ok(workbench,'SafeCamp must expose one authoritative workbench anchor');
@@ -24,8 +25,8 @@ assert.ok(guidance.includes("['1:1', '1:0', '1:2']"),
   'route guidance must stay active in Safe Camp, MIRE MART and the unlocked southern zone');
 assert.ok(renderer.includes('boss:bossProgress?.encounter?.spawn||null,bossCleared:bossProgress?.isCleared?.()===true'),
   'the renderer adapter must pass boss location and unlock state to the wayfinding module');
-assert.ok(renderer.includes('homeUpgrade:window.ABYSSAL_HOME_WORKBENCH_V1?.getState?.()||null'),
-  'the renderer adapter must pass the HOME-owned upgrade snapshot to the wayfinding module');
+assert.ok(renderer.includes('craftingRecipes:window.ABYSSAL_CRAFTING_RECIPES_V1?.recipes||null'),
+  'route guidance must read the same data-driven recipe costs as the crafting system');
 for(const marker of [
   "phase === 'REACH_MIRE_MART'",
   "phase === 'SEARCH_FIGHT'",
@@ -53,7 +54,7 @@ assert.ok(preview.indexOf("modules/ui/route-guidance-v1.js")<preview.indexOf("pr
 assert.ok(build.includes("'modules/ui/route-guidance-v1.js'"),
   'the canonical Cloudflare package must include the route UI module');
 
-const labelsFor=({zone,phase,player,inventory,resources=[],interactionTarget=null,inCamp=false,bossCleared=false,boss=null,homeUpgrade=null,width=800,height=600,projection}={})=>{
+const labelsFor=({zone,phase,player,inventory,resources=[],interactionTarget=null,inCamp=false,bossCleared=false,boss=null,craftingRecipes=lanternRecipeData,width=800,height=600,projection}={})=>{
   const labels=[],points=[],ctx={
     save(){},restore(){},setTransform(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},stroke(){},fill(){},fillRect(){},strokeRect(){},
     translate(x,y){points.push({x,y})},rotate(){},measureText(text){return{width:String(text).length*6}},
@@ -64,7 +65,7 @@ const labelsFor=({zone,phase,player,inventory,resources=[],interactionTarget=nul
   const frozenResources=Object.freeze(resources.map(resource=>Object.freeze({...resource})));
   const state=Object.freeze({
     zone,phase,player:Object.freeze({...player}),inventory:Object.freeze({...inventory}),availableResources:frozenResources,
-    interactionTarget,camp:Object.freeze({x:2400,y:2400}),worldZone:1600,bossCleared,boss,homeUpgrade,
+    interactionTarget,camp:Object.freeze({x:2400,y:2400}),worldZone:1600,bossCleared,boss,craftingRecipes,
     parking:Object.freeze({x:2200,y:900,w:300,h:200}),inCamp,workbench:Object.freeze({x:2195,y:2535}),
     projectViewport:projection||((x,y)=>({x:400+(x-player.x)*.5,y:300+(y-player.y)*.25})),
     width,height,dpr:1,now:1200,worldNow:1200,
@@ -84,16 +85,20 @@ assert.ok(!farmWinsNearbyWood.includes('木材 · 按 E 采集'),
   'an unselected resource must never claim that E will collect it');
 assert.ok(labelsFor({zone:'1:0',phase:'SECURE_REQUIRED_SALVAGE',player:{x:2400,y:1500},inventory:{knife:true,shard:1}}).labels.includes('→ 返回安全营地'),
   'after securing salvage the MIRE MART scene must show the return route');
-const rigLocked={returnClearance:true,tier:1,cost:{stone:3,shard:2}};
-const needRigShard=labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true,stone:0,shard:1},homeUpgrade:rigLocked,inCamp:true}).labels;
-assert.ok(needRigShard.includes('→ MIRE MART · 碎片'),'after first return, the camp must direct a player missing a shard back to the salvage area');
+const campLanternDeficit=labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true,wood:0,shard:1},resources:[{id:'camp:lantern-wood',type:'wood',x:2410,y:2470}],inCamp:true}).labels;
+assert.ok(campLanternDeficit.includes('提灯木材')&&!campLanternDeficit.includes('→ MIRE MART · 提灯碎片'),'at HOME, collect the locally available Lantern wood before showing the next trip marker');
+assert.ok(!campLanternDeficit.includes('石料'),'after crafting the Bone Knife, stone for the optional Field Rig must not appear as a main-route requirement');
+const campLanternShardTrip=labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true,wood:3,shard:1},inCamp:true}).labels;
+assert.ok(campLanternShardTrip.includes('→ MIRE MART · 提灯碎片'),'after local Lantern wood is ready, the camp must point to missing shards');
 const shardResource={id:'poi:store:shard-b',type:'shard',x:2400,y:1310};
-const findRigShard=labelsFor({zone:'1:0',phase:'COMPLETE',player:{x:2400,y:1272},inventory:{knife:true,stone:0,shard:1},resources:[shardResource],homeUpgrade:rigLocked}).labels;
-assert.ok(findRigShard.includes('装备架碎片'),'MIRE MART must point to an available shard while the upgrade is short one');
-const returnToRig=labelsFor({zone:'1:0',phase:'COMPLETE',player:{x:2400,y:1272},inventory:{knife:true,stone:3,shard:2},homeUpgrade:rigLocked}).labels;
-assert.ok(returnToRig.includes('→ 返营强化装备架'),'once upgrade materials are ready, the route must switch to HOME');
-const upgradeRig=labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true,stone:3,shard:2},homeUpgrade:rigLocked,inCamp:true}).labels;
-assert.ok(upgradeRig.includes('强化野外装备架'),'at HOME with the required materials, the marker must point to the workbench');
+const findLanternShard=labelsFor({zone:'1:0',phase:'COMPLETE',player:{x:2400,y:1272},inventory:{knife:true,wood:0,shard:1},resources:[shardResource]}).labels;
+assert.ok(findLanternShard.includes('提灯碎片'),'MIRE MART must point to a shard required by the actual Lantern recipe');
+const returnForLanternWood=labelsFor({zone:'1:0',phase:'COMPLETE',player:{x:2400,y:1272},inventory:{knife:true,wood:0,shard:2}}).labels;
+assert.ok(returnForLanternWood.includes('→ 返营收集木材'),'with Lantern shards secured, the route must return for missing recipe wood');
+const returnForLanternCraft=labelsFor({zone:'1:0',phase:'COMPLETE',player:{x:2400,y:1272},inventory:{knife:true,wood:3,shard:2}}).labels;
+assert.ok(returnForLanternCraft.includes('→ 返营制作提灯'),'with Lantern materials secured, the route must return to craft it');
+const craftLantern=labelsFor({zone:'1:1',phase:'COMPLETE',player:{x:2400,y:2470},inventory:{knife:true,wood:3,shard:2},inCamp:true}).labels;
+assert.ok(craftLantern.includes('制作提灯'),'at HOME with recipe materials, the marker must point to Lantern crafting');
 assert.ok(labelsFor({zone:'1:1',phase:'RETURN_HOME',player:{x:2400,y:1900},inventory:{knife:true,shard:1},inCamp:false}).labels.includes('篝火 · 安全营地'),
   'the last stretch back inside HOME must keep a visible camp destination');
 assert.ok(labelsFor({zone:'1:1',phase:'LEAVE_HOME',player:{x:Number(workbench[1]),y:Number(workbench[2])},inventory:{wood:4,stone:3},inCamp:true}).labels.includes('前往工作台'),

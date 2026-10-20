@@ -917,7 +917,7 @@
       availableResources:resources.filter(resource=>(harvested.get(resource.id)||0)<=Date.now()).map(resource=>({...resource})),
       interactionTarget:window.ABYSSAL_INTERACTION_V12?.getTarget?.()||null,
       phase:window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.phase,
-      homeUpgrade:window.ABYSSAL_HOME_WORKBENCH_V1?.getState?.()||null,
+      craftingRecipes:window.ABYSSAL_CRAFTING_RECIPES_V1?.recipes||null,
       boss:bossProgress?.encounter?.spawn||null,bossCleared:bossProgress?.isCleared?.()===true,
       camp:{x:CAMP.x,y:CAMP.y},worldZone:WORLD.zone,parking:worldApi?.poi?.parking||null,
       inCamp:inCamp(),workbench:{x:2195,y:2535},projectViewport:(x,y)=>projectViewport(x,y),

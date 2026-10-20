@@ -4,7 +4,12 @@
 
   function draw(ctx, state) {
     if (!ctx || !state || !['1:1', '1:0', '1:2'].includes(String(state.zone || ''))) return false;
-    const { zone, player, inventory = {}, availableResources = [], interactionTarget = null, homeUpgrade = null } = state;
+    const { zone, player, inventory = {}, availableResources = [], interactionTarget = null, craftingRecipes = {} } = state;
+    const recipeCosts = craftingRecipes?.lantern?.costs || {};
+    const lanternCosts = {
+      wood: Math.max(0, Number(recipeCosts.wood ?? 3) || 0),
+      shard: Math.max(0, Number(recipeCosts.shard ?? 2) || 0),
+    };
     const phase = String(state.phase || ''), camp = state.camp || {}, worldZone = Number(state.worldZone) || 0;
     const projectViewport = state.projectViewport;
     if (typeof projectViewport !== 'function' || !Number.isFinite(Number(player?.x)) || !Number.isFinite(Number(player?.y))) return false;
@@ -32,18 +37,20 @@
 
     const goals = [], worldNow = Number(state.worldNow) || 0, insideCamp = state.inCamp === true;
     if (zone === '1:1') {
-      for (const [type, need, label, color] of [['wood', 4, '木材', '#f0c77c'], ['stone', 3, '石料', '#b9d0d4']]) {
-        if (!insideCamp || (Number(inventory[type]) || 0) >= need) continue;
-        let nearest = null, best = Infinity;
-        for (const resource of availableResources) {
-          if (resource?.type !== type) continue;
-          const distance = Math.hypot(resource.x - player.x, resource.y - player.y);
-          if (distance <= 1250 && distance < best) { best = distance; nearest = resource; }
-        }
-        if (nearest) {
-          const target = interactionTarget;
-          if (target?.type === 'resource' && target.resource?.type === type) nearest = target.resource;
-          goals.push({ ...nearest, label, color, edge: true });
+      if (!inventory.knife) {
+        for (const [type, need, label, color] of [['wood', 4, '木材', '#f0c77c'], ['stone', 3, '石料', '#b9d0d4']]) {
+          if (!insideCamp || (Number(inventory[type]) || 0) >= need) continue;
+          let nearest = null, best = Infinity;
+          for (const resource of availableResources) {
+            if (resource?.type !== type) continue;
+            const distance = Math.hypot(resource.x - player.x, resource.y - player.y);
+            if (distance <= 1250 && distance < best) { best = distance; nearest = resource; }
+          }
+          if (nearest) {
+            const target = interactionTarget;
+            if (target?.type === 'resource' && target.resource?.type === type) nearest = target.resource;
+            goals.push({ ...nearest, label, color, edge: true });
+          }
         }
       }
 
@@ -53,24 +60,25 @@
         if (distance <= 350) goals.push({ x: Number(workbench.x), y: Number(workbench.y), type: 'workbench', label: '前往工作台', color: '#efd399', edge: true });
       }
 
-      if (inventory.knife && phase === 'COMPLETE' && !state.bossCleared && !inventory.lantern && homeUpgrade?.returnClearance && Number(homeUpgrade.tier) < 2) {
-        const cost = homeUpgrade.cost || {}, missingStone = Math.max(0, Number(cost.stone || 3) - (Number(inventory.stone) || 0)), missingShard = Math.max(0, Number(cost.shard || 2) - (Number(inventory.shard) || 0));
-        if (missingStone > 0) {
+      if (inventory.knife && phase === 'COMPLETE' && !state.bossCleared && !inventory.lantern) {
+        const missingWood = Math.max(0, Number(lanternCosts.wood || 0) - (Number(inventory.wood) || 0));
+        const missingShard = Math.max(0, Number(lanternCosts.shard || 0) - (Number(inventory.shard) || 0));
+        if (missingWood > 0) {
           let nearest = null, best = Infinity;
           for (const resource of availableResources) {
-            if (resource?.type !== 'stone') continue;
+            if (resource?.type !== 'wood') continue;
             const distance = Math.hypot(resource.x - player.x, resource.y - player.y);
             if (distance <= 1250 && distance < best) { best = distance; nearest = resource; }
           }
-          if (nearest) goals.push({ ...nearest, label: '装备架石料', color: '#b9d0d4', edge: true });
+          if (nearest) goals.push({ ...nearest, label: '提灯木材', color: '#f0c77c', edge: true });
         }
-        if (missingShard > 0) {
+        if (missingWood <= 0 && missingShard > 0) {
           const exit = { x: Number(camp.x), y: worldZone - 10 }, distance = Math.hypot(exit.x - player.x, exit.y - player.y);
-          if (distance <= 1600) goals.push({ ...exit, type: 'exit', label: '→ MIRE MART · 碎片', color: '#a8e6df', edge: true });
+          if (zone === '1:1' && distance <= 1600) goals.push({ ...exit, type: 'exit', label: '→ MIRE MART · 提灯碎片', color: '#a8e6df', edge: true });
         }
-        if (missingStone <= 0 && missingShard <= 0) {
+        if (missingWood <= 0 && missingShard <= 0 && zone === '1:1') {
           const distance = Math.hypot(Number(workbench.x) - player.x, Number(workbench.y) - player.y);
-          if (distance <= 1000) goals.push({ x: Number(workbench.x), y: Number(workbench.y), type: 'workbench', label: '强化野外装备架', color: '#efd399', edge: true });
+          if (distance <= 1000) goals.push({ x: Number(workbench.x), y: Number(workbench.y), type: 'workbench', label: '制作提灯', color: '#efd399', edge: true });
         }
       }
     }
@@ -97,15 +105,15 @@
           target = { x: Number(camp.x), y: worldZone + 10 };
           label = '→ 返回安全营地';
           type = 'home';
-        } else if (phase === 'COMPLETE' && !state.bossCleared && !inventory.lantern && homeUpgrade?.returnClearance && Number(homeUpgrade.tier) < 2) {
-          const requiredShards = Math.max(1, Number(homeUpgrade.cost?.shard) || 2);
+        } else if (phase === 'COMPLETE' && !state.bossCleared && !inventory.lantern) {
+          const requiredShards = Math.max(0, Number(lanternCosts.shard) || 0);
           if ((Number(inventory.shard) || 0) < requiredShards) {
             target = availableResources.filter(resource => resource?.type === 'shard' && String(resource.id).startsWith('poi:store:'))
               .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
-            if (target) { label = '装备架碎片'; color = '#a8e6df'; type = 'shard'; }
+            if (target) { label = '提灯碎片'; color = '#a8e6df'; type = 'shard'; }
           } else {
             target = { x: Number(camp.x), y: worldZone + 10 };
-            label = '→ 返营强化装备架';
+            label = (Number(inventory.wood) || 0) < Number(lanternCosts.wood || 0) ? '→ 返营收集木材' : '→ 返营制作提灯';
             type = 'home';
             maxDistance = 1600;
           }

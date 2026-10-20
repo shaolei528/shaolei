@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const source=fs.readFileSync(new URL('../modules/world/awakening-expedition-loop-v1.js',import.meta.url),'utf8');
+const craftingRecipes=JSON.parse(fs.readFileSync(new URL('../data/crafting/recipes-v1.json',import.meta.url),'utf8'));
 const boot=fs.readFileSync(new URL('../survival-v21.html',import.meta.url),'utf8');
 const combat=fs.readFileSync(new URL('../modules/combat/player-combat.js',import.meta.url),'utf8');
 const relay=fs.readFileSync(new URL('../modules/network/network-relay-v16.js',import.meta.url),'utf8');
@@ -17,6 +18,7 @@ const sandbox={
   started:true,dead:false,CAMP,SESSION_ID:'test-player',
   me:{x:CAMP.x,y:CAMP.y},
   inventory:{wood:0,stone:0,food:2,shard:0,knife:false,lantern:false},
+  ABYSSAL_CRAFTING_RECIPES_V1:craftingRecipes,
   ABYSSAL_CREATURE_REWARDS_CONFIG_V1:{creatures:{crawler:{},cultist:{},watcher:{}}},
   questText:{textContent:'legacy'},
   saveLocal(){return true;},
@@ -146,9 +148,11 @@ assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-c
 assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-crawler',mobKind:'crawler',rewardKey:'companion-egg:runtime-crawler:2001',grants:{shard:1}}),false,'duplicate confirmed reward events are ignored');
 sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^带碎片回营/);
 sandbox.me={x:2400,y:1500};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^沿北路返营/);
-sandbox.me={x:CAMP.x,y:CAMP.y};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^远征完成/);sandbox.updateQuest();
+sandbox.me={x:CAMP.x,y:CAMP.y};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^提灯材料/);sandbox.updateQuest();
 assert.equal(toasts.filter(t=>t.includes('远征完成')).length,1,'completion result must be announced once');
-assert.match(sandbox.questText.textContent,/前往工作台解锁野外装备架/,'a completed first expedition must point to the actual next progression step');
+assert.match(sandbox.questText.textContent,/提灯材料 · 木3\/3 碎片1\/2/,'a completed first expedition must show Lantern progress instead of gating the main route behind the optional Field Rig');
+assert.equal(api.objectiveText({phase:'COMPLETE'},obs({lantern:false,wood:3,shard:2})),'提灯材料齐 · 去工作台制作','complete Lantern ingredients must point straight to crafting');
+assert.equal(api.objectiveText({phase:'COMPLETE'},obs({lantern:true})),'远征完成 · 北上挑战沼心守望者','Lantern ownership must make the Boss the next progression step');
 const conciseObjectives=api.contract.phases.map(phase=>api.objectiveText({phase,attempt:1},{...obs({inCamp:false,atMart:false,hasKnife:true,shard:0}),started:true}));
 assert.ok(conciseObjectives.every(text=>Array.from(text||'').length<=36),'each phase objective must fit a compact task card');
 assert.equal(api.objectiveText({phase:'COMPLETE',attempt:1},obs({lantern:true})),'远征完成 · 北上挑战沼心守望者','a prepared lantern should point directly to the Boss encounter');
