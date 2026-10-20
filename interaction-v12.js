@@ -158,6 +158,7 @@
   };
 
   function requiredExpeditionShards(){const value=Number(window.ABYSSAL_EXPEDITION_LOOP_V1?.contract?.requiredSalvage?.shard);return Number.isFinite(value)&&value>0?Math.floor(value):1;}
+  function lanternRecipeCosts(){const costs=window.ABYSSAL_CRAFTING_RECIPES_V1?.recipes?.lantern?.costs||{};return{wood:Math.max(0,Math.floor(Number(costs.wood)||3)),shard:Math.max(0,Math.floor(Number(costs.shard)||2))};}
   function currentTaskAdvice(){
     const wood=Math.max(0,Number(inventory.wood)||0),stone=Math.max(0,Number(inventory.stone)||0),food=Math.max(0,Number(inventory.food)||0);
     const phase=window.ABYSSAL_EXPEDITION_LOOP_V1?.state?.phase,shard=Math.max(0,Number(inventory.shard)||0),required=requiredExpeditionShards();
@@ -165,10 +166,12 @@
     if(phase==='REACH_MIRE_MART')return '沿破损北路继续向北。先找到停电的 MIRE MART，再决定是搜寻还是撤回。';
     if(phase==='SEARCH_FIGHT')return `MIRE MART 的货架、冰柜和异常残留都值得检查。保持距离，收集异质碎片；当前 ${Math.min(required,shard)}/${required}。`;
     if(phase==='SECURE_REQUIRED_SALVAGE')return '碎片已经够了。别贪心，离开 MIRE MART，沿北路把这批东西带回营地。';
-    if(phase==='RETURN_HOME')return '沿来时的北路返回篝火。把异质碎片带进安全营地，工作台才能强化野外装备架。';
+    if(phase==='RETURN_HOME')return '沿来时的北路返回篝火，带回异质碎片即可完成远征。野外装备架升级是可选项。';
     if(phase==='COMPLETE'){
-      const home=window.ABYSSAL_HOME_WORKBENCH_V1?.getState?.();
-      return home?.tier>=2?'你把 MIRE MART 的发现带回来了，野外装备架也已经升级。先休息一下，再和大家商量下一次往哪边走。':'你把 MIRE MART 的发现带回来了。先在工作台安顿好装备，再和大家商量下一次往哪边走。';
+      if(window.ABYSSAL_BOSS_PROGRESSION_V1?.isCleared?.())return '沼心守望者已击败，南侧探索区已经开放。野外装备架仍可在工作台升级。';
+      if(inventory.lantern)return '提灯已经准备好。沿北路挑战沼心守望者；野外装备架升级是可选准备。';
+      const cost=lanternRecipeCosts();
+      return `远征发现已带回。主线先制作提灯：木材 ${Math.min(wood,cost.wood)}/${cost.wood}、碎片 ${Math.min(shard,cost.shard)}/${cost.shard}。野外装备架升级是可选项。`;
     }
     if(inventory.knife){
       const supplies=food?`背包有食物 ×${food}`:'当前没有食物，建议先在营地补给';
@@ -185,7 +188,13 @@
     if(phase==='SEARCH_FIGHT')return `当前目标：搜索 MIRE MART · 异质碎片 ${Math.min(required,shard)}/${required}。`;
     if(phase==='SECURE_REQUIRED_SALVAGE')return '当前目标：离开 MIRE MART，把异质碎片带回营地。';
     if(phase==='RETURN_HOME')return '当前目标：沿北路返回安全营地 · 携带异质碎片。';
-    if(phase==='COMPLETE')return window.ABYSSAL_HOME_WORKBENCH_V1?.getState?.()?.tier>=2?'当前状态：远征完成 · 野外装备架已强化。':'当前状态：远征发现已带回 · 前往工作台强化野外装备架。';
+    if(phase==='COMPLETE'){
+      if(window.ABYSSAL_BOSS_PROGRESSION_V1?.isCleared?.())return '当前目标：沼心守望者已击败 · 南侧探索区开放。';
+      if(inventory.lantern)return '当前目标：提灯已准备 · 沿北路挑战沼心守望者。';
+      const cost=lanternRecipeCosts();
+      if((Number(inventory.wood)||0)>=cost.wood&&(Number(inventory.shard)||0)>=cost.shard)return '当前目标：前往工作台制作提灯。';
+      return `当前目标：提灯木材 ${Math.min(Math.max(0,Number(inventory.wood)||0),cost.wood)}/${cost.wood} · 碎片 ${Math.min(Math.max(0,Number(inventory.shard)||0),cost.shard)}/${cost.shard}。`;
+    }
     if(inventory.knife)return `当前目标：骨刃已装备 · 前往 MIRE MART，带回 ${required} 个异质碎片。`;
     if(inventory.wood<4||inventory.stone<3)return `当前目标：木材 ${inventory.wood}/4 · 石头 ${inventory.stone}/3`;
     if(!inventory.knife)return '当前目标：前往西南侧工作台制作【骨刃】。';
