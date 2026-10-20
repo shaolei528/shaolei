@@ -6,7 +6,9 @@ Status: local-player persistent HOME gameplay contract
 
 Close the first playable progression loop without adding a second POI or a building system:
 
-`Safe Camp → MIRE MART → secure salvage → return alive → Workbench → Field Rig upgrade → stronger next expedition capability`
+`Safe Camp → MIRE MART → secure salvage → return alive → craft Lantern → challenge Boss`
+
+The Field Rig is an optional HOME upgrade alongside the main route. It does not unlock the Lantern or gate the Boss.
 
 The upgrade is deliberately small and functional. It does not add farming, a building catalog, a boss, another POI, or a new network architecture.
 

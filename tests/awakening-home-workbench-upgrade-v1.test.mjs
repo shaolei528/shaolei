@@ -158,7 +158,7 @@ function confirmCreatureLoot(runtime){
   assert.notEqual(s.ABYSSAL_EXPEDITION_LOOP_V1.state.phase,'COMPLETE');
 }
 
-// Full MIRE MART route records persistent clearance, then HOME workbench consumes salvage once and upgrades the next departure capability.
+// Full MIRE MART route records persistent clearance; the optional HOME upgrade remains separate from Lantern progression.
 let persistentSeed;
 {
   const store=memoryStorage();
@@ -179,12 +179,12 @@ let persistentSeed;
   assert.ok(api.getState().lastReturnAt>0);
   assert.ok(store.getItem(api.storageKey),'successful return clearance must persist');
   assert.equal(api.canUpgrade().reason,'materials-required','a one-shard successful return unlocks the opportunity but does not satisfy the two-shard upgrade cost');
-  assert.match(s.questText.textContent,/装备架已解锁 · 补石3\/碎片1/,'the post-return objective must show the actual missing stone and shard counts');
+  assert.match(s.questText.textContent,/提灯材料 · 木3\/3 碎片1\/2/,'the post-return objective must show Lantern recipe progress, not optional Field Rig deficits');
 
   s.inventory.stone=3;
   s.inventory.shard=2;
   s.updateQuest();
-  assert.equal(s.questText.textContent,'装备架材料齐备 · 前往工作台强化','the objective must change when the live inventory meets the recipe');
+  assert.equal(s.questText.textContent,'提灯材料齐 · 去工作台制作','the objective must keep the Lantern route primary when optional Field Rig materials are present');
   assert.equal(api.canUpgrade().ok,true);
   const savesBeforeUpgrade=runtime.getSaveCalls();
   const upgraded=api.upgrade();
@@ -238,4 +238,4 @@ assert.ok(contractSource.includes('25 seconds'));
 assert.ok(contractSource.includes('ward: boolean'));
 assert.ok(contractSource.includes('no new broadcast event'));
 
-console.log(JSON.stringify({ok:true,loop:'MIRE MART return → HOME Field Rig',cost:{stone:3,shard:2},wardBeforeMs:15000,wardAfterMs:25000,persistence:'local-player',relayProtocol:'unchanged'}));
+console.log(JSON.stringify({ok:true,loop:'MIRE MART return → optional HOME Field Rig',cost:{stone:3,shard:2},wardBeforeMs:15000,wardAfterMs:25000,persistence:'local-player',relayProtocol:'unchanged'}));

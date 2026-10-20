@@ -83,7 +83,7 @@ The player must leave MIRE MART with the required salvage and physically return 
 
 Completion occurs only on a live return to SafeCamp with the required salvage. Respawning at HOME after death does not count as a successful return.
 
-The completion result points to the existing workbench / Lantern path when the player does not yet have a Lantern. If a Lantern already exists, the next hint is to resupply for another expedition.
+The completion result points to the data-driven Lantern recipe and its current material deficits when the player does not yet have a Lantern. Field Rig remains an optional HOME upgrade, not a Lantern or Boss prerequisite. If a Lantern already exists, the next hint is to challenge the Boss.
 
 ## Early return
 
@@ -113,7 +113,7 @@ Consequences:
 
 - page reload resumes the same character's expedition phase
 - multiplayer clients can still have different local objective phases while sharing world/combat/resource state; Relay remains unchanged
-- the first successful return unlocks the existing Field Rig upgrade path; buying the upgrade remains a separate workbench action with its existing material cost and persistence checks
+- the first successful return unlocks the optional Field Rig upgrade path; buying the upgrade remains a separate workbench action with its existing material cost and persistence checks
 
 This is persistent character progress, not server-authoritative shared quest progress. A future shared expedition system must define party/world authority before claiming that co-op members share quest completion.
 
