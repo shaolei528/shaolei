@@ -4,7 +4,7 @@
 
   function draw(ctx, state) {
     if (!ctx || !state || !['1:1', '1:0', '1:2'].includes(String(state.zone || ''))) return false;
-    const { zone, player, inventory = {}, availableResources = [], interactionTarget = null, craftingRecipes = {} } = state;
+    const { zone, player, inventory = {}, availableResources = [], mobs = [], hasDefeatedCreature = false, interactionTarget = null, craftingRecipes = {} } = state;
     const recipeCosts = craftingRecipes?.lantern?.costs || {};
     const lanternCosts = {
       wood: Math.max(0, Number(recipeCosts.wood ?? 3) || 0),
@@ -98,9 +98,15 @@
           target = { x: area.x + area.w / 2, y: area.y + area.h / 2 };
           label = '搜索 MIRE MART';
         } else if (phase === 'SEARCH_FIGHT') {
-          target = availableResources.filter(resource => resource?.type === 'shard' && String(resource.id).startsWith('poi:store:'))
-            .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
-          if (target) { label = '异质碎片'; color = '#a8e6df'; type = 'shard'; }
+          if (!hasDefeatedCreature) {
+            target = mobs.filter(mob => mob?.hp > 0 && String(mob.id).startsWith('poi:store:crawler-'))
+              .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
+            if (target) { label = '击退爬行者'; color = '#eeaa94'; type = 'creature'; }
+          } else {
+            target = availableResources.filter(resource => resource?.type === 'shard' && String(resource.id).startsWith('poi:store:'))
+              .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
+            if (target) { label = '异质碎片'; color = '#a8e6df'; type = 'shard'; }
+          }
         } else if (phase === 'SECURE_REQUIRED_SALVAGE' || phase === 'RETURN_HOME') {
           target = { x: Number(camp.x), y: worldZone + 10 };
           label = '→ 返回安全营地';

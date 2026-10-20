@@ -15,7 +15,7 @@ const toasts=[];
 let oldQuestCalls=0;
 const sandbox={
   console,window:null,globalThis:null,
-  started:true,dead:false,CAMP,SESSION_ID:'test-player',
+  started:true,dead:false,CAMP,SESSION_ID:'test-player',currentZone:'1:0',
   me:{x:CAMP.x,y:CAMP.y},
   inventory:{wood:0,stone:0,food:2,shard:0,knife:false,lantern:false},
   ABYSSAL_CRAFTING_RECIPES_V1:craftingRecipes,
@@ -142,10 +142,16 @@ sandbox.me={x:CAMP.x,y:CAMP.y};assert.equal(sandbox.inCamp(sandbox.me),true);san
 sandbox.me={x:2400,y:1800};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^抵达 MIRE MART/);
 sandbox.me={x:2400,y:1200};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^搜寻\/击退爬行者/);
 sandbox.inventory.shard=1;sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^搜寻\/击退爬行者/,'a carried shard alone cannot satisfy the creature objective');
-assert.equal(api.recordConfirmedMobLoot({playerId:'remote-player',mobId:'runtime-crawler',mobKind:'crawler',rewardKey:'companion-egg:runtime-crawler:1999',grants:{shard:1}}),false,'another player’s reward cannot satisfy the local expedition');
-assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-crawler',mobKind:'unknown',rewardKey:'companion-egg:runtime-crawler:1999',grants:{shard:1}}),false,'unconfigured creature rewards cannot satisfy the fight gate');
-assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-crawler',mobKind:'crawler',rewardKey:'companion-egg:runtime-crawler:2001',grants:{shard:1}}),true,'the confirmed-loot boundary records one MIRE MART kill');
-assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-crawler',mobKind:'crawler',rewardKey:'companion-egg:runtime-crawler:2001',grants:{shard:1}}),false,'duplicate confirmed reward events are ignored');
+assert.equal(api.recordConfirmedMobLoot({playerId:'remote-player',mobId:'poi:store:crawler-a',mobKind:'crawler',rewardKey:'companion-egg:poi:store:crawler-a:1999',grants:{shard:1}}),false,'another player’s valid authored encounter reward cannot satisfy the local expedition');
+assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'runtime-crawler',mobKind:'crawler',rewardKey:'companion-egg:runtime-crawler:1999',grants:{shard:1}}),false,'a generic crawler outside the authored MIRE MART encounter cannot satisfy the fight gate');
+sandbox.currentZone='1:1';
+assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'poi:store:crawler-a',mobKind:'crawler',rewardKey:'companion-egg:poi:store:crawler-a:1998',grants:{shard:1}}),false,'the authored encounter only counts while the local player remains in its MIRE MART zone');
+sandbox.currentZone='1:0';
+assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'poi:store:crawler-b',mobKind:'unknown',rewardKey:'companion-egg:poi:store:crawler-b:1999',grants:{shard:1}}),false,'unconfigured creature rewards cannot satisfy the fight gate');
+sandbox.me={x:2800,y:1450};
+assert.equal(api.atMireMart(sandbox.me),false,'the player may kite an authored crawler beyond the parking boundary');
+assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'poi:store:crawler-a',mobKind:'crawler',rewardKey:'companion-egg:poi:store:crawler-a:2001',grants:{shard:1}}),true,'a confirmed MIRE MART encounter kill still counts after the player kites outside the parking boundary');
+assert.equal(api.recordConfirmedMobLoot({playerId:'test-player',mobId:'poi:store:crawler-a',mobKind:'crawler',rewardKey:'companion-egg:poi:store:crawler-a:2001',grants:{shard:1}}),false,'duplicate confirmed reward events are ignored');
 sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^带碎片回营/);
 sandbox.me={x:2400,y:1500};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^沿北路返营/);
 sandbox.me={x:CAMP.x,y:CAMP.y};sandbox.updateQuest();assert.match(sandbox.questText.textContent,/^提灯材料/);sandbox.updateQuest();

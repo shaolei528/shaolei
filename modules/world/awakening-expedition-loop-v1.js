@@ -149,7 +149,7 @@ function recordConfirmedMobLoot(detail){
   const rewardKey=String(detail?.rewardKey||'');
   const mobId=String(detail?.mobId||'');
   const mobKind=String(detail?.mobKind||'');
-  if(!observation.started||!observation.atMart||!['SEARCH_FIGHT','SECURE_REQUIRED_SALVAGE'].includes(phase))return false;
+  if(!observation.started||observation.zone!=='1:0'||!mobId.startsWith('poi:store:crawler-')||!['SEARCH_FIGHT','SECURE_REQUIRED_SALVAGE'].includes(phase))return false;
   if(!rewardKey||rewardKey.length>160||!mobId||mobId.length>96||!mobKind||mobKind.length>40)return false;
   if(typeof SESSION_ID==='string'&&detail?.playerId!==SESSION_ID)return false;
   if(!globalThis.ABYSSAL_CREATURE_REWARDS_CONFIG_V1?.creatures?.[mobKind])return false;

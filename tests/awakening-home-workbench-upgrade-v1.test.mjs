@@ -26,7 +26,7 @@ function createRuntime(store=memoryStorage()){
   let saveCalls=0,uiCalls=0,oldQuestCalls=0;
   const sandbox={
     console,window:null,globalThis:null,Date,
-    started:true,dead:false,CAMP,
+    started:true,dead:false,CAMP,currentZone:'1:1',
     me:{x:CAMP.x,y:CAMP.y},
     SESSION_ID:'test-player',
     inventory:{wood:4,stone:3,food:2,shard:0,knife:true,lantern:false},
@@ -51,13 +51,13 @@ function createRuntime(store=memoryStorage()){
 function reachMart(runtime){
   const s=runtime.sandbox;
   s.updateQuest();
-  s.me.x=2400;s.me.y=1800;s.updateQuest();
+  s.me.x=2400;s.me.y=1800;s.currentZone='1:0';s.updateQuest();
   s.me.x=2400;s.me.y=1200;s.updateQuest();
 }
 
 function confirmCreatureLoot(runtime){
   const s=runtime.sandbox;
-  return s.ABYSSAL_EXPEDITION_LOOP_V1.recordConfirmedMobLoot({playerId:s.SESSION_ID,mobId:'test-crawler',mobKind:'crawler',rewardKey:'companion-egg:test-crawler:1',grants:{shard:1}});
+  return s.ABYSSAL_EXPEDITION_LOOP_V1.recordConfirmedMobLoot({playerId:s.SESSION_ID,mobId:'poi:store:crawler-a',mobKind:'crawler',rewardKey:'companion-egg:poi:store:crawler-a:1',grants:{shard:1}});
 }
 
 // Fresh HOME state must keep the legacy 15s departure ward and refuse material-only upgrades.
