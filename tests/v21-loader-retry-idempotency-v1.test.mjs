@@ -48,7 +48,7 @@ const document={
 
 const sandbox={
   window:null,document,console:{log(){},warn(){},error(){}},queueMicrotask,setTimeout,clearTimeout,
-  performance:{now:()=>1000},ABYSSAL_CONFIG:{RELAY_URL:'wss://fixture.invalid/ws'},
+  performance:{now:()=>1000},URLSearchParams,location:{search:''},ABYSSAL_CONFIG:{RELAY_URL:'wss://fixture.invalid/ws'},
   fetch:async url=>String(url).includes('shared-chest-v1.json')
     ?{ok:true,json:async()=>({version:1})}
     :String(url).includes('recipes-v1.json')

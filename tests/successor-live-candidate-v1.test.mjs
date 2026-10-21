@@ -16,7 +16,7 @@ assert.match(oldPreview, /\.\.\/\.\.\/index\.html/, 'the former variant chooser 
 assert.match(page, /title="深渊苏醒统一灰盒"/);
 assert.match(loader, /survival-v21\.html\?awView=34/, 'the player entry must select the explicit 3/4 boot mode');
 assert.doesNotMatch(loader, /fetch\(|srcdoc|entryHook|moduleHook|injectRenderer/, 'the player entry must not rewrite V21 source text');
-assert.match(runtime, /const successor34=new URLSearchParams\(location\.search\)\.get\('awView'\)==='34'/);
+assert.match(runtime, /const successor34=new URLSearchParams\(globalThis\.location\?\.search\|\|''\)\.get\('awView'\)==='34'/);
 assert.match(runtime, /if\(successor34\)\{window\.AW_DEV_QA=false;window\.AW_SUCCESSOR_PREVIEW=false/);
 assert.match(runtime, /successor34&&name==='modules\/main-loop\/smooth-motion-v18\.js'/);
 assert.match(runtime, /if\(successor34\)\{window\.__AW_V21_CANONICAL_FRAME__=draw;draw=\(\)=>\{\};for\(const name of \['modules\/render\/graybox-scene-painter\.js','modules\/interaction\/resource-work\.js'/,

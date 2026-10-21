@@ -14,7 +14,7 @@ let connectGlobal=async()=>null,switchZone=async()=>null;
 'use strict';
 const VER='21g';
 const BOOT={depsReady:false,depsLoading:false,requested:false,promise:null,lastPointerUpAt:0,timeoutMs:8000,loadedModules:new Set()};
-const successor34=new URLSearchParams(location.search).get('awView')==='34';
+const successor34=new URLSearchParams(globalThis.location?.search||'').get('awView')==='34';
 if(successor34){window.AW_DEV_QA=false;window.AW_SUCCESSOR_PREVIEW=false;window.AW_SUCCESSOR_VIEW='34';window.AW_SUCCESSOR_PIXEL_SURVIVOR=false;window.AW_SUCCESSOR_LIVE_GROUND_ART=false;window.AW_SUCCESSOR_COZY_PIXEL_PROOF=true;window.AW_SUCCESSOR_GRAYBOX_CONTINUITY=true;}
 window.ABYSSAL_BOOT_V21=BOOT;
 const boot=document.getElementById('boot');
