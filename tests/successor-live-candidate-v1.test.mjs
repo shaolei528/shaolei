@@ -14,13 +14,13 @@ assert.match(root, /live-candidate\.html/, 'root must lead to the one playable e
 assert.doesNotMatch(root, /assets\/|survival-v(?:3|7|8|9|1[0-7])\.html/i, 'root shell must not present old art or versions');
 assert.match(oldPreview, /\.\.\/\.\.\/index\.html/, 'the former variant chooser must redirect to the one player entry');
 assert.match(page, /title="深渊苏醒统一灰盒"/);
-assert.doesNotMatch(loader, /art-candidates|PreviewSocketBlocked|__previewStorage|__previewMem|qa-harness\.js/, 'player entry must not load concept art or guarded QA systems');
-assert.match(loader, /AW_SUCCESSOR_PREVIEW=false/);
-assert.match(loader, /AW_DEV_QA=false/);
-assert.match(loader, /AW_SUCCESSOR_GRAYBOX_CONTINUITY=true/);
-assert.match(loader, /AW_SUCCESSOR_PIXEL_SURVIVOR=false[\s\S]*?AW_SUCCESSOR_LIVE_GROUND_ART=false/);
-assert.match(loader, /modules\/render\/graybox-scene-painter\.js[\s\S]*?modules\/interaction\/resource-work\.js[\s\S]*?prototypes\/successor-3-4\/successor-renderer\.js/,
-  'live entry must load the one scene and interaction owner before its 3/4 renderer');
+assert.match(loader, /survival-v21\.html\?awView=34/, 'the player entry must select the explicit 3/4 boot mode');
+assert.doesNotMatch(loader, /fetch\(|srcdoc|entryHook|moduleHook|injectRenderer/, 'the player entry must not rewrite V21 source text');
+assert.match(runtime, /const successor34=new URLSearchParams\(globalThis\.location\?\.search\|\|''\)\.get\('awView'\)==='34'/);
+assert.match(runtime, /if\(successor34\)\{window\.AW_DEV_QA=false;window\.AW_SUCCESSOR_PREVIEW=false/);
+assert.match(runtime, /successor34&&name==='modules\/main-loop\/smooth-motion-v18\.js'/);
+assert.match(runtime, /if\(successor34\)\{window\.__AW_V21_CANONICAL_FRAME__=draw;draw=\(\)=>\{\};for\(const name of \['modules\/render\/graybox-scene-painter\.js','modules\/interaction\/resource-work\.js'/,
+  'the explicit mode must load the canonical scene and interaction modules before its renderer');
 assert.match(runtime, /fetch\('\.\/ui-shell\.html\?ui=/, 'the active simulation must load the renamed internal UI shell');
 assert.match(runtime, /RELAY_URL/, 'the active simulation still owns the existing Relay connection');
 assert.match(preview, /PreviewSocketBlocked/);
@@ -44,7 +44,7 @@ const childDocument = {
   addEventListener(type, listener) { childDocumentListeners.set(type, listener); }
 };
 const frame = {
-  hidden: false, srcdoc: '', contentDocument: childDocument,
+  hidden: false, src: '', contentDocument: childDocument,
   addEventListener(type, listener) { frameListeners.set(type, listener); },
   focus() { focusCalls++; }
 };
@@ -52,16 +52,13 @@ const error = { hidden: true, textContent: '' };
 const context = {
   document: { querySelector(selector) { return selector === '#game' ? frame : error; } },
   location: { href: 'https://game.example/prototypes/successor-3-4/live-candidate.html' },
-  URL, fetch: async () => ({ ok: true, text: async () => runtime })
+  URL
 };
 vm.runInNewContext(loader, context);
-await new Promise(resolve => setImmediate(resolve));
-assert.match(frame.srcdoc, /<base href="https:\/\/game\.example\/survival-v21\.html">/);
-assert.match(frame.srcdoc, /window\.AW_SUCCESSOR_PREVIEW=false/);
-assert.match(frame.srcdoc, /modules\/render\/graybox-scene-painter\.js[\s\S]*?modules\/interaction\/resource-work\.js/);
+assert.equal(frame.src, 'https://game.example/survival-v21.html?awView=34');
 frameListeners.get('load')?.();
 childDocumentListeners.get('pointerdown')?.({ target: canvas });
 assert.equal(focusCalls, 1, 'clicking the game canvas must focus it for keyboard input');
 assert.equal(error.hidden, true, 'compatible boot must not show the load error surface');
 
-console.log('PASS one graybox player entry, retired old entry files, canonical scene/interaction modules, and preserved V21 Relay/save runtime');
+console.log('PASS single player entry, explicit 3/4 boot contract, retired old entry files, and preserved V21 Relay/save runtime');

@@ -6,6 +6,7 @@ const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const renderer=read('prototypes/successor-3-4/successor-renderer.js');
 const guidance=read('modules/ui/route-guidance-v1.js');
 const liveCandidate=read('prototypes/successor-3-4/live-candidate.js');
+const v21=read('survival-v21.html');
 const preview=read('prototypes/successor-3-4/preview.js');
 const build=read('cloudflare/build-site.mjs');
 const safeCamp=read('modules/safe-camp/game-v7-patch.js');
@@ -47,8 +48,8 @@ assert.ok(renderer.includes('window.ABYSSAL_ROUTE_GUIDANCE_V1?.draw?.(out,{'),
   'the large renderer must delegate wayfinding to its separate presentation module');
 assert.ok(renderer.includes('function projectViewport(x,y)')&&renderer.includes('projectViewport:(x,y)=>projectViewport(x,y)')&&!guidance.includes('displayScale'),
   'the adapter must reuse the existing screen projection instead of duplicating camera math');
-assert.ok(liveCandidate.indexOf("modules/ui/route-guidance-v1.js")<liveCandidate.indexOf("prototypes/successor-3-4/successor-renderer.js"),
-  'the live candidate must load the route UI module before the renderer adapter');
+assert.ok(v21.indexOf("'modules/ui/route-guidance-v1.js'")<v21.indexOf("'prototypes/successor-3-4/successor-renderer.js'"),
+  'the explicit 3/4 boot must load the route UI module before the renderer adapter');
 assert.ok(preview.indexOf("modules/ui/route-guidance-v1.js")<preview.indexOf("prototypes/successor-3-4/successor-renderer.js"),
   'the preview must load the route UI module before the renderer adapter');
 assert.ok(build.includes("'modules/ui/route-guidance-v1.js'"),

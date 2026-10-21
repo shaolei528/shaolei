@@ -91,7 +91,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Scene placement preview isolation
         run: node tests/awakening-scene-placement-preview-v1.test.mjs
       - name: Module-sort byte equivalence and load order

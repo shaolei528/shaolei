@@ -1,0 +1,100 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'survival-v21.html'
+      - 'ui-shell.html'
+      - 'survival-config.js'
+      - 'game-*.js'
+      - 'terrain-v21.js'
+      - 'interaction-v12.js'
+      - 'content-v9.js'
+      - 'network-*.js'
+      - 'modules/**'
+      - 'prototypes/successor-3-4/**'
+      - 'data/**'
+      - 'assets/**'
+      - 'cloudflare/**'
+      - 'wrangler.jsonc'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: abyssal-wake-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: production
+      url: https://abyssal-wake-relay.zuoranzhang.workers.dev/
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check player entry contract
+        run: node tests/successor-live-candidate-v1.test.mjs
+
+      - name: Build and validate Cloudflare package
+        run: npm run check:worker
+
+      - name: Require production credentials
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CF_TOKEN" ] || [ -z "$CF_ACCOUNT" ]; then
+            echo "::error title=Cloudflare production secrets missing::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to the GitHub production environment. See docs/RELEASE_RUNBOOK.md."
+            exit 1
+          fi
+
+      - name: Deploy Worker and game files
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify deployed health and player entry
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://abyssal-wake-relay.zuoranzhang.workers.dev'
+          ok=0
+          for attempt in $(seq 1 12); do
+            status=$(curl -sS -o /tmp/aw-health.json -w '%{http_code}' --connect-timeout 10 --max-time 20 "$base/health" || true)
+            if [ "$status" = '200' ] && grep -q '"ok":true' /tmp/aw-health.json; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = '1'
+          curl -fsS "$base/" -o /tmp/aw-index.html
+          grep -q 'live-candidate.html' /tmp/aw-index.html
+          curl -fsS "$base/prototypes/successor-3-4/live-candidate.js" -o /tmp/aw-player-entry.js
+          grep -q 'survival-v21.html?awView=34' /tmp/aw-player-entry.js
+
+      - name: Verify two-client Relay and reconnect
+        env:
+          LIVE_RELAY_URL: wss://abyssal-wake-relay.zuoranzhang.workers.dev/ws
+        run: npm run test:live-relay
