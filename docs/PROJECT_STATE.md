@@ -18,6 +18,21 @@
 
 ## 历史记录（以下每节是当时快照，不代表当前分支状态）
 
+### 2026-10-22：止损复盘与灰盒入口重启
+
+- **VERIFIED（失败根因）：**最近打开的 `qa-runner.html?view=home-pixel&awQaControls=1` 是本机隔离验收页；页面明确显示“公网 Relay 已阻断”，`preview.js` 也替换了 WebSocket 和存档。它不能代表朋友打开的正式入口。这解释了为什么在该页检查联机或当正式成品，会得到错误印象。
+- **VERIFIED（接线根因）：**普通入口原本通过 `live-candidate.js` 抓取 `survival-v21.html` 文本，再以字符串锚点改写启动函数并插入 3/4 模块；V21 启动文字稍有变化就会加载失败或漏接模块。这种运行时代码替换让“单测通过”与玩家入口脱节。
+- **已改（仅本地特性分支 `feat/graybox-reset-boot-contract`）：**3/4 入口现在用 `survival-v21.html?awView=34` 选择明确启动模式；V21 只在这个参数下加载 3/4 表现模块，默认 V21 路径不变。移除运行时 HTML 抓取/字符串替换；没有改 Relay 协议、存档格式或 Worker。
+- **VERIFIED（定向检查）：**`node tests/successor-live-candidate-v1.test.mjs`、`node tests/terrain-v21.test.mjs`、`node tests/first-expedition-keyboard-input-v1.test.mjs` 和内联启动脚本语法检查通过。确认唯一根入口、3/4 模式接线、V21 地形契约未变，模拟路线可完成 Boss 和存档；模拟不等于浏览器实玩。
+- **UNKNOWN / NOT PASS：**此特性分支尚未做普通浏览器完整输入验收；没有提交、推送或部署。五类玩法闭环、真实双人协作和 Worker 最新部署仍未全部通过。
+- **重启边界：**停止给当前候选叠加美术/QA捷径；下一步从唯一玩家入口重做清楚的灰盒闭环。保留可工作的 V21 模拟、存档、Relay 和 Git 历史；先按依赖盘点再归档旧试验，不直接删除这些运行底座。
+- **VERIFIED（本机打不开的原因）：**检查时 8876、8883、8884、8886 均无监听进程；因此浏览器的 localhost 拒绝连接由本机预览服务停止导致。已在当前工作区用单一预览脚本启动 8884，进程会话仍存活；未操作浏览器页面。
+- **已加（未部署）：**新增 `Deploy production` 主线工作流、`docs/RELEASE_RUNBOOK.md` 和 `.github/skills/abyssal-wake-release/SKILL.md`。主线相关改动会自动锁定依赖、构建/dry-run、部署 Worker+静态文件，接着检查入口、`/health` 和双客户端 Relay。GitHub 部署环境需要 `CLOUDFLARE_API_TOKEN` 与 `CLOUDFLARE_ACCOUNT_ID` 两个 secret；本机 token 当前缺失，GitHub Actions 这条新流程还未跑过。
+- **UNKNOWN：**目前只从来源代码与进程状态确认本机预览故障；没有浏览器点选验收或检查新的 Cloudflare 线上版本。GitHub Actions 配置也尚未提交到 `main`，不会自动触发。
+- **VERIFIED（本轮清理）：**已从活动仓库移出旧 `backups/`（15 个备份文件）、未接入的美术候选（429 个文件，约 43.3 MB）、旧艺术预览脚本与过期发布试跑输出；可恢复副本放在工作区旁的 `_abyssal-wake-pre-reset-2026-10-22/`。活动仓库不再把这些实验副本当游戏内容。历史 review、游戏状态模块、存档、V21 Relay 与唯一玩家入口保留。
+- **单入口复核：**玩家从根目录 `index.html` 进入；本机 `8884` 的根页面、3/4 页面和 V21 启动页均返回 HTTP 200。此项只证明本机静态服务可取页面，不证明浏览器完整游玩或多人联机通过。
+- **重启边界：**后续以单一灰盒玩家路线重新收敛玩法，保留 V21 作为当前存档/模拟/Relay 兼容底座；不再把旧预览图、QA 变体或候选素材加回玩家入口。旧副本可从工作区归档恢复，不对 Git 历史做重写。
+
 ### 2026-10-20：采集反馈失败根因与本地修复
 
 - **根因（VERIFIED）：**`resource-work.js` 的分段计数和最后一次奖励结算正常；3/4 渲染器原先只画很小的进度牌，位置又与“按 E 采集”提示重叠，前几下被提示盖住。挥砍动画没有接分段命中事件；营地节点在当前非预览入口也没有设置挥砍状态，石头则完全没有镐击表现。于是 QA 能看到计数递增，玩家却看不到相应反馈。

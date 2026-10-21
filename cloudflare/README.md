@@ -22,6 +22,8 @@ npm run deploy
 
 `build:site` copies an explicit allowlist into a content-addressed `.cloudflare-site-*` directory and points Wrangler at that directory. It includes the 3/4 entry, its V21 runtime modules, and the required existing gameplay sheets. It does not package V17 entry pages, tests, documentation, or art-intake folders. Previous build directories are preserved. The local manifest detects unexpected edits and extra files and stops without removing them. Wrangler deploys the Worker and static files together.
 
+Routine releases are automated by [`Deploy production`](../.github/workflows/deploy-production.yml): after relevant gameplay/runtime files reach `main`, it installs the lockfile, builds and dry-runs the package, deploys the Worker and static assets, checks the public game and `/health`, then runs the two-client Relay/reconnect smoke test. Configure `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as secrets in the GitHub `production` environment once. The human-readable recovery and verification steps live in [`RELEASE_RUNBOOK.md`](../docs/RELEASE_RUNBOOK.md); the repository agent workflow is in [the release Skill](../.github/skills/abyssal-wake-release/SKILL.md).
+
 The worker's Durable Object and Relay protocol are unchanged. Relay delivery is not authoritative world simulation or persistent player saving. The public candidate still requires visual, mobile, gameplay-loop, and sustained co-op acceptance before it can be called production-ready; the current terrain art verdict is REVISE.
 
 ## Current release check — 2026-10-19
