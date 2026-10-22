@@ -1,0 +1,54 @@
+{
+  "iteration": "0.4.0",
+  "base_commit": "3ebe2985a665683236f38be7887b730f1f998565",
+  "validated_commit": "3632b0871796ad1962e0203c323e70c1fda46685",
+  "engine": "Godot 4.7.2 stable official via GitHub Actions",
+  "pr_run": {
+    "id": 39166804148,
+    "status": "success",
+    "url": "https://github.com/shaolei528/shaolei/actions/runs/39166804148"
+  },
+  "artifact": {
+    "id": 12151410509,
+    "sha256": "5a8906f50f58ecfe21ccbc64131cff8b18b06bb36f385477a75dab84acc9c150"
+  },
+  "checks": {
+    "project_import": "passed",
+    "smoke": {"passed": 45, "failed": 0},
+    "headless_runtime": "passed",
+    "web_export": {"passed": true, "files": ["index.wasm", "index.pck"]},
+    "browser": {
+      "passed": true,
+      "console_errors": 0,
+      "ember_pickup": true,
+      "campfire_craft_and_ember_consumption": true,
+      "ashling_combat_and_unique_drop": true,
+      "dodge_distance_m": 4.150001086303024,
+      "upgrade_out_of_range_rejected": true,
+      "upgrade_keyboard_U": true,
+      "upgrade_shard_consumed": true,
+      "upgrade_light_range_m": 8,
+      "duplicate_upgrade_rejected": true,
+      "mobile_upgrade_button_keeps_state": true,
+      "mobile_viewport": "390x844; all controls in bounds",
+      "touch_movement_m": 3.675002769745256
+    },
+    "local_node_syntax": "passed",
+    "local_godot": "not run; binary unavailable"
+  },
+  "failed_attempts_and_fixes": [
+    {
+      "run_id": 39166477121,
+      "failed_check": "GDScript smoke script parse",
+      "reason": "upgrade_position needed an explicit Vector3 type",
+      "fix": "Declared upgrade_position: Vector3"
+    },
+    {
+      "run_id": 39166563590,
+      "failed_check": "browser campfire upgrade",
+      "reason": "state did not show upgrade after the first browser route",
+      "fix": "Tightened the camp return stop distance, added status telemetry, and reran; final run confirms keyboard U succeeds"
+    }
+  ],
+  "deployment": "no production deploy; PR remains isolated and unmerged"
+}
